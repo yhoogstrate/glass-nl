@@ -162,6 +162,7 @@ idxstats.stats <- data.frame(idxstats = Sys.glob("output/tables/qc/idxstats/*.tx
   dplyr::mutate_if(colnames(.) %in% c('idxstats', 'genomescan.sid') == F , as.numeric)
 
 
+
 # STAR alignment metrics ----
 
 parse_star_log_final_out <- function(star_log_final_out) {
