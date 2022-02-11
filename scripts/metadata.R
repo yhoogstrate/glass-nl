@@ -124,7 +124,7 @@ tmp <- metadata.glass.per.fastq %>%
   )
 
 
-metadata.glass.per.resection %>% 
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
   dplyr::left_join(
     tmp, by=c('genomescan.sid'='genomescan.sid')
   )
@@ -164,9 +164,10 @@ tmp <- data.frame(idxstats = Sys.glob("output/tables/qc/idxstats/*.txt")) %>%
   dplyr::mutate(`Alternate loci` = rowSums(select(., contains("_")))) %>% 
   dplyr::select(!contains("_")) %>% 
   dplyr::select(-c('chrM', 'chrEBV'))  %>% 
+  `colnames<-`(paste0("idxstats.",colnames(.))) %>% 
   tibble::rownames_to_column('genomescan.sid')
 
-metadata.glass.per.resection %>% 
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
   dplyr::left_join(
     tmp, by=c('genomescan.sid'='genomescan.sid')
   )
@@ -175,8 +176,36 @@ metadata.glass.per.resection %>%
 rm(tmp, parse_idxstats)
 
 
+##  featurecounts ----
 
 
+tmp <- read.delim("data/glass/RNAseq/alignments/alignments-new/GLASS.LGG.EMC.RNA.readcounts.deduplicated_s_2.txt.summary",skip=0,header=T,check.names=F) %>% 
+  tibble::column_to_rownames('Status') %>% 
+  t() %>% 
+  as.data.frame %>% 
+  `colnames<-`(paste0("featureCounts.",colnames(.))) %>% 
+  tibble::rownames_to_column('BAM.file') %>% 
+  dplyr::mutate(genomescan.sid = gsub("^.+alignments-new/([^/]+)/Aligned.sortedByCoord.+$","\\1",BAM.file)) %>% 
+  dplyr::mutate(BAM.file = NULL ,
+                featureCounts.Unassigned_Unmapped = NULL,
+                featureCounts.Unassigned_Read_Type = NULL,
+                featureCounts.Unassigned_Chimera = NULL,
+                featureCounts.Unassigned_Singleton = NULL,
+                featureCounts.Unassigned_MappingQuality = NULL,
+                featureCounts.Unassigned_FragmentLength = NULL,
+                featureCounts.Unassigned_Secondary = NULL,
+                featureCounts.Unassigned_NonSplit = NULL,
+                featureCounts.Unassigned_Overlapping_Length = NULL
+                )
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::left_join(
+    tmp, by=c('genomescan.sid'='genomescan.sid')
+  )
+
+
+rm(tmp)
 
 
 
