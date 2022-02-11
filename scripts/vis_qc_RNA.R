@@ -1,10 +1,10 @@
 #!/usr/bin/env R
 
-# visualise all RNA QC stats
-
+# libs & functions ----
 
 library(tidyverse)
 library(patchwork)
+library(factoextra)
 
 
 source('scripts/R/youri_gg_theme.R')
@@ -101,7 +101,7 @@ p1 / p2 / p3 / p4 / p5 / p6
 
 
 
-## fastq : sequencing run ----
+## 2. fastq : sequencing run ----
 
 
 
@@ -220,32 +220,22 @@ p1 / p2 / p3 / p4 / p5 / p7/ p8
 
 
 
-## fastp changes / sequencing run ----
+## 3. per res pca ----
 
 
 
 
-library(factoextra)
-
-
-plt <- qc.stats %>% 
-  dplyr::left_join(idxstats.stats %>%
-                     dplyr::select(genomescan.sid, freq.alternate.loci),
-                   by=c('genomescan.sid'='genomescan.sid') ) %>% 
+plt <- metadata.glass.per.resection %>% 
   dplyr::select(
-    c("fastp.json","fastp.low.complexity.reads",
+    c("genomescan.sid","fastp.low.complexity.reads",
       "fastp.duplication.rate",
       "fastp.percentage.a",
       "fastp.gc.rmse","fastp.ratio.reads.not.passed.filtering",
       'fastp.insert_size.0.ratio',
-      "avg.read.trim",
-      "freq.alternate.loci")
+      "fastp.avg.read.trim",
+      "idxstats.freq.alternate.loci")
   ) %>% 
-  dplyr::mutate(fastp.json = gsub("data/glass/RNAseq/fastq-clean/","",fastp.json)) %>% 
-  dplyr::mutate(fastp.json = gsub("_fastp_log.json","",fastp.json)) %>%
-  dplyr::mutate(fastp.json = gsub("[ACTG\\-]{8,}","",fastp.json)) %>% 
-  dplyr::mutate(fastp.json = gsub("[_]+","-",fastp.json)) %>% 
-  tibble::column_to_rownames('fastp.json')
+  tibble::column_to_rownames('genomescan.sid')
 
 res.pca <- prcomp(plt, scale = TRUE)
 

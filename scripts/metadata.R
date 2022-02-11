@@ -200,9 +200,9 @@ tmp <- data.frame(idxstats = Sys.glob("output/tables/qc/idxstats/*.txt")) %>%
   dplyr::mutate_if(colnames(.) %in% c('idxstats', 'genomescan.sid') == F , as.numeric) %>% 
   dplyr::mutate(idxstats = NULL, `X.` = NULL)  %>% 
   tibble::column_to_rownames('genomescan.sid') %>% 
-  dplyr::mutate(idxstats.total = rowSums(.))  %>% 
-  dplyr::mutate(idxstats.alternate.loci = rowSums(select(., contains("_")))) %>% 
-  dplyr::mutate(idxstats.freq.alternate.loci = idxstats.alternate.loci / idxstats.total ) %>% 
+  dplyr::mutate(total = rowSums(.))  %>% 
+  dplyr::mutate(alternate.loci = rowSums(select(., contains("_")))) %>% 
+  dplyr::mutate(freq.alternate.loci = alternate.loci / total ) %>% 
   dplyr::select(!contains("_")) %>% 
   dplyr::select(-c('chrM', 'chrEBV'))  %>% 
   `colnames<-`(paste0("idxstats.",colnames(.))) %>% 
