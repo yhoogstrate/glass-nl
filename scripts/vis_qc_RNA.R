@@ -233,7 +233,8 @@ plt <- metadata.glass.per.resection %>%
       "fastp.gc.rmse","fastp.ratio.reads.not.passed.filtering",
       'fastp.insert_size.0.ratio',
       "fastp.avg.read.trim",
-      "idxstats.freq.alternate.loci")
+      "idxstats.freq.alternate.loci",
+      'star.pct.uniquely.mapped.reads')
   ) %>% 
   tibble::column_to_rownames('genomescan.sid')
 
@@ -241,46 +242,44 @@ res.pca <- prcomp(plt, scale = TRUE)
 
 fviz_pca_biplot(res.pca, repel = TRUE,
                 col.var = "#2E9FDF", # Variables color
-                col.ind = "#696969"  # Individuals color
-                #,label="var"
+                col.ind = ifelse(metadata.glass.per.resection$featureCounts.Assigned >= 750000, "red","green")
+                #col.ind = "#696969"  # Individuals color
+                #,label="var" 
 )
 
 
-## idxstats / patient sample - rainbow ----
 
-plt <- idxstats.stats %>% 
-  dplyr::mutate(idxstats = NULL) %>% 
-  dplyr::mutate(`Alternate loci` = rowSums(select(., contains("_")))) %>% 
-  dplyr::select(!contains("_")) %>% 
+
+## per resection idxstats-rainbow ----
+
+
+plt <- metadata.glass.per.resection %>% 
+  dplyr::select('genomescan.sid',contains('idxstats')) %>% 
+  dplyr::mutate(idxstats.freq.alternate.loci = NULL, idxstats.total = NULL) %>% 
   tidyr::pivot_longer(cols = -c(genomescan.sid)) %>% 
-  dplyr::filter(name %in% c("chrM","chrEBV","X.") == F) %>% 
-  #dplyr::mutate(name = ifelse(grepl("_",name),"Alternate loci",name)) %>% 
+  dplyr::mutate(name = gsub("idxstats.","",name)) %>% 
+  dplyr::mutate(name = gsub("alternate.loci","alternate loci",name)) %>% 
   dplyr::group_by(genomescan.sid) %>% 
   dplyr::mutate(n = sum(value)) %>% 
   dplyr::ungroup() %>% 
   dplyr::mutate(freq = value / n * 100) 
 
 
+order <- plt %>% 
+  dplyr::select(c('genomescan.sid','name','freq')) %>% 
+  dplyr::filter(name %in% c("chr21","alternate loci")) %>% 
+  tidyr::pivot_wider(names_from = name, values_from = freq) %>% 
+  dplyr::mutate(product = chr21 * `alternate loci`) %>% 
+  dplyr::mutate(order = rank(-product)) %>% 
+  dplyr::select(genomescan.sid, order)
 
 
-plt <- plt %>%
-  dplyr::left_join(plt %>% 
-                     dplyr::filter(name == "Alternate loci") %>%
-                     dplyr::group_by(genomescan.sid) %>% 
-                     dplyr::summarise(freq = max(freq)) %>% 
-                     dplyr::ungroup() %>% 
-                     dplyr::mutate(order = rank(freq, genomescan.sid) ) %>% 
-                     dplyr::arrange(order) %>% 
-                     dplyr::select(genomescan.sid, order)
-                   ,
-                   by = c('genomescan.sid'='genomescan.sid')
-  )
-
-
+plt <- plt %>% 
+  dplyr::left_join(order, by=c('genomescan.sid'='genomescan.sid'))
 
 
 ggplot(plt, aes(x = reorder(genomescan.sid,order) ,y = freq, fill=name, label=genomescan.sid)) +
-  #coord_flip() + 
+  coord_flip() + 
   geom_bar(stat = "identity", position = "stack",colour="black") + 
   scale_y_continuous(labels = scales::unit_format(unit = "%")) + 
   theme_bw() + 
