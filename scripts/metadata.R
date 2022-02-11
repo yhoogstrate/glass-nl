@@ -76,13 +76,14 @@ metadata.glass.per.fastq <- data.frame(fastp.json = Sys.glob("data/glass/RNAseq/
   dplyr::mutate(fastp.low.complexity.reads = as.numeric(fastp.low.complexity.reads)) %>% 
   dplyr::mutate(fastp.read1_mean_length = as.numeric(fastp.read1_mean_length)) %>% 
   dplyr::mutate(fastp.read2_mean_length = as.numeric(fastp.read2_mean_length)) %>% 
-  dplyr::mutate(avg.read.trim = 150 - (fastp.read1_mean_length + fastp.read2_mean_length)/ 2) %>% 
+  dplyr::mutate(fastp.avg.read.trim = 150 - (fastp.read1_mean_length + fastp.read2_mean_length)/ 2) %>% 
   dplyr::mutate(flow.cell = as.factor(gsub("^.+/([^_]+)_.+$","\\1",fastp.json))) %>% 
   dplyr::mutate(lane = gsub("^.+_(L[0-9]+)_.+$","\\1",fastp.json )) %>% 
   dplyr::mutate(lane.flow.cell = as.factor( paste0(flow.cell , "_", lane )))
 
 
 rm(parse_fastp_json_files)
+
 
 
 # per resection ----
@@ -103,7 +104,7 @@ tmp <- metadata.glass.per.fastq %>%
   dplyr::mutate(fastp.json = NULL, order=NULL) %>% 
   dplyr::group_by(genomescan.sid) %>% 
   dplyr::summarise(
-    avg.read.trim = weighted.mean(avg.read.trim, fastp.total_reads),
+    fastp.avg.read.trim = weighted.mean(fastp.avg.read.trim, fastp.total_reads),
     fastp.avg.duplicates.per.read = weighted.mean(fastp.avg.duplicates.per.read, fastp.total_reads),
     fastp.duplication.rate = weighted.mean(fastp.duplication.rate, fastp.total_reads),
     fastp.gc.rmse = weighted.mean(fastp.gc.rmse, fastp.total_reads),
@@ -133,6 +134,45 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 rm(tmp)
 
 
+## star log stats ----
+
+parse_star_log_final_out <- function(star_log_final_out) {
+  # 'data/glass/RNAseq/alignments/alignments-new/104059-001-012/Log.final.out'
+  tmp <- read.delim(star_log_final_out,header=F)
+  
+  out <- list(
+    'star.input.reads' = tmp %>% dplyr::filter(grepl('Number of input reads',V1)) %>% dplyr::pull(V2) %>% as.numeric,
+    'star.n.uniquely.mapped.reads' = tmp %>% dplyr::filter(grepl('Uniquely mapped reads number',V1)) %>%  dplyr::pull(V2) %>% as.numeric,
+    'star.pct.uniquely.mapped.reads' = tmp %>% dplyr::filter(grepl('Uniquely mapped reads %',V1)) %>% dplyr::mutate(V2= gsub('%','',V2)) %>% dplyr::pull(V2) %>%  as.numeric
+  )
+  return(out)
+}
+
+
+
+
+tmp <- data.frame(star.log.final.out = Sys.glob("data/glass/RNAseq/alignments/alignments-new/*/Log.final.out")) %>% 
+  dplyr::mutate(genomescan.sid =  gsub("^.+new/([^/]+)/Log.+$","\\1", star.log.final.out)) %>%
+  dplyr::arrange(genomescan.sid) %>% 
+  dplyr::mutate(stats = lapply(star.log.final.out, parse_star_log_final_out)) %>% 
+  mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
+  tidyr::unnest(tmp) %>%
+  dplyr::mutate(stats = NULL) %>%
+  as.data.frame %>% 
+  dplyr::mutate_if(colnames(.) %in% c('star.log.final.out', 'genomescan.sid') == F , as.numeric) %>% 
+  dplyr::mutate(star.log.final.out = NULL)
+
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::left_join(
+    tmp, by=c('genomescan.sid'='genomescan.sid')
+  )
+
+
+rm(tmp, parse_star_log_final_out)
+
+
 
 ## idxstats stats  ----
 
@@ -160,8 +200,9 @@ tmp <- data.frame(idxstats = Sys.glob("output/tables/qc/idxstats/*.txt")) %>%
   dplyr::mutate_if(colnames(.) %in% c('idxstats', 'genomescan.sid') == F , as.numeric) %>% 
   dplyr::mutate(idxstats = NULL, `X.` = NULL)  %>% 
   tibble::column_to_rownames('genomescan.sid') %>% 
-  dplyr::mutate(`total` = rowSums(.))  %>% 
-  dplyr::mutate(`Alternate loci` = rowSums(select(., contains("_")))) %>% 
+  dplyr::mutate(idxstats.total = rowSums(.))  %>% 
+  dplyr::mutate(idxstats.alternate.loci = rowSums(select(., contains("_")))) %>% 
+  dplyr::mutate(idxstats.freq.alternate.loci = idxstats.alternate.loci / idxstats.total ) %>% 
   dplyr::select(!contains("_")) %>% 
   dplyr::select(-c('chrM', 'chrEBV'))  %>% 
   `colnames<-`(paste0("idxstats.",colnames(.))) %>% 
@@ -196,7 +237,8 @@ tmp <- read.delim("data/glass/RNAseq/alignments/alignments-new/GLASS.LGG.EMC.RNA
                 featureCounts.Unassigned_Secondary = NULL,
                 featureCounts.Unassigned_NonSplit = NULL,
                 featureCounts.Unassigned_Overlapping_Length = NULL
-                )
+                ) %>% 
+  dplyr::mutate(featureCounts.M.Assigned = featureCounts.Assigned / 1000000)
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
