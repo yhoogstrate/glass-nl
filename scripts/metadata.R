@@ -79,7 +79,7 @@ metadata.glass.per.fastq <- data.frame(fastp.json = Sys.glob("data/glass/RNAseq/
   dplyr::mutate(fastp.avg.read.trim = 150 - (fastp.read1_mean_length + fastp.read2_mean_length)/ 2) %>% 
   dplyr::mutate(flow.cell = as.factor(gsub("^.+/([^_]+)_.+$","\\1",fastp.json))) %>% 
   dplyr::mutate(lane = gsub("^.+_(L[0-9]+)_.+$","\\1",fastp.json )) %>% 
-  dplyr::mutate(lane.flow.cell = as.factor( paste0(flow.cell , "_", lane )))
+  dplyr::mutate(lane.flow.cell = as.factor( paste0(flow.cell , "_", lane ))) 
 
 
 rm(parse_fastp_json_files)
