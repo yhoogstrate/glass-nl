@@ -279,14 +279,14 @@ plt <- plt %>%
 
 
 ggplot(plt, aes(x = reorder(genomescan.sid,order) ,y = freq, fill=name, label=genomescan.sid)) +
-  coord_flip() + 
+  #coord_flip() + 
   geom_bar(stat = "identity", position = "stack",colour="black") + 
   scale_y_continuous(labels = scales::unit_format(unit = "%")) + 
   theme_bw() + 
   theme( axis.title.y = element_text(size = 11) ,
          axis.text.x = element_text(angle = 90, size = 5 ))
 
-
+ggsave("output/figures/qc/per_patients__idxstats-rainbox.png",width=15,height=6)
 
 
 
@@ -295,7 +295,11 @@ ggplot(plt, aes(x = reorder(genomescan.sid,order) ,y = freq, fill=name, label=ge
 
 
 plt <- metadata.glass.per.resection %>% 
-  dplyr::mutate(order = rank(-rank(featureCounts.M.Assigned))) 
+  dplyr::mutate(order = rank(-rank(featureCounts.M.Assigned))) %>% 
+  dplyr::mutate(assigned.reads.status = factor(
+    ifelse(featureCounts.Assigned > 750000,"PASS","INSUFFICIENT"),
+    levels=c("PASS","INSUFFICIENT")))
+
 
 plt <- rbind(plt, plt %>%
                dplyr::mutate(fastp.insert_size.0.ratio = 0,
@@ -310,9 +314,11 @@ plt <- rbind(plt, plt %>%
                              
                              idxstats.freq.alternate.loci = 0)) %>% 
   dplyr::select(genomescan.sid,order,assigned.reads.status,
-                fastp.insert_size.0.ratio, featureCounts.M.Assigned, avg.read.trim, fastp.gc.rmse, fastp.percentage.c, fastp.low.complexity.reads, fastp.duplication.rate, fastp.ratio.reads.not.passed.filtering, freq.alternate.loci) %>% 
+                fastp.insert_size.0.ratio, featureCounts.M.Assigned,
+                fastp.avg.read.trim, fastp.gc.rmse, fastp.percentage.c, fastp.low.complexity.reads,
+                fastp.duplication.rate, fastp.ratio.reads.not.passed.filtering, idxstats.freq.alternate.loci) %>% 
   pivot_longer(cols = -c(genomescan.sid,order,assigned.reads.status)) %>% 
-  dplyr::mutate(name = gsub( "avg.read.trim" ,'Avg trim',name)) %>% 
+  dplyr::mutate(name = gsub( "fastp.avg.read.trim" ,'Avg trim',name)) %>% 
   dplyr::mutate(name = gsub( "fastp.duplication.rate" ,'Dupl rate',name)) %>% 
   dplyr::mutate(name = gsub( "fastp.gc.rmse" ,'ACTG RMSE',name)) %>% 
   dplyr::mutate(name = gsub( "fastp.insert_size.0.ratio" ,'Inst size != 0',name)) %>% 
@@ -320,8 +326,8 @@ plt <- rbind(plt, plt %>%
   dplyr::mutate(name = gsub( "fastp.percentage.c" ,'%C',name)) %>% 
   dplyr::mutate(name = gsub( "fastp.ratio.reads.not.passed.filtering" ,'Not pass filter',name)) %>% 
   dplyr::mutate(name = gsub( "featureCounts.M.Assigned" ,'M Assigned',name)) %>% 
-  dplyr::mutate(name = gsub( "freq.alternate.loci" ,'rRNA / Alternate loci/',name)) %>% 
-  dplyr::mutate(name = factor(name, levels=c("M Assigned", "Avg trim", "ACTG RMSE", "%C", "Low cplxty", "Dupl rate","Inst size != 0",  "Not pass filter", "rRNA / Alternate loci/")))
+  dplyr::mutate(name = gsub( "idxstats.freq.alternate.loci" ,'rRNA; Alternate loci',name)) %>% 
+  dplyr::mutate(name = factor(name, levels=c("M Assigned", "Avg trim", "ACTG RMSE", "%C", "Low cplxty", "Dupl rate","Inst size != 0",  "Not pass filter", "rRNA; Alternate loci")))
 
 
 
@@ -330,6 +336,9 @@ ggplot(plt, aes(x = reorder(genomescan.sid, order),y=value, group=genomescan.sid
   labs(x=NULL) +
   theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) + 
   facet_grid(cols = vars(assigned.reads.status), row=vars(name), scale="free", space= "free_x")
+
+
+ggsave("output/figures/qc/per_patients__all-stats-overview.png",width=15,height=8)
 
 
 
