@@ -1,83 +1,84 @@
 #!/usr/bin/env R 
 
+#BiocManager::install("minfi")
+#BiocManager::install("IlluminaHumanMethylationEPICmanifest")
+#BiocManager::install("IlluminaHumanMethylation450kmanifest")
+#devtools::install_github('mwsill/RFpurify')
+
+
+library(IlluminaHumanMethylationEPICmanifest)
+library(IlluminaHumanMethylation450kmanifest)
+library(tidyverse)
 library(minfi)
 library(RFpurify)
-
-# example 
-targets <- read.metharray.sheet('data/glass/Methylation' ,pattern ='t3.csv',recursive=F)
-#targets <- read.metharray.sheet('.' ,pattern ='t3.csv',recursive=F, verbose=T)
-
-# 
-targets_old <- read.csv('Datasheet3.csv')
-#targets_new <- Sys.glob('data/glass/Methylation/*/idats/*/*Grn.idat')
-#targets_new <- Sys.glob('data/glass/Methylation/*/idats/*/*/*Grn.idat')
+data('IlluminaHumanMethylationEPICmanifest')
+data('RFpurify_ABSOLUTE')
+data('RFpurify_ESTIMATE')
 
 
-create_targets <- function (fn) {
-  #fn <- "data/glass/Methylation/MET2019-156-014_plate2/idats/203430580025/203430580025_R01C01_Grn.idat"
-  bbasename <- gsub("^(.+)_(Grn|Red).idat$","\\1",fn)
-  sslide <- gsub("^.+idats/([^/]+)/.+$","\\1",fn)
-  aarray <- gsub("^.+/[^_]+_([^_]+).+$","\\1",fn)
-  
-  tmp <- targets %>%
-    dplyr::filter(Slide == sslide & Array == aarray) %>% 
-    dplyr::mutate(Basename = bbasename)
+# obtain idat files ----
 
-  return(tmp)
-}
+# glass/Methylation/20190516_Methylation\ 1\ \(HereisyOUr79Data\)/MET2019-156-014_plate1/MET2019-156-014_plate1/idats/*.idat
+# glass/Methylation/20200602_Methylation2_(pTg2@8zRT)/MET2019-186-014/idats/*.idat
 
-# 
-# 
-# RGset <- read.metharray.exp(targets = targets)
-# 
-# 
-# absolute <- predict_purity(RGset,method="ABSOLUTE")
-# estimate <- predict_purity(RGset,method="ESTIMATE")
-# 
-# 
-# 
-# t <- create_targets('data/glass/Methylation/MET2019-186-014_plate4 redo_kolom 1245/idats/204088040075/204088040075_R06C01_Grn.idat')
-# RGset <- read.metharray.exp(targets = t)
-# MsetEx <- preprocessRaw(RGset)
-# 
-# absolute <- predict_purity(MsetEx,method="ABSOLUTE")
-# estimate <- predict_purity(MsetEx,method="ESTIMATE")
-
-# 'data/glass/Methylation/MET2019-186-014_plate4 redo_kolom 1245/idats/204088040075/204088040075_R06C01_Grn.idat'
+# glass/Methylation/MET2019-156-014_plate2/idats/*.idat
+# glass/Methylation/MET2019-186-014plate3/MET2019-186-014plate3/idats/*/*.idat
+# glass/Methylation/MET2019-186-014_plate4\ redo_kolom\ 1245/idats/*/*.idat
+# glass/Methylation/MET2019-186-014_plate4 redo_kolom 3/MET2019-186-014redoplate3kolom3/idats/204086170028/*.idat
+# glass/Methylation/MET2019-186-014_plate7/*.idat
 
 
-lin <- read.delim('asd.txt',header=F) %>% 
-  dplyr::mutate(V1=gsub("^./","data/glass/Methylation/",V1)) %>% 
-  dplyr::pull(V1)
+c1 <- Sys.glob("data/glass/Methylation/Methylation Array Data/20190516_Methylation 1 (HereisyOUr79Data)/*/*/idats/*/*.idat")
+c2 <- Sys.glob("data/glass/Methylation/Methylation Array Data/20200602_Methylation2_(pTg2@8zRT)/MET2019-186-014/idats/*/*.idat")
+c3 <- Sys.glob("data/glass/Methylation/Methylation Array Data/MET2019-156-014_plate2/idats/*/*.idat")
+c4 <- Sys.glob("data/glass/Methylation/Methylation Array Data/MET2019-186-014plate3/*/idats/*/*.idat")
+c5 <- Sys.glob("data/glass/Methylation/Methylation Array Data/MET2019-186-014_plate4\ redo_kolom\ 1245/idats/*/*.idat")
+c6 <- Sys.glob("data/glass/Methylation/Methylation Array Data/MET2019-186-014_plate4 redo_kolom 3/MET2019-186-014redoplate3kolom3/idats/204086170028/*.idat")
+c7 <- Sys.glob("data/glass/Methylation/Methylation Array Data/MET2019-186-014_plate7/*.idat")
 
+targets <- unique(c(c1,c2,c3,c4,c5,c6,c7))
+targets <- targets[grepl("Grn",targets)]
+
+rm(c1,c2,c3,c4,c5,c6,c7)
+
+
+stopifnot(length(targets) == 329)
+
+
+targets.df <- data.frame(fn = targets) %>% 
+  dplyr::mutate(Basename = gsub("^(.+)_(Grn|Red).idat$","\\1",fn)) %>% 
+  dplyr::mutate(Slide = gsub("^.+idats/([^/]+)/.+$","\\1",fn)) %>% 
+  dplyr::mutate(Array = gsub("^.+/[^_]+_([^_]+).+$","\\1",fn))
+
+
+
+
+# apply x calc purity from Array ----
 
 out <- data.frame()
-for(a in lin){
-  t <- create_targets(a)
-  print(nrow(t))
-  if(nrow(t) >= 1){
-    RGset <- read.metharray.exp(targets = t)
-    MsetEx <- preprocessRaw(RGset)
-    
-    absolute <- predict_purity(MsetEx,method="ABSOLUTE")
-    estimate <- predict_purity(MsetEx,method="ESTIMATE")
-    
-    out <- rbind(out,
-                 t %>%  dplyr::mutate(absolute=absolute,estimate=estimate)
-                 )
-  }
+for(i in 1:nrow(targets.df)) {
+#i <- 323
+  print(i)
+  
+  slice <- targets.df[i,]
+  
+  RGset <- read.metharray.exp(targets = slice %>% head(n=1))
+  MsetEx <- preprocessRaw(RGset)
+  
+  abs <- predict_purity(MsetEx,method="ABSOLUTE")
+  #print(abs)
+  
+  est <- predict_purity(MsetEx,method="ESTIMATE")
+  #print(est)
+  
+  
+  out <- rbind(out, slice %>% dplyr::mutate(absolute=abs,estimate=est))
 }
 
-file <- out %>% 
-  dplyr::filter(!duplicated(Basename)) %>% 
-  dplyr::arrange(Sample_Name) %>% 
-  dplyr::mutate(X=NULL)
+
 
 
 write.table(file, file = "output/tables/methylation-array/purities_RFpurity.txt")
 
-
-
-plot(file)
 
 
