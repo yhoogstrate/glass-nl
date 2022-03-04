@@ -283,6 +283,13 @@ stopifnot(is.na(metadata.glass.per.resection$featureCounts.Assigned) == F)
 rm(tmp)
 
 
+metadata.glass.per.resection <- metadata.glass.per.resection%>% 
+  dplyr::mutate(assigned.reads.status = factor(
+    ifelse(featureCounts.Assigned > 750000,"PASS","INSUFFICIENT"),
+    levels=c("PASS","INSUFFICIENT")))
+
+
+
 
 # per patient ----s
 

@@ -14,7 +14,7 @@ source('scripts/R/job_gg_theme.R')
 # data ----
 
 
-source('scripts/metadata.R')
+source('scripts/load_metadata.R')
 
 
 # plots ----
@@ -295,10 +295,7 @@ ggsave("output/figures/qc/per_patients__idxstats-rainbox.png",width=15,height=6)
 
 
 plt <- metadata.glass.per.resection %>% 
-  dplyr::mutate(order = rank(-rank(featureCounts.M.Assigned))) %>% 
-  dplyr::mutate(assigned.reads.status = factor(
-    ifelse(featureCounts.Assigned > 750000,"PASS","INSUFFICIENT"),
-    levels=c("PASS","INSUFFICIENT")))
+  dplyr::mutate(order = rank(-rank(featureCounts.M.Assigned))) 
 
 
 plt <- rbind(plt, plt %>%
@@ -377,11 +374,26 @@ plt <- qc.stats.collapsed %>%
   dplyr::mutate(resection = factor(resection, levels = c('R1','R2','R3','R4','MW1','MW2','MW7') )) %>% 
   dplyr::filter(group == "Glioma")
 
-ggplot(plt, aes(x=pid, y=resection, fill=col)) +
-  geom_tile() +
-  scale_fill_manual(values=c('TOO LOW'='red','PASSED'='darkgreen')) +
-  youri_gg_theme
+plt <- metadata.glass.per.resection
 
+p1 <- ggplot(plt, aes(x=GLASS_ID, y=resection, fill=assigned.reads.status)) +
+  geom_tile() +
+  scale_fill_manual(values=c('INSUFFICIENT'='red','PASS'='darkgreen')) +
+  youri_gg_theme +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6))
+
+
+plt <- metadata.glass.per.resection %>% 
+  dplyr::filter(!duplicated(GLASS_ID))
+
+p2 <- ggplot(plt, aes(x=GLASS_ID, y=1, fill=institute)) +
+  geom_tile(col="black") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) +
+  scale_color_brewer(palette="Accent") +
+  coord_equal()
+
+
+p1 / p2
 
 
 
