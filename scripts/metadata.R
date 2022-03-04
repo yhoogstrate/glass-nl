@@ -89,12 +89,29 @@ rm(parse_fastp_json_files)
 # per resection ----
 
 
-metadata.glass.per.resection <- read.csv('output/tables/metadata/Samplesheet_GLASS.txt',header=T) %>% 
-  dplyr::filter(group == "Glioma") %>% 
-  dplyr::mutate(group=NULL) %>% 
+# metadata.glass.per.resection <- read.csv('output/tables/metadata/Samplesheet_GLASS.txt',header=T) %>% 
+#   dplyr::filter(group == "Glioma") %>% 
+#   dplyr::mutate(group=NULL) %>% 
+#   dplyr::rename(genomescan.sid = GS_ID) %>% 
+#   dplyr::mutate(pid = as.factor(gsub("^([0-9]+)_.+$","g-nl.\\1",GLASS_ID))) %>% 
+#   dplyr::mutate(resection = gsub("^.+_(.+)$","\\1",GLASS_ID))
+
+#a = unique(metadata.glass.per.resection$genomescan.sid)
+# a = sort(unique(gsub("^.+/","",Sys.glob("data/glass/RNAseq/alignments/alignments-new/10405*"))))
+# b = unique(tmp$GS_ID)
+# length(a)
+# length(b)
+
+# a[a %in% b == F]
+# b[b %in% a == F]
+
+
+metadata.glass.per.resection <- read.csv('data/glass/RNAseq/Metadata/Samplesheet_GLASS_RNAseq.csv') %>% 
+  dplyr::mutate(institute = gsub("^.+_(.+)_.+$","\\1",GLASS_ID)) %>% 
   dplyr::rename(genomescan.sid = GS_ID) %>% 
-  dplyr::mutate(pid = as.factor(gsub("^([0-9]+)_.+$","g-nl.\\1",GLASS_ID))) %>% 
-  dplyr::mutate(resection = gsub("^.+_(.+)$","\\1",GLASS_ID))
+  dplyr::mutate(rid = paste0(gsub("^(.+_)[^_]+$","\\1",GLASS_ID),Sample_Name))
+
+
 
 
 
@@ -131,6 +148,8 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   )
 
 
+stopifnot(is.na(metadata.glass.per.resection$fastp.total_reads) == F) # ENSURE ALL SAMPLE HAVE THIS METADATA
+
 rm(tmp)
 
 
@@ -145,6 +164,7 @@ parse_star_log_final_out <- function(star_log_final_out) {
     'star.n.uniquely.mapped.reads' = tmp %>% dplyr::filter(grepl('Uniquely mapped reads number',V1)) %>%  dplyr::pull(V2) %>% as.numeric,
     'star.pct.uniquely.mapped.reads' = tmp %>% dplyr::filter(grepl('Uniquely mapped reads %',V1)) %>% dplyr::mutate(V2= gsub('%','',V2)) %>% dplyr::pull(V2) %>%  as.numeric
   )
+
   return(out)
 }
 
@@ -168,6 +188,9 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(
     tmp, by=c('genomescan.sid'='genomescan.sid')
   )
+
+
+stopifnot(is.na(metadata.glass.per.resection$star.input.reads) == F)
 
 
 rm(tmp, parse_star_log_final_out)
@@ -208,10 +231,16 @@ tmp <- data.frame(idxstats = Sys.glob("output/tables/qc/idxstats/*.txt")) %>%
   `colnames<-`(paste0("idxstats.",colnames(.))) %>% 
   tibble::rownames_to_column('genomescan.sid')
 
+
+
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
   dplyr::left_join(
     tmp, by=c('genomescan.sid'='genomescan.sid')
   )
+
+
+
+stopifnot(is.na(metadata.glass.per.resection$idxstats.alternate.loci) == F)
 
 
 rm(tmp, parse_idxstats)
@@ -245,6 +274,10 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(
     tmp, by=c('genomescan.sid'='genomescan.sid')
   )
+
+
+
+stopifnot(is.na(metadata.glass.per.resection$featureCounts.Assigned) == F)
 
 
 rm(tmp)
