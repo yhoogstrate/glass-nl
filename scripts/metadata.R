@@ -106,7 +106,7 @@ rm(parse_fastp_json_files)
 # b[b %in% a == F]
 
 
-metadata.glass.per.resection <- read.csv('data/glass/RNAseq/Metadata/Samplesheet_GLASS_RNAseq.csv') %>% 
+metadata.glass.per.resection <- read.csv('data/glass/RNAseq/Metadata/Samplesheet_GLASS_RNAseq__ALL.csv') %>% 
   dplyr::mutate(institute = gsub("^.+_(.+)_.+$","\\1",GLASS_ID)) %>% 
   dplyr::rename(genomescan.sid = GS_ID) %>% 
   dplyr::mutate(rid = paste0(gsub("^(.+_)[^_]+$","\\1",GLASS_ID),Sample_Name))
@@ -284,7 +284,6 @@ rm(tmp)
 
 
 
-
 # per patient ----s
 
 # metadata.glass.per.patient <- 
@@ -299,5 +298,5 @@ rm(tmp)
 # 
 
 
-  
-# reshape?!
+
+

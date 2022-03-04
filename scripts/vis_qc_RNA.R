@@ -331,14 +331,38 @@ plt <- rbind(plt, plt %>%
 
 
 
-ggplot(plt, aes(x = reorder(genomescan.sid, order),y=value, group=genomescan.sid)) +
+p1 <- ggplot(plt, aes(x = reorder(genomescan.sid, order),y=value, group=genomescan.sid)) +
   geom_line() +
   labs(x=NULL) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) + 
+  #theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) + 
+  theme(axis.text.x = element_blank()) + 
   facet_grid(cols = vars(assigned.reads.status), row=vars(name), scale="free", space= "free_x")
 
 
-ggsave("output/figures/qc/per_patients__all-stats-overview.png",width=15,height=8)
+
+
+
+plt <- metadata.glass.per.resection %>% 
+  dplyr::mutate(order = rank(-rank(featureCounts.M.Assigned))) %>% 
+  dplyr::mutate(assigned.reads.status = factor(
+    ifelse(featureCounts.Assigned > 750000,"PASS","INSUFFICIENT"),
+    levels=c("PASS","INSUFFICIENT")))
+
+
+p2 <- ggplot(plt, aes(x = reorder(genomescan.sid, order),y=1, fill=institute)) +
+  geom_tile(col="black") +
+  facet_grid(cols = vars(assigned.reads.status),space= "free_x",scale="free") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) +
+  scale_color_brewer(palette="Accent")
+
+
+
+p1 / p2 +   plot_layout(heights = c(10,0.5))
+
+
+
+ggsave("output/figures/qc/per_patients__all-stats-overview.png",width=10,height=1.5)
+
 
 
 
