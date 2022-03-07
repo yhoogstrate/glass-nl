@@ -110,7 +110,7 @@ metadata.glass.per.resection <- read.csv('data/glass/RNAseq/Metadata/Samplesheet
   dplyr::mutate(institute = gsub("^.+_(.+)_.+$","\\1",GLASS_ID)) %>% 
   dplyr::rename(genomescan.sid = GS_ID) %>% 
   dplyr::mutate(rid = paste0(gsub("^(.+_)[^_]+$","\\1",GLASS_ID),Sample_Name)) %>% 
-  dplyr::mutate(Exclude.by.Wies.on.complete.pair = Exclude)
+  dplyr::rename(Exclude.by.Wies.on.complete.pair = Exclude)
 
 
 
@@ -288,6 +288,23 @@ metadata.glass.per.resection <- metadata.glass.per.resection%>%
   dplyr::mutate(assigned.reads.status = factor(
     ifelse(featureCounts.Assigned > 750000,"PASS","INSUFFICIENT"),
     levels=c("PASS","INSUFFICIENT")))
+
+
+
+
+
+
+## classify sample as incl/excl ----
+
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::mutate(excluded.reason = case_when(
+    assigned.reads.status == "INSUFFICIENT" ~ "featureCounts.Assigned",
+    T ~ '-' # keep all those that are not excluded
+  )) %>% 
+  dplyr::mutate(excluded = ifelse(excluded.reason == "-", FALSE, TRUE))
+
 
 
 
