@@ -83,6 +83,7 @@ stopifnot(rownames(expression.glass) == expression.glass.metadata$gene_uid)
 
 ## VST transform ----
 
+
 expression.glass.vst <- expression.glass %>% 
   DESeq2::DESeqDataSetFromMatrix( data.frame(cond = as.factor(paste0('c',round(runif(ncol(.)))+1) )), ~cond) %>% 
   DESeq2::vst(blind=F) %>% 

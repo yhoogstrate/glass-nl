@@ -293,6 +293,8 @@ ggsave("output/figures/qc/per_patients__idxstats-rainbox.png",width=15,height=6)
 ## all / patient sample ----
 
 
+library(patchwork)
+
 
 plt <- metadata.glass.per.resection %>% 
   dplyr::mutate(order = rank(-rank(featureCounts.M.Assigned))) 
@@ -340,10 +342,15 @@ p1 <- ggplot(plt, aes(x = reorder(genomescan.sid, order),y=value, group=genomesc
 
 
 plt <- metadata.glass.per.resection %>% 
-  dplyr::mutate(order = rank(-rank(featureCounts.M.Assigned))) %>% 
-  dplyr::mutate(assigned.reads.status = factor(
-    ifelse(featureCounts.Assigned > 750000,"PASS","INSUFFICIENT"),
-    levels=c("PASS","INSUFFICIENT")))
+  dplyr::mutate(order = rank(-rank(featureCounts.M.Assigned))) 
+#  dplyr::mutate(assigned.reads.status = factor(
+#    ifelse(featureCounts.Assigned > 750000,"PASS","INSUFFICIENT"),
+#    levels=c("PASS","INSUFFICIENT")))
+
+plt <- plt %>% 
+  dplyr::mutate(institute = genomescan.sid %in% c('104059-002-009','104059-002-010'))%>% 
+  dplyr::mutate(institute = genomescan.sid %in% c('104059-002-054','104059-003-035','104059-002-103','104059-002-176')) %>% 
+  dplyr::mutate(institute = genomescan.sid %in% c("104059-002-009", "104059-002-010", "104059-002-012", "104059-002-013", "104059-002-033", "104059-002-060", "104059-002-063", "104059-002-096", "104059-002-105", "104059-002-120"))
 
 
 p2 <- ggplot(plt, aes(x = reorder(genomescan.sid, order),y=1, fill=institute)) +
