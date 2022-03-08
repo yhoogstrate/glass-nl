@@ -94,7 +94,8 @@ metadata.glass.per.resection <- read.csv('data/glass/Clinical data/Cleaned/metad
   dplyr::mutate(institute = gsub("^.+_(.+)_.+$","\\1",GLASS_ID)) %>% 
   dplyr::rename(genomescan.sid = GS_ID) %>% 
   dplyr::mutate(rid = paste0(gsub("^(.+_)[^_]+$","\\1",GLASS_ID),Sample_Name)) %>% 
-  dplyr::rename(Exclude.by.Wies.on.complete.pair = Exclude)
+  dplyr::rename(Exclude.by.Wies.on.complete.pair = Exclude) %>% 
+  dplyr::mutate(Sample_Type = factor(Sample_Type, levels=c('I','R','X')))
 
 
 
@@ -301,7 +302,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 
 metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_GLASS RNAseq.csv') %>% 
   dplyr::mutate(data_of_birth = NULL) %>%
-  dplyr::mutate(Age_at_Diagnosis = NULL) %>%
+  # dplyr::mutate(Age_at_Diagnosis = NULL) %>%
   dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) %>%
   dplyr::mutate(Date_of_Death = as.Date(Date_of_Death , format = "%Y-%m-%d")) %>%
   dplyr::mutate(Date_Last_Followup = as.Date(Date_Last_Followup , format = "%Y-%m-%d")) %>%
