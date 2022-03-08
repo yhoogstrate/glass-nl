@@ -315,7 +315,8 @@ metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadat
   ) %>% 
   dplyr::mutate(overall.survival.event = ifelse(is.na(overall.survival),0,1),
                 overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival)) %>% 
-  dplyr::mutate(Sample_Name.I = NA, Sample_Name.R = NA)
+  dplyr::mutate(Sample_Name.I = NA, Sample_Name.R = NA, genomescan.sid.I = NA, genomescan.sid.R = NA)
+
 
 
 # missing metadata for those 3 patients lacking a matching pair
@@ -333,7 +334,8 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
   
   if(nrow(r.I) > 0) {
     metadata.glass.per.patient <- metadata.glass.per.patient %>% 
-      dplyr::mutate(Sample_Name.I = ifelse(GLASS_ID == pid, r.I$Sample_Name, Sample_Name.I) )
+      dplyr::mutate(Sample_Name.I = ifelse(GLASS_ID == pid, r.I$Sample_Name, Sample_Name.I)) %>% 
+      dplyr::mutate(genomescan.sid.I = ifelse(GLASS_ID == pid, r.I$genomescan.sid, genomescan.sid.I))
   }
   
   r.R <- metadata.glass.per.resection %>% 
@@ -343,7 +345,8 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
 
   if(nrow(r.R) > 0) {
     metadata.glass.per.patient <- metadata.glass.per.patient %>% 
-      dplyr::mutate(Sample_Name.R = ifelse(GLASS_ID == pid, r.R$Sample_Name, Sample_Name.R) )
+      dplyr::mutate(Sample_Name.R = ifelse(GLASS_ID == pid, r.R$Sample_Name, Sample_Name.R) ) %>% 
+      dplyr::mutate(genomescan.sid.R = ifelse(GLASS_ID == pid, r.R$genomescan.sid, genomescan.sid.R))
   }
 }
 
