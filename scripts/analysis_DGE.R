@@ -116,19 +116,18 @@ dds <- DESeqDataSetFromMatrix(countData = tmp.data,
 
 
 dds <- DESeq(dds)
-res <- results(dds) %>% 
+res.paired <- results(dds) %>% 
   as.data.frame() %>% 
   dplyr::filter(!is.na(padj)) %>% 
-  dplyr::arrange(pvalue,padj)
-res.paired <- res
-res.paired <- res.paired %>% 
+  dplyr::arrange(pvalue,padj) %>% 
   tibble::rownames_to_column('gene_uid') %>% 
-  dplyr::left_join(expression.glass.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
+  dplyr::left_join(expression.glass.metadata %>% 
+                     dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
 
 
 
 
-dim(res %>%  dplyr::filter(padj < 0.01))
+dim(res.paired %>%  dplyr::filter(padj < 0.01))
 
 
 View(res)
@@ -178,6 +177,33 @@ ggplot(p1, aes(x= stat.unpaired, y=stat.paired,label=gene_name)) +
   youri_gg_theme + 
   ggpubr::stat_cor() +
   ggrepel::geom_text_repel(data = subset(p1, dist > 5))
+
+
+
+
+## chromosome plot
+
+source('scripts/R/chrom_sizes.R')
+
+plt <- res.paired %>% 
+  dplyr::left_join(chrs_hg38_s, by=c('gene_chr'='chr')) %>% 
+  dplyr::mutate(x = gene_chr_center_loc + pos) %>% 
+  dplyr::mutate(gene_chr = factor(gene_chr, levels=gtools::mixedsort(unique(as.character(gene_chr))) ))
+
+
+ggplot(plt , aes(x=x,y=stat,col=gene_chr)) + 
+  geom_point(pch=19,cex=0.2) +
+  geom_smooth() +
+  youri_gg_theme
+
+ggplot(plt , aes(x=gene_chr_center_loc,y=stat,col=gene_chr)) + 
+  facet_grid(cols = vars(gene_chr), scales = "free", space="free") +
+  geom_point(pch=19,cex=0.2) +
+  geom_smooth() +
+  youri_gg_theme
+
+
+plt$gene_chr = factor(plt$gene_chr, levels = unique(plt$gene_chr))
 
 
 
