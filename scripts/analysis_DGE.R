@@ -48,11 +48,12 @@ dds <- DESeqDataSetFromMatrix(countData = tmp.data,
 dds <- DESeq(dds)
 res <- results(dds) %>% 
   as.data.frame(stringsAsFactors=F) %>% 
+  tibble::rownames_to_column('gene_uid') %>% 
   dplyr::filter(!is.na(padj)) %>% 
   dplyr::arrange(pvalue,padj) %>% 
-  dplyr::left_join()
+  dplyr::left_join(expression.glass.metadata %>% dplyr::select(gene_uid, gene_name, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
 
-expression.glass.metadata %>% dplyr::select(gene_uid, gene_name, gene_strand, gene_loc)
+
 
 head(res)
 
