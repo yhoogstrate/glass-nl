@@ -47,10 +47,12 @@ dds <- DESeqDataSetFromMatrix(countData = tmp.data,
 
 dds <- DESeq(dds)
 res <- results(dds) %>% 
-  as.data.frame() %>% 
+  as.data.frame(stringsAsFactors=F) %>% 
   dplyr::filter(!is.na(padj)) %>% 
-  dplyr::arrange(pvalue,padj)
+  dplyr::arrange(pvalue,padj) %>% 
+  dplyr::left_join()
 
+expression.glass.metadata %>% dplyr::select(gene_uid, gene_name, gene_strand, gene_loc)
 
 head(res)
 
@@ -86,8 +88,6 @@ ggplot(tmp.plt.data,aes(x=PC1,y=PC2,col=Sample_Type)) +
 
 # 2. paired ----
 
-
-# 1. unpaired ----
 
 
 

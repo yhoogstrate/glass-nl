@@ -34,7 +34,8 @@ expression.glass <- read.delim('data/glass/RNAseq/alignments/alignments-new/GLAS
 expression.glass.metadata <- expression.glass %>% 
   dplyr::select(gene_id, Chr, Start, End, Strand, Length) %>% 
   dplyr::left_join(expression.glass.gtf, by=c('gene_id' = 'gene_id')) %>% 
-  dplyr::mutate(loc = paste0("chr:", round((V4 + V5) /  2 / 1000000),"M"))
+  dplyr::mutate(gene_loc = paste0("chr:", round((V4 + V5) /  2 / 1000000),"M")) %>% 
+  dplyr::rename(gene_strand = V7)
 rm(expression.glass.gtf)
 
 
