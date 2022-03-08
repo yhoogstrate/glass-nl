@@ -95,7 +95,10 @@ metadata.glass.per.resection <- read.csv('data/glass/Clinical data/Cleaned/metad
   dplyr::rename(genomescan.sid = GS_ID) %>% 
   dplyr::mutate(rid = paste0(gsub("^(.+_)[^_]+$","\\1",GLASS_ID),Sample_Name)) %>% 
   dplyr::rename(Exclude.by.Wies.on.complete.pair = Exclude) %>% 
-  dplyr::mutate(Sample_Type = factor(Sample_Type, levels=c('I','R','X')))
+  dplyr::mutate(Sample_Type = case_when(Sample_Type == "I" ~ "initial",
+                                        Sample_Type == "R" ~ "recurrent",
+                                        T ~ "X")) %>% 
+  dplyr::mutate(Sample_Type = factor(Sample_Type, levels=c('initial','recurrent','X')))
 
 
 
@@ -329,7 +332,7 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
     dplyr::filter(GLASS_ID == pid)
   
   r.I <- metadata.glass.per.resection %>% 
-    dplyr::filter(GLASS_ID == pid & Sample_Type == "I" & excluded == F) %>% 
+    dplyr::filter(GLASS_ID == pid & Sample_Type == "initial" & excluded == F) %>% 
     dplyr::arrange(resection) %>% 
     dplyr::slice_head(n=1)
   
@@ -340,7 +343,7 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
   }
   
   r.R <- metadata.glass.per.resection %>% 
-    dplyr::filter(GLASS_ID == pid & Sample_Type == "R" & excluded == F) %>% 
+    dplyr::filter(GLASS_ID == pid & Sample_Type == "recurrent" & excluded == F) %>% 
     dplyr::arrange(resection) %>% 
     dplyr::slice_tail(n=1)
 
@@ -356,9 +359,11 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
 metadata.glass.per.patient <- metadata.glass.per.patient %>% 
   dplyr::mutate(pair.status = case_when(
     !is.na(Sample_Name.I) & !is.na(Sample_Name.R) ~ "complete",
-    is.na(Sample_Name.I) & is.na(Sample_Name.R) ~ "excluded",
-    T ~ "incomplete"
+    is.na(Sample_Name.I) & !is.na(Sample_Name.R) ~ "missing initial",
+    !is.na(Sample_Name.I) & is.na(Sample_Name.R) ~ "missing recurrent",
+    T ~ "excluded"
   )) %>% 
+  dplyr::mutate(pair.status = factor(pair.status, levels=c("complete","missing recurrent","missing initial" ,"excluded"))) %>% 
   dplyr::mutate(patient.correction.id = ifelse(pair.status == "complete", GLASS_ID, "remaining.individual.samples")) %>% 
   dplyr::mutate(excluded = ifelse(pair.status == "excluded",T,F))
 

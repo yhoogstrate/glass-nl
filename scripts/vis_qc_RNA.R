@@ -347,17 +347,18 @@ plt <- metadata.glass.per.resection %>%
 #    ifelse(featureCounts.Assigned > 750000,"PASS","INSUFFICIENT"),
 #    levels=c("PASS","INSUFFICIENT")))
 
-plt <- plt %>% 
-  dplyr::mutate(institute = genomescan.sid %in% c('104059-002-009','104059-002-010'))%>% 
-  dplyr::mutate(institute = genomescan.sid %in% c('104059-002-054','104059-003-035','104059-002-103','104059-002-176')) %>% 
-  dplyr::mutate(institute = genomescan.sid %in% c("104059-002-009", "104059-002-010", "104059-002-012", "104059-002-013", "104059-002-033", "104059-002-060", "104059-002-063", "104059-002-096", "104059-002-105", "104059-002-120"))
+# plt <- plt %>% 
+#   dplyr::mutate(institute = genomescan.sid %in% c('104059-002-009','104059-002-010'))%>% 
+#   dplyr::mutate(institute = genomescan.sid %in% c('104059-002-054','104059-003-035','104059-002-103','104059-002-176')) %>% 
+#   dplyr::mutate(institute = genomescan.sid %in% c("104059-002-009", "104059-002-010", "104059-002-012", "104059-002-013", "104059-002-033", "104059-002-060", "104059-002-063", "104059-002-096", "104059-002-105", "104059-002-120"))
 
 
 p2 <- ggplot(plt, aes(x = reorder(genomescan.sid, order),y=1, fill=institute)) +
   geom_tile(col="black") +
   facet_grid(cols = vars(assigned.reads.status),space= "free_x",scale="free") +
   theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) +
-  scale_color_brewer(palette="Accent")
+  scale_color_brewer(palette="Accent") +
+  labs(x=NULL)
 
 
 
@@ -365,7 +366,7 @@ p1 / p2 +   plot_layout(heights = c(10,0.5))
 
 
 
-ggsave("output/figures/qc/per_patients__all-stats-overview.png",width=10,height=1.5)
+ggsave("output/figures/qc/per_patients__all-stats-overview.png",width=15,height=8.5)
 
 
 
@@ -375,33 +376,38 @@ ggsave("output/figures/qc/per_patients__all-stats-overview.png",width=10,height=
 
 
 
-plt <- qc.stats.collapsed %>% 
-  dplyr::left_join(metadata.glass.per.resection, by = c('genomescan.sid'='GS_ID')) %>%
-  dplyr::mutate(col = assigned.reads.status) %>% 
-  dplyr::mutate(resection = factor(resection, levels = c('R1','R2','R3','R4','MW1','MW2','MW7') )) %>% 
-  dplyr::filter(group == "Glioma")
+plt <- metadata.glass.per.resection %>% 
+  dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, pair.status,Sample_Name.I,Sample_Name.R), by=c('GLASS_ID'='GLASS_ID')) 
 
-plt <- metadata.glass.per.resection
+
 
 p1 <- ggplot(plt, aes(x=GLASS_ID, y=resection, fill=assigned.reads.status)) +
   geom_tile() +
   scale_fill_manual(values=c('INSUFFICIENT'='red','PASS'='darkgreen')) +
   youri_gg_theme +
-  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6))
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) +
+  facet_grid(cols = vars(pair.status), scales = "free", space="free") 
 
 
 plt <- metadata.glass.per.resection %>% 
-  dplyr::filter(!duplicated(GLASS_ID))
+  dplyr::filter(!duplicated(GLASS_ID)) %>% 
+  dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, pair.status,Sample_Name.I,Sample_Name.R), by=c('GLASS_ID'='GLASS_ID'))
+
 
 p2 <- ggplot(plt, aes(x=GLASS_ID, y=1, fill=institute)) +
   geom_tile(col="black") +
   theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) +
   scale_color_brewer(palette="Accent") +
-  coord_equal()
+  # coord_equal() +
+  facet_grid(cols = vars(pair.status), scales = "free", space="free") 
 
 
-p1 / p2
+p1 / p2 + plot_layout(heights = c(6,0.25))
 
+
+
+ggsave("output/figures/qc/per_patients__sample_overview.png",width=15,height=8.5)
+ggsave("output/figures/qc/per_patients__sample_overview.pdf",width=15,height=8.5)
 
 
 
