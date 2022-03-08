@@ -51,7 +51,7 @@ res <- results(dds) %>%
   tibble::rownames_to_column('gene_uid') %>% 
   dplyr::filter(!is.na(padj)) %>% 
   dplyr::arrange(pvalue,padj) %>% 
-  dplyr::left_join(expression.glass.metadata %>% dplyr::select(gene_uid, gene_name, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
+  dplyr::left_join(expression.glass.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
 
 
 
@@ -72,7 +72,7 @@ tmp.plt.data <- expression.glass.vst %>%
     c(metadata.glass.per.patient$genomescan.sid.I, metadata.glass.per.patient$genomescan.sid.R) %>% 
       purrr::keep(~ !is.na(.))
   ) %>% 
-  dplyr::filter(rownames(.) %in% rownames(res %>%  dplyr::slice_head(n=250))) %>% 
+  dplyr::filter(rownames(.) %in% (res %>%  dplyr::slice_head(n=250) %>% dplyr::pull(gene_uid) )) %>% 
   t() %>% 
   prcomp() %>% 
   purrr::pluck('x') %>% 
@@ -82,8 +82,10 @@ tmp.plt.data <- expression.glass.vst %>%
 
 
 
-ggplot(tmp.plt.data,aes(x=PC1,y=PC2,col=Sample_Type)) +
-  geom_point()
+ggplot(tmp.plt.data,aes(x=PC1,y=PC2,col=Sample_Type, group=GLASS_ID, label=Sample_Name)) +
+  geom_point() +
+  youri_gg_theme +
+  ggrepel::geom_text_repel(size=3, col="gray80")
 
 
 
@@ -119,11 +121,63 @@ res <- results(dds) %>%
   dplyr::filter(!is.na(padj)) %>% 
   dplyr::arrange(pvalue,padj)
 res.paired <- res
+res.paired <- res.paired %>% 
+  tibble::rownames_to_column('gene_uid') %>% 
+  dplyr::left_join(expression.glass.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
+
+
 
 
 dim(res %>%  dplyr::filter(padj < 0.01))
 
 
 View(res)
+
+
+
+
+tmp.plt.data <- expression.glass.vst %>%
+  dplyr::select(
+    c(metadata.glass.per.patient$genomescan.sid.I, metadata.glass.per.patient$genomescan.sid.R) %>% 
+      purrr::keep(~ !is.na(.))
+  ) %>% 
+  dplyr::filter(rownames(.) %in% (res.paired %>%  dplyr::slice_head(n=250) %>% dplyr::pull(gene_uid) )) %>% 
+  t() %>% 
+  prcomp() %>% 
+  purrr::pluck('x') %>% 
+  as.data.frame(stringsAsFactor=F) %>% 
+  tibble::rownames_to_column('genomescan.sid') %>% 
+  dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid'))
+
+
+
+ggplot(tmp.plt.data,aes(x=PC1,y=PC2,col=Sample_Type, group=GLASS_ID, label=Sample_Name)) +
+  geom_line(col="gray90") + 
+  geom_point() +
+  youri_gg_theme
+  #ggrepel::geom_text_repel(size=3, col="gray80")
+
+
+
+
+p1 <- res %>%
+  dplyr::mutate(stat.unpaired = stat) %>%
+  dplyr::select(gene_uid, stat.unpaired,gene_name) %>% 
+  dplyr::left_join(
+    res.paired %>%
+      dplyr::mutate(stat.paired = stat) %>%
+      dplyr::select(gene_uid, stat.paired)
+    , by=c('gene_uid'='gene_uid')
+  ) %>% 
+  dplyr::filter(!is.na(stat.unpaired) & !is.na(stat.paired)) %>% 
+  dplyr::mutate(dist = abs(stat.unpaired - stat.paired))
+
+
+ggplot(p1, aes(x= stat.unpaired, y=stat.paired,label=gene_name)) +
+  geom_point() +
+  youri_gg_theme + 
+  ggpubr::stat_cor() +
+  ggrepel::geom_text_repel(data = subset(p1, dist > 5))
+
 
 
