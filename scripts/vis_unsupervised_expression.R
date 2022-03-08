@@ -31,7 +31,8 @@ stopifnot(plt$genomescan.sid == colnames(expression.glass.vst))
 plt.pca <- expression.glass.vst %>%
   dplyr::mutate(mad =  apply( as.matrix(.), 1, stats::mad) ) %>%  # use MAD instead of SD to find most variable genes
   dplyr::arrange(-mad) %>% # arrange in asc? order
-  dplyr::slice_head(n=1000) %>%  # pick top 1000
+  #dplyr::slice_head(n=1000) %>%  # pick top 1000
+  dplyr::filter(rownames(.) %in% a) %>% 
   dplyr::mutate(mad=NULL) %>% # remove the sd to obtain original vst matrix
   t() %>% # transpose, to PCA the genes rather than the patients
   prcomp %>% # PCA
@@ -44,32 +45,30 @@ plt.pca <- expression.glass.vst %>%
 
 
 
-ggplot(plt.pca, aes(x = PC3, y=PC4, col=Sample_Sex, group=GLASS_ID, label=Sample_Name)) +
-  geom_line() +
-  geom_point() +
-  youri_gg_theme +
-  ggrepel::geom_text_repel(size=3, col="gray80")
+# ggplot(plt.pca, aes(x = PC3, y=PC4, col=Sample_Sex, group=GLASS_ID, label=Sample_Name)) +
+#   geom_line() +
+#   geom_point() +
+#   youri_gg_theme +
+#   ggrepel::geom_text_repel(size=3, col="gray80")
+# 
+# 
+# 
+# ggplot(plt.pca, aes(x = PC1, y=PC2, col=low.q.suspects, group=GLASS_ID, label=Sample_Name)) +
+#   geom_point() +
+#   youri_gg_theme +
+#   ggrepel::geom_text_repel(size=3, col="gray80")
+# 
+# 
+# plt.pca %>% dplyr::filter(PC2 > 25) %>%  dplyr::pull(genomescan.sid)
+# 
+# 
 
-
-
-ggplot(plt.pca, aes(x = PC1, y=PC2, col=low.q.suspects, group=GLASS_ID, label=Sample_Name)) +
-  geom_point() +
-  youri_gg_theme +
-  ggrepel::geom_text_repel(size=3, col="gray80")
-
-
-plt.pca %>% dplyr::filter(PC2 > 25) %>%  dplyr::pull(genomescan.sid)
-
-
-
-
-
-
-ggplot(plt.pca, aes(x = PC1, y=PC2, col=low.q.suspects, group=GLASS_ID, label=Sample_Name)) +
-  geom_point() +
-  youri_gg_theme +
-  ggrepel::geom_text_repel(size=3, col="gray80")
-
+# 
+# ggplot(plt.pca, aes(x = PC1, y=PC2, col=low.q.suspects, group=GLASS_ID, label=Sample_Name)) +
+#   geom_point() +
+#   youri_gg_theme +
+#   ggrepel::geom_text_repel(size=3, col="gray80")
+# 
 
 
 ggplot(plt.pca, aes(x = PC1, y=PC2, col=resection, group=GLASS_ID, label=Sample_Name)) +
