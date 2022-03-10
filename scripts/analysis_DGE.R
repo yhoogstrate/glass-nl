@@ -6,7 +6,7 @@
 
 source('scripts/R/youri_gg_theme.R')
 library(DESeq2)
-
+library(EnhancedVolcano)
 
 
 # load data ----
@@ -66,6 +66,7 @@ res.unpaired.a %>%
   dim
 
 
+saveRDS(res.unpaired.a, "cache/res.unpaired.a.Rds")
 
 
 
@@ -117,7 +118,7 @@ res.paired.a %>%
   dim
 
 
-
+saveRDS(res.paired.a, "cache/res.paired.a.Rds")
 
 
 
@@ -164,6 +165,9 @@ res.paired.b %>%
   dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
   dplyr::filter(padj < 0.01) %>% 
   dim
+
+
+
 
 
 
@@ -245,6 +249,27 @@ ggplot(p1, aes(x= stat.unpaired, y=stat.paired,label=gene_name)) +
 
 
 
+p1 <- res.unpaired.a %>%
+  dplyr::mutate(stat.unpaired = stat) %>%
+  dplyr::select(gene_uid, stat.unpaired,gene_name) %>% 
+  dplyr::left_join(
+    res.paired.b %>%
+      dplyr::mutate(stat.paired = stat) %>%
+      dplyr::select(gene_uid, stat.paired)
+    , by=c('gene_uid'='gene_uid')
+  ) %>% 
+  dplyr::filter(!is.na(stat.unpaired) & !is.na(stat.paired)) %>% 
+  dplyr::mutate(dist = abs(stat.unpaired - stat.paired))
+
+
+ggplot(p1, aes(x= stat.unpaired, y=stat.paired,label=gene_name)) +
+  geom_point() +
+  youri_gg_theme + 
+  ggpubr::stat_cor() +
+  ggrepel::geom_text_repel(data = subset(p1, dist > 5))
+
+
+
 
 ## chromosome plot
 
@@ -270,9 +295,24 @@ ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=stat,col=gene_chr)) +
 
 plt$gene_chr = factor(plt$gene_chr, levels = unique(plt$gene_chr))
 
+## enhancedvolcano's ----
 
-EnhancedVolcano(res.paired,
-                lab = res$gene_name,
+EnhancedVolcano(res.unpaired.a,
+                lab = res.unpaired.a$gene_name,
+                x = 'log2FoldChange',
+                y = 'padj',
+                pCutoff = 0.01)
+
+
+EnhancedVolcano(res.paired.a,
+                lab = res.paired.a$gene_name,
+                x = 'log2FoldChange',
+                y = 'padj',
+                pCutoff = 0.01)
+
+
+EnhancedVolcano(res.paired.b,
+                lab = res.paired.b$gene_name,
                 x = 'log2FoldChange',
                 y = 'padj',
                 pCutoff = 0.01)
@@ -280,7 +320,7 @@ EnhancedVolcano(res.paired,
 
 
 
-# comparison methylering
+## comparison methylering ----
 
 plt1 <- expression.glass.vst %>% 
   dplyr::filter(grepl("HOXD11",rownames(.))) %>% 
