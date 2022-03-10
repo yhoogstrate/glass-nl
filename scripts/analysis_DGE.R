@@ -92,6 +92,23 @@ ggplot(tmp.plt.data,aes(x=PC1,y=PC2,col=Sample_Type, group=GLASS_ID, label=Sampl
 # 2a. paired [incomplete as separate group] ----
 
 
+#@todo clean-up by using structure as in comment below:
+# tmp.metadata <- metadata.glass.per.patient %>% 
+#   dplyr::select(genomescan.sid.I, genomescan.sid.R) %>% 
+#   tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>% 
+#   tidyr::drop_na(value) %>% 
+#   dplyr::mutate(name=NULL) %>% 
+#   dplyr::rename(genomescan.sid = value) %>% 
+#   dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+#   dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID'))
+# 
+# 
+# tmp.data <- expression.glass %>% 
+#   dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+# 
+# 
+# stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+
 
 
 tmp.data <- expression.glass %>% 
@@ -284,33 +301,31 @@ ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
 
 
 tmp.metadata <- metadata.glass.per.patient %>% 
-  dplyr::filter(pair.status == "complete")
-
-
-tmp.data <- expression.glass %>% 
-  dplyr::select(all_of(
-    c(metadata.glass.per.patient$genomescan.sid.I, metadata.glass.per.patient$genomescan.sid.R) %>% 
-      purrr::keep(~ !is.na(.))))
-
-
-
-tmp.metadata <- data.frame(genomescan.sid = colnames(tmp.data) ) %>% 
+  dplyr::filter(pair.status == "complete") %>% 
+  dplyr::select(genomescan.sid.I, genomescan.sid.R) %>% 
+  tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>% 
+  dplyr::mutate(name=NULL) %>% 
+  dplyr::rename(genomescan.sid = value) %>% 
   dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
   dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID'))
 
+
+tmp.data <- expression.glass %>% 
+  dplyr::select(all_of( tmp.metadata$genomescan.sid ))
 
 
 stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
 
 
-dds <- DESeqDataSetFromMatrix(countData = tmp.data,
+
+dds.paired.b <- DESeqDataSetFromMatrix(countData = tmp.data,
                               colData = tmp.metadata,
                               design= ~ patient.correction.id + Sample_Type)
 
 
 
-dds <- DESeq(dds)
-res.paired <- results(dds) %>% 
+dds.paired.b <- DESeq(dds.paired.b)
+res.paired.b <- results(dds.paired.b) %>% 
   as.data.frame() %>% 
   dplyr::filter(!is.na(padj)) %>% 
   dplyr::arrange(pvalue,padj) %>% 
@@ -321,8 +336,12 @@ res.paired <- results(dds) %>%
 
 
 
-dim(res.paired %>%  dplyr::filter(padj < 0.01))
+res.paired.b %>%
+  dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
+  dplyr::filter(padj < 0.01) %>% 
+  dim
 
 
-View(res)
+
+
 
