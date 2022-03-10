@@ -196,7 +196,7 @@ ggplot(plt , aes(x=x,y=stat,col=gene_chr)) +
   geom_smooth() +
   youri_gg_theme
 
-ggplot(plt , aes(x=gene_chr_center_loc,y=stat,col=gene_chr)) + 
+ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=stat,col=gene_chr)) + 
   facet_grid(cols = vars(gene_chr), scales = "free", space="free") +
   geom_point(pch=19,cex=0.2) +
   geom_smooth() +
@@ -206,4 +206,73 @@ ggplot(plt , aes(x=gene_chr_center_loc,y=stat,col=gene_chr)) +
 plt$gene_chr = factor(plt$gene_chr, levels = unique(plt$gene_chr))
 
 
+EnhancedVolcano(res.paired,
+                lab = res$gene_name,
+                x = 'log2FoldChange',
+                y = 'padj',
+                pCutoff = 0.01)
 
+
+
+
+# comparison methylering
+
+plt1 <- expression.glass.vst %>% 
+  dplyr::filter(grepl("HOXD11",rownames(.))) %>% 
+  t() %>% 
+  as.data.frame %>% 
+  tibble::rownames_to_column('genomescan.sid') %>% 
+  dplyr::left_join(tmp.metadata, by=c('genomescan.sid'='genomescan.sid')) %>% 
+  tidyr::drop_na(Sample_Type) 
+  
+
+
+ggplot(plt1, aes(x = Sample_Type, y= ENSG00000128713_HOXD11)) +
+  ggbeeswarm::geom_quasirandom()
+
+
+plt2 <- rowSums(t(expression.glass)) %>% 
+  as.data.frame %>% 
+  tibble::rownames_to_column('genomescan.sid') %>% 
+  dplyr::left_join(tmp.metadata, by=c('genomescan.sid'='genomescan.sid')) %>% 
+  tidyr::drop_na(Sample_Type) 
+
+
+ggplot(plt2, aes(x = Sample_Type, y= `.`)) +
+  ggbeeswarm::geom_quasirandom()
+
+
+
+p3 <- plt1 %>% 
+  dplyr::left_join(plt2, by=c('genomescan.sid'='genomescan.sid'))
+
+
+ggplot(p3, aes(x = `.`, y=ENSG00000128713_HOXD11, col=Sample_Type.x)) +
+         geom_point()
+       
+
+
+sign <- res.paired %>% 
+  dplyr::filter(padj < 0.01) %>% 
+  dplyr::filter(abs(log2FoldChange) >= 0.75)
+
+cp <- expression.glass.vst %>%
+  dplyr::select(tmp.metadata$genomescan.sid) %>% 
+  dplyr::filter(rownames(.) %in% sign$gene_uid) %>% 
+  `rownames<-`(gsub("ENSG00000284906_ARHGAP11B","ENSG00000284906_ARHGAP11B.2",rownames(.),fixed=T)) %>% 
+  `rownames<-`(gsub("^ENS.+_","",rownames(.)))
+
+
+cpm <- data.frame(gid=rownames(cp)) %>% 
+  dplyr::mutate(HOX = grepl("^HOX", gid)) %>% 
+  dplyr::mutate(COL = ifelse(grepl("^COL", gid),"red","green")) %>% 
+  tibble::column_to_rownames('gid')
+
+
+recursiveCorPlot::recursiveCorPlot(cp, cpm, 2 ,2)
+
+ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
+
+
+
+"CD248" %in% rownames(cp)
