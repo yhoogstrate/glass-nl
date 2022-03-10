@@ -89,7 +89,7 @@ ggplot(tmp.plt.data,aes(x=PC1,y=PC2,col=Sample_Type, group=GLASS_ID, label=Sampl
 
 
 
-# 2. paired ----
+# 2a. paired [incomplete as separate group] ----
 
 
 
@@ -276,3 +276,53 @@ ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
 
 
 "CD248" %in% rownames(cp)
+
+
+
+
+# 2b. paired [only paired] ----
+
+
+tmp.metadata <- metadata.glass.per.patient %>% 
+  dplyr::filter(pair.status == "complete")
+
+
+tmp.data <- expression.glass %>% 
+  dplyr::select(all_of(
+    c(metadata.glass.per.patient$genomescan.sid.I, metadata.glass.per.patient$genomescan.sid.R) %>% 
+      purrr::keep(~ !is.na(.))))
+
+
+
+tmp.metadata <- data.frame(genomescan.sid = colnames(tmp.data) ) %>% 
+  dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+  dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID'))
+
+
+
+stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+
+
+dds <- DESeqDataSetFromMatrix(countData = tmp.data,
+                              colData = tmp.metadata,
+                              design= ~ patient.correction.id + Sample_Type)
+
+
+
+dds <- DESeq(dds)
+res.paired <- results(dds) %>% 
+  as.data.frame() %>% 
+  dplyr::filter(!is.na(padj)) %>% 
+  dplyr::arrange(pvalue,padj) %>% 
+  tibble::rownames_to_column('gene_uid') %>% 
+  dplyr::left_join(expression.glass.metadata %>% 
+                     dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
+
+
+
+
+dim(res.paired %>%  dplyr::filter(padj < 0.01))
+
+
+View(res)
+

@@ -37,7 +37,8 @@ expression.glass.metadata <- expression.glass %>%
   dplyr::rename(gene_chr = V1) %>%  
   dplyr::rename(gene_strand = V7) %>% 
   dplyr::mutate(gene_chr_center_loc = (V4 + V5) /  2) %>% 
-  dplyr::mutate(gene_loc = paste0(gene_chr, ":", round(gene_chr_center_loc / 1000000),"M")) %>% 
+  dplyr::mutate(gene_loc = paste0(gene_chr, ":", round(gene_chr_center_loc / 1000000),"M")) 
+
 rm(expression.glass.gtf)
 
 
