@@ -195,7 +195,7 @@ ggplot(tmp.plt.data,aes(x=PC1,y=PC2,col=Sample_Type, group=GLASS_ID, label=Sampl
 
 
 
-## plot integration 1 ~ 2a ----
+## Another PCA of some sort ----
 
 
 tmp.plt.data <- expression.glass.vst %>%
@@ -220,6 +220,8 @@ ggplot(tmp.plt.data,aes(x=PC1,y=PC2,col=Sample_Type, group=GLASS_ID, label=Sampl
 #ggrepel::geom_text_repel(size=3, col="gray80")
 
 
+
+## plot integration 1 ~ 2a ----
 
 
 p1 <- res.unpaired.a %>%
