@@ -26,10 +26,9 @@ if(!exists("metadata.glass.per.resection")) {
 #  dplyr::mutate(names = NULL)
 
 
-glass.cellularities <- readxl::read_excel('data/glass/WES/CombinedDataGLASS/AllDataGLASS.xlsx') %>% 
+dnaseq.purities <- readxl::read_excel('data/glass/WES/CombinedDataGLASS/AllDataGLASS.xlsx') %>% 
   dplyr::mutate(samplenames = NULL) %>% 
   dplyr::mutate(names = gsub("-","_",names,fixed=T)) %>% 
-  dplyr::mutate(Sample_ID = gsub("^(.+_.+)_I.+$","\\1", names)) %>% 
   dplyr::mutate(VAF_IDH = ifelse(Coverage_IDH == -1 | VAF_IDH == "NA", NA, VAF_IDH)) %>% 
   dplyr::mutate(VAF_IDH = as.numeric(VAF_IDH)) %>% 
   dplyr::mutate(VAF_upperbound = ifelse(Coverage_IDH == -1, NA, VAF_upperbound)) %>% 
@@ -43,11 +42,61 @@ glass.cellularities <- readxl::read_excel('data/glass/WES/CombinedDataGLASS/AllD
     cn_estimate_IDH >= 2.5 & cn_estimate_IDH < 3.5 ~ "n=3",
     cn_estimate_IDH >= 3.5 ~ "n=4",
     T ~ "???"
-  ))
+  )) %>% 
+  dplyr::mutate(Sample_Name = gsub("^([^_]+_[^_]+).*$","\\1",names))
+
+
+# methylation based purity, using RF ----
+
+
+methylation.purities <- read.table("data/glass/Methylation/Analysis/RFpurity/purities_RFpurity.txt") %>% 
+  dplyr::mutate(methylation.uid = paste0(Slide, "_", Array)) %>% 
+  dplyr::mutate(fn = NULL) %>% 
+  dplyr::mutate(Basename = NULL) %>% 
+  dplyr::mutate(Slide = NULL) %>% 
+  dplyr::mutate(Array = NULL) %>% 
+  dplyr::rename(methylation.purity.absolute = absolute) %>% 
+  dplyr::rename(methylation.purity.estimate = estimate)
+
+stopifnot(duplicated(methylation.purities$methylation.uid) == F) # no duplicates may exist
 
 
 
-# perform basic plotting ----
+tmp.methylation.metdata <- read.csv("data/glass/Methylation/Metadata/Datasheet4.csv") %>% 
+  dplyr::mutate(methylation.uid = paste0(Slide, "_", Array)) %>% 
+  dplyr::mutate(
+    Basename = NULL,
+    Array = NULL,
+    Slide = NULL,
+    Surgery_ID = NULL, 
+    GLASS_ID = NULL, 
+    Sample_Plate = NULL,       
+    Sample_ID = NULL, 
+    Sample_Resection = NULL, 
+    Sample_Type = NULL, 
+    Recurrent_Type = NULL, 
+    Sample_Sex = NULL  )
+
+stopifnot(duplicated(tmp.methylation.metdata$methylation.uid) == F) # no duplicates may exist
+
+
+# I ran all 323 samples I found on the server with RFpurity, only a subset matches the actual glass samples (tmp.2)
+stopifnot(tmp.methylation.metdata$methylation.uid %in% methylation.purities$methylation.uid)
+
+methylation.purities <-methylation.purities %>% 
+  dplyr::left_join(tmp.methylation.metdata, by=c('methylation.uid'='methylation.uid'))
+
+rm(tmp.methylation.metdata)
+
+
+
+
+
+
+
+
+## some basic qc plots ----
+
 
 
 ggplot(glass.cellularities, aes(x=CNV.purity.shallowseq,y=VAF_IDH * 2, label=names,col=CNV_ploidy_IDH)) +
@@ -122,9 +171,6 @@ ggplot(glass.cellularities, aes(x=CNV.purity.shallowseq,y=VAF_IDH, label=names, 
 
 
 
-tmp <- read.table( "output/tables/methylation-array/purities_RFpurity.txt") %>% 
-  dplyr::select(Sample_Name, absolute, estimate)
-
 
 glass.cellularities <- glass.cellularities %>% 
   dplyr::mutate(sid = gsub("^([^_]+_[^_]+).+$","\\1",names)) %>% 
@@ -189,5 +235,14 @@ p2 <- ggplot(glass.cellularities, aes( y=VAF_IDH ,  x=resection)) +
 
 # ggplot(glass.cellularities, aes(x = VAF_IDH, y=estimate)) +
 #   geom_point()
+
+
+# cleanup ----
+
+
+rm(dnaseq.purities)
+rm(methylation.purities)
+
+
 
 

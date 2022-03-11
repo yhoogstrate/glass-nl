@@ -47,7 +47,7 @@ stopifnot(length(targets) == 329)
 
 targets.df <- data.frame(fn = targets) %>% 
   dplyr::mutate(Basename = gsub("^(.+)_(Grn|Red).idat$","\\1",fn)) %>% 
-  dplyr::mutate(Slide = gsub("^.+idats/([^/]+)/.+$","\\1",fn)) %>% 
+  dplyr::mutate(Slide = gsub("^.+/([^/_]+)_.+$","\\1",fn)) %>% 
   dplyr::mutate(Array = gsub("^.+/[^_]+_([^_]+).+$","\\1",fn))
 
 
@@ -76,9 +76,16 @@ for(i in 1:nrow(targets.df)) {
 }
 
 
+# head(out)
 
 
-write.table(file, file = "output/tables/methylation-array/purities_RFpurity.txt")
+#out <- out %>% 
+#  dplyr::mutate(Slide = gsub("^.+/([^/_]+)_.+$","\\1",fn)) 
+
+
+write.table(out, file = "output/tables/methylation-array/purities_RFpurity.txt")
+
+
 
 
 
