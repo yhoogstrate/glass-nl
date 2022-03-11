@@ -65,8 +65,10 @@ dnaseq.purities <- readxl::read_excel('data/glass/WES/CombinedDataGLASS/AllDataG
 
 ## append to metadata ----
 
+
+
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
-  dplyr::left_join(dnaseq.purities, by=c('Sample_Name'='Sample_Name'))
+  dplyr::left_join(dnaseq.purities, by=c('Sample_Name'='Sample_Name'), keep=F,suffix = c("", "")) # force overwrite
 
 
 
@@ -118,7 +120,7 @@ rm(tmp.methylation.metdata)
 ## append to metadata ----
 
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
-  dplyr::left_join(methylation.purities, by=c('Sample_Name'='Sample_Name'))
+  dplyr::left_join(methylation.purities, by=c('Sample_Name'='Sample_Name'), keep=F,suffix = c("", "")) # force overwrite
 
 
 
@@ -164,7 +166,7 @@ ggplot(plt, aes(x=log(dna.shallow.ACE.purity),y=methylation.purity.absolute, lab
 ## WES/VAF x Meth/RF[abs] ----
 
 
-p2 <- ggplot(plt, aes(x=dna.wes.VAF_IDH * 2,y=methylation.purity.absolute, label=Sample_Name)) +
+ggplot(plt, aes(x=dna.wes.VAF_IDH * 2,y=methylation.purity.absolute, label=Sample_Name)) +
   geom_point() +
   scale_x_continuous(limits = c(0, 1)) +
   scale_y_continuous(limits = c(0.25, 0.75))  +
@@ -172,7 +174,6 @@ p2 <- ggplot(plt, aes(x=dna.wes.VAF_IDH * 2,y=methylation.purity.absolute, label
 
 
 
-p1 + p2
 
 
 ## ACE x Meth/RF[est] ----
@@ -267,65 +268,68 @@ glass.cellularities <- glass.cellularities %>%
   dplyr::left_join(tmp,
                    by=c('sid'='Sample_Name'))
 
-glass.cellularities$sid
 
 
-c <- glass.cellularities %>%  dplyr::select(CNV.purity.shallowseq, VAF_IDH, ManualPurity, absolute, estimate )
-c <- c %>%  dplyr::filter( !is.na(CNV.purity.shallowseq) &  !is.na(VAF_IDH)  & ! is.na(ManualPurity)  & !is.na(absolute) & ! is.na(estimate))
-corrplot(cor(c))
+rm(plt)
 
 
-
-library(patchwork)
-
-
-p1 <- ggplot(glass.cellularities, aes(x = CNV.purity.shallowseq, y=VAF_IDH)) +
-  geom_point() +
-  youri_gg_theme
-
-p2 <- ggplot(glass.cellularities, aes(x = CNV.purity.shallowseq, y=absolute)) +
-  labs(y="RFpurtity methylation Array absolute-fit") +
-  geom_point() +
-  youri_gg_theme
-
-p3 <- ggplot(glass.cellularities, aes(x = VAF_IDH, y=absolute)) +
-  labs(y="RFpurtity methylation Array absolute-fit") +
-  geom_point() +
-  youri_gg_theme
-
-p1 + p2 + p3
+# 
+# c <- glass.cellularities %>%  dplyr::select(CNV.purity.shallowseq, VAF_IDH, ManualPurity, absolute, estimate )
+# c <- c %>%  dplyr::filter( !is.na(CNV.purity.shallowseq) &  !is.na(VAF_IDH)  & ! is.na(ManualPurity)  & !is.na(absolute) & ! is.na(estimate))
+# corrplot(cor(c))
 
 
-
-
-ggplot(glass.cellularities, aes(y = VAF_IDH * 2, x=absolute, label=names, col=CNV_ploidy_IDH)) +
-  labs(x="RFpurtity methylation Array absolute-fit") +
-  geom_point() +
-  #scale_x_continuous(limits = c(0.2, 0.75)) +
-  #scale_y_continuous(limits = c(0, 1)) +
-  youri_gg_theme
-
-
-
-glass.cellularities <- glass.cellularities %>% 
-  dplyr::mutate(resection =  gsub("^.+_([^_]+)_.+$","\\1",names))
-
-
-
-p1 <- ggplot(glass.cellularities, aes( y=absolute,  x=resection)) +
-  labs(y="RFpurtity methylation Array absolute-fit") +
-  ggbeeswarm::geom_beeswarm() +
-  youri_gg_theme
-
-p2 <- ggplot(glass.cellularities, aes( y=VAF_IDH ,  x=resection)) +
-  ggbeeswarm::geom_beeswarm() +
-  youri_gg_theme
-
-
-
-# ggplot(glass.cellularities, aes(x = VAF_IDH, y=estimate)) +
-#   geom_point()
-
+# 
+# library(patchwork)
+# 
+# 
+# p1 <- ggplot(glass.cellularities, aes(x = CNV.purity.shallowseq, y=VAF_IDH)) +
+#   geom_point() +
+#   youri_gg_theme
+# 
+# p2 <- ggplot(glass.cellularities, aes(x = CNV.purity.shallowseq, y=absolute)) +
+#   labs(y="RFpurtity methylation Array absolute-fit") +
+#   geom_point() +
+#   youri_gg_theme
+# 
+# p3 <- ggplot(glass.cellularities, aes(x = VAF_IDH, y=absolute)) +
+#   labs(y="RFpurtity methylation Array absolute-fit") +
+#   geom_point() +
+#   youri_gg_theme
+# 
+# p1 + p2 + p3
+# 
+# 
+# 
+# 
+# ggplot(glass.cellularities, aes(y = VAF_IDH * 2, x=absolute, label=names, col=CNV_ploidy_IDH)) +
+#   labs(x="RFpurtity methylation Array absolute-fit") +
+#   geom_point() +
+#   #scale_x_continuous(limits = c(0.2, 0.75)) +
+#   #scale_y_continuous(limits = c(0, 1)) +
+#   youri_gg_theme
+# 
+# 
+# 
+# glass.cellularities <- glass.cellularities %>% 
+#   dplyr::mutate(resection =  gsub("^.+_([^_]+)_.+$","\\1",names))
+# 
+# 
+# 
+# p1 <- ggplot(glass.cellularities, aes( y=absolute,  x=resection)) +
+#   labs(y="RFpurtity methylation Array absolute-fit") +
+#   ggbeeswarm::geom_beeswarm() +
+#   youri_gg_theme
+# 
+# p2 <- ggplot(glass.cellularities, aes( y=VAF_IDH ,  x=resection)) +
+#   ggbeeswarm::geom_beeswarm() +
+#   youri_gg_theme
+# 
+# 
+# 
+# # ggplot(glass.cellularities, aes(x = VAF_IDH, y=estimate)) +
+# #   geom_point()
+# 
 
 # cleanup ----
 
