@@ -28,3 +28,15 @@ stopifnot(tmp.metadata$genomescan.sid == colnames(tmp.data))
 
 
 cor.test(tmp.metadata$dna.shallow.ACE.purity, as.numeric(tmp.data[1,]))
+
+
+fun <- function(vec) {
+  t <- cor.test(tmp.metadata$dna.shallow.ACE.purity, as.numeric(vec))
+  
+  return( t$statistic)
+  
+}
+
+apply(tmp.data[3,],1,fun)
+
+
