@@ -303,7 +303,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 
 
 
-metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_GLASS RNAseq.csv') %>% 
+metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_GLASS RNAseq__ALL.csv') %>% 
   dplyr::mutate(data_of_birth = NULL) %>%
   # dplyr::mutate(Age_at_Diagnosis = NULL) %>%
   dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) %>%
@@ -353,6 +353,7 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
       dplyr::mutate(genomescan.sid.R = ifelse(GLASS_ID == pid, r.R$genomescan.sid, genomescan.sid.R))
   }
 }
+rm(r.I, r.R, pid, slice)
 
 
 

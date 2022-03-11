@@ -1,11 +1,23 @@
 #!/usr/bin/env R
 
+# load libs ----
 
 library(readxl)
 library(tidyverse)
 source('scripts/R/job_gg_theme.R')
 source('scripts/R/youri_gg_theme.R')
 
+# load data ----
+
+
+if(!exists("metadata.glass.per.resection")) {
+  warning('metadata was not loaded')
+  
+  source('scripts/load_metadata.R')
+}
+
+
+# import purities ----
 
 
 #cnv.cellularities <- read.delim('output/tables/dna-seq/CellularitiesManuallyCurated.xlsx.txt') %>% 
@@ -32,6 +44,10 @@ glass.cellularities <- readxl::read_excel('data/glass/WES/CombinedDataGLASS/AllD
     cn_estimate_IDH >= 3.5 ~ "n=4",
     T ~ "???"
   ))
+
+
+
+# perform basic plotting ----
 
 
 ggplot(glass.cellularities, aes(x=CNV.purity.shallowseq,y=VAF_IDH * 2, label=names,col=CNV_ploidy_IDH)) +

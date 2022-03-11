@@ -168,7 +168,7 @@ res.paired.b %>%
 
 
 
-
+# small visualisations for checking etc. ----
 
 
 ## PCA ----
