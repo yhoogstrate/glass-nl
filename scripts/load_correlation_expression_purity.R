@@ -27,16 +27,85 @@ tmp.data <- expression.glass.vst %>%
 stopifnot(tmp.metadata$genomescan.sid == colnames(tmp.data))
 
 
-cor.test(tmp.metadata$dna.shallow.ACE.purity, as.numeric(tmp.data[1,]))
+
+tmp.out <- data.frame(cor.t.dna.shallow.ACE.purity = apply(tmp.data,1, function(vec) {return( cor.test(tmp.metadata$dna.shallow.ACE.purity, as.numeric(vec))$statistic) })) %>% 
+  tibble::rownames_to_column('gene_uid')
 
 
-fun <- function(vec) {
-  t <- cor.test(tmp.metadata$dna.shallow.ACE.purity, as.numeric(vec))
-  
-  return( t$statistic)
-  
-}
+tmp.out %>% dplyr::arrange(cor.t.dna.shallow.ACE.purity) %>% head(n=10)
+tmp.out %>% dplyr::arrange(-cor.t.dna.shallow.ACE.purity) %>% head(n=10)
 
-apply(tmp.data[3,],1,fun)
+
+expression.glass.metadata <- expression.glass.metadata %>% 
+  dplyr::left_join(tmp.out , by=c('gene_uid'='gene_uid'), keep=F,suffix = c("", "")) # force overwrite
+
+
+rm(tmp.metadata, tmp.data, tmp.out)
+
+
+
+# calc corr for VAF method ----
+
+tmp.metadata <- metadata.glass.per.resection %>%
+  dplyr::filter(excluded == F) %>% 
+  dplyr::filter(!is.na(dna.wes.VAF_IDH))
+
+
+tmp.data <- expression.glass.vst %>% 
+  dplyr::select(tmp.metadata$genomescan.sid)
+
+
+stopifnot(tmp.metadata$genomescan.sid == colnames(tmp.data))
+
+
+tmp.out <- data.frame(cor.t.dna.wes.VAF_IDH = apply(tmp.data,1, function(vec) {return( cor.test(tmp.metadata$dna.wes.VAF_IDH, as.numeric(vec))$statistic) })) %>% 
+  tibble::rownames_to_column('gene_uid')
+
+
+
+tmp.out %>% dplyr::arrange(cor.t.dna.wes.VAF_IDH) %>% head(n=10)
+tmp.out %>% dplyr::arrange(-cor.t.dna.wes.VAF_IDH) %>% head(n=20)
+
+
+expression.glass.metadata <- expression.glass.metadata %>% 
+  dplyr::left_join(tmp.out , by=c('gene_uid'='gene_uid'), keep=F,suffix = c("", "")) # force overwrite
+
+
+rm(tmp.metadata, tmp.data, tmp.out)
+
+
+
+
+# calc corr for Meth/RFpurity method ----
+
+
+tmp.metadata <- metadata.glass.per.resection %>%
+  dplyr::filter(excluded == F) %>% 
+  dplyr::filter(!is.na(methylation.purity.absolute))
+
+
+tmp.data <- expression.glass.vst %>% 
+  dplyr::select(tmp.metadata$genomescan.sid)
+
+
+stopifnot(tmp.metadata$genomescan.sid == colnames(tmp.data))
+
+
+tmp.out <- data.frame(cor.t.methylation.purity.absolute = apply(tmp.data,1, function(vec) {return( cor.test(tmp.metadata$methylation.purity.absolute, as.numeric(vec))$statistic) })) %>% 
+  tibble::rownames_to_column('gene_uid')
+
+
+
+tmp.out %>% dplyr::arrange(cor.t.methylation.purity.absolute) %>% head(n=10)
+tmp.out %>% dplyr::arrange(-cor.t.methylation.purity.absolute) %>% head(n=20)
+
+
+expression.glass.metadata <- expression.glass.metadata %>% 
+  dplyr::left_join(tmp.out , by=c('gene_uid'='gene_uid'), keep=F,suffix = c("", "")) # force overwrite
+
+
+rm(tmp.metadata, tmp.data, tmp.out)
+
+
 
 
