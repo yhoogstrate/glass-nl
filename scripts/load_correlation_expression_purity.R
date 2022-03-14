@@ -78,8 +78,9 @@ rm(tmp.metadata, tmp.data, tmp.out)
 
 tmp.metadata <- metadata.glass.per.resection %>%
   dplyr::filter(excluded == F) %>% 
-  dplyr::filter(!is.na(dna.shallow.ACE.purity.below.1)) %>% 
-  dplyr::select(genomescan.sid, dna.shallow.ACE.purity.below.1)
+  dplyr::filter(!is.na(dna.purity.manual.Erik)) %>% 
+  dplyr::select(genomescan.sid, dna.purity.manual.Erik)
+
 
 tmp.data <- expression.glass.vst %>% 
   dplyr::select(tmp.metadata$genomescan.sid)
@@ -88,12 +89,12 @@ tmp.data <- expression.glass.vst %>%
 stopifnot(tmp.metadata$genomescan.sid == colnames(tmp.data))
 
 
-tmp.out <- data.frame(cor.t.dna.shallow.ACE.purity.below.1 = apply(tmp.data,1, function(vec) {return( cor.test(tmp.metadata %>% dplyr::pull(dna.shallow.ACE.purity.below.1), as.numeric(vec))$statistic) })) %>% 
+tmp.out <- data.frame(cor.t.dna.purity.manual.Erik = apply(tmp.data,1, function(vec) {return( cor.test(tmp.metadata %>% dplyr::pull(dna.purity.manual.Erik), as.numeric(vec))$statistic) })) %>% 
   tibble::rownames_to_column('gene_uid')
 
 
-tmp.out %>% dplyr::arrange(cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10)
-tmp.out %>% dplyr::arrange(-cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10)
+tmp.out %>% dplyr::arrange(cor.t.dna.purity.manual.Erik) %>% head(n=10)
+tmp.out %>% dplyr::arrange(-cor.t.dna.purity.manual.Erik) %>% head(n=10)
 
 
 expression.glass.metadata <- expression.glass.metadata %>% 
