@@ -2,6 +2,7 @@
 
 # load libs ----
 
+
 library(readxl)
 library(tidyverse)
 source('scripts/R/job_gg_theme.R')
@@ -55,10 +56,8 @@ dnaseq.purities <- readxl::read_excel('data/glass/WES/CombinedDataGLASS/AllDataG
   dplyr::mutate(dna.wes.cn_estimate_IDH = as.numeric(ifelse(dna.wes.cn_estimate_IDH == "NA", NA , dna.wes.cn_estimate_IDH)) ) %>% 
   dplyr::mutate(dna.wes.coverage_IDH = as.numeric(ifelse(dna.wes.coverage_IDH == "NA", NA , dna.wes.coverage_IDH)) ) %>% 
   dplyr::mutate(dna.wes.VAF_lowerbound = as.numeric(ifelse(dna.wes.VAF_lowerbound == "NA", NA , dna.wes.VAF_lowerbound)) ) %>% 
-  dplyr::mutate(dna.wes.VAF_upperbound = as.numeric(ifelse(dna.wes.VAF_upperbound == "NA", NA , dna.wes.VAF_upperbound)) )
-
-
-
+  dplyr::mutate(dna.wes.VAF_upperbound = as.numeric(ifelse(dna.wes.VAF_upperbound == "NA", NA , dna.wes.VAF_upperbound)) ) %>% 
+  dplyr::mutate(dna.shallow.ACE.purity.below.1 = ifelse(dna.shallow.ACE.purity < 1.0,dna.shallow.ACE.purity,NA))
 
 
 
@@ -118,6 +117,8 @@ rm(tmp.methylation.metdata)
 
 
 ## append to metadata ----
+
+
 
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
   dplyr::left_join(methylation.purities, by=c('Sample_Name'='Sample_Name'), keep=F,suffix = c("", "")) # force overwrite

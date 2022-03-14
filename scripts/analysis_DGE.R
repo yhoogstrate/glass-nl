@@ -66,7 +66,8 @@ res.unpaired.a %>%
   dim
 
 
-saveRDS(res.unpaired.a, "cache/res.unpaired.a.Rds")
+#saveRDS(res.unpaired.a, "cache/res.unpaired.a.Rds")
+res.unpaired.a <- readRDS("cache/res.unpaired.a.Rds")
 
 
 
@@ -118,7 +119,8 @@ res.paired.a %>%
   dim
 
 
-saveRDS(res.paired.a, "cache/res.paired.a.Rds")
+#saveRDS(res.paired.a, "cache/res.paired.a.Rds")
+res.paired.a <- readRDS("cache/res.paired.a.Rds")
 
 
 
@@ -318,6 +320,27 @@ EnhancedVolcano(res.paired.b,
                 pCutoff = 0.01)
 
 
+# geiserplot x tpc ----
+
+
+plt <- res.paired.a %>% 
+  dplyr::left_join(
+    expression.glass.metadata %>%
+      dplyr::select(gene_uid, cor.t.dna.shallow.ACE.purity, cor.t.dna.wes.VAF_IDH, cor.t.methylation.purity.absolute),
+    by=c('gene_uid'='gene_uid'))
+
+
+ggplot(plt, aes(x=log2FoldChange, y=cor.t.dna.shallow.ACE.purity)) +
+  geom_point(pch=19,cex=0.5) +
+  xlim(-3,3)
+ggplot(plt, aes(x=log2FoldChange, y=cor.t.dna.wes.VAF_IDH)) +
+  geom_point(pch=19,cex=0.5) +
+  xlim(-3,3)
+ggplot(plt, aes(x=log2FoldChange, y=cor.t.methylation.purity.absolute)) +
+  geom_point(pch=19,cex=0.5) +
+  xlim(-3,3)
+
+
 
 
 ## comparison methylering ----
@@ -376,7 +399,7 @@ cpm <- data.frame(gid=rownames(cp)) %>%
 
 recursiveCorPlot::recursiveCorPlot(cp, cpm, 2 ,2)
 
-ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
+#ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
 
 
 
