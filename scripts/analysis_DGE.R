@@ -20,6 +20,9 @@ if(!exists("expression.glass.vst")) {
   source('scripts/load_rna-counts.R')
 }
 
+if("cor.t.methylation.purity.absolute" %in% names(expression.glass.metadata) == F) {
+  source('scripts/load_correlation_expression_purity.R') 
+}
 
 # 1. unpaired ----
 
@@ -326,24 +329,31 @@ EnhancedVolcano(res.paired.b,
 plt <- res.paired.a %>% 
   dplyr::left_join(
     expression.glass.metadata %>%
-      dplyr::select(gene_uid, cor.t.dna.shallow.ACE.purity, cor.t.dna.wes.VAF_IDH, cor.t.methylation.purity.absolute),
-    by=c('gene_uid'='gene_uid'))
+      dplyr::select(gene_uid, cor.t.dna.shallow.ACE.purity, cor.t.dna.wes.VAF_IDH, cor.t.methylation.purity.absolute, cor.t.dna.purity.manual.Erik),
+    by=c('gene_uid'='gene_uid')) %>% 
+  dplyr::select(gene_name, log2FoldChange, cor.t.dna.purity.manual.Erik,  cor.t.dna.wes.VAF_IDH, cor.t.methylation.purity.absolute) %>% 
+  tidyr::pivot_longer(cols = -c(gene_name, log2FoldChange)) %>% 
+  dplyr::rename(method = name) %>% 
+  dplyr::rename(purity = value) %>% 
+  dplyr::arrange(abs(log2FoldChange))
 
 
-ggplot(plt, aes(x=log2FoldChange, y=cor.t.dna.shallow.ACE.purity)) +
-  geom_point(pch=19,cex=0.5) +
-  xlim(-3,3)
-ggplot(plt, aes(x=log2FoldChange, y=cor.t.dna.wes.VAF_IDH)) +
-  geom_point(pch=19,cex=0.5) +
-  xlim(-3,3)
-ggplot(plt, aes(x=log2FoldChange, y=cor.t.methylation.purity.absolute)) +
-  geom_point(pch=19,cex=0.5) +
-  xlim(-3,3)
+
+ggplot(plt, aes(x=log2FoldChange, y=purity, fill = method)) +
+  facet_grid(cols = vars(method),  scales = "free", space="free") +
+  geom_point(pch=21, fill=alpha("white",0.6), col="gray10", cex=2) +
+  xlim(-2.5,2.5)+
+  youri_gg_theme
+
+
+
+
 
 
 
 
 ## comparison methylering ----
+
 
 plt1 <- expression.glass.vst %>% 
   dplyr::filter(grepl("HOXD11",rownames(.))) %>% 
@@ -380,7 +390,7 @@ ggplot(p3, aes(x = `.`, y=ENSG00000128713_HOXD11, col=Sample_Type.x)) +
 
 
 
-sign <- res.paired %>% 
+sign <- res.paired.a %>% 
   dplyr::filter(padj < 0.01) %>% 
   dplyr::filter(abs(log2FoldChange) >= 0.75)
 
