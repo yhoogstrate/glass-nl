@@ -63,12 +63,17 @@ tmp.out <- data.frame(cor.t.dna.shallow.ACE.purity.below.1 = apply(tmp.data,1, f
   tibble::rownames_to_column('gene_uid')
 
 
-tmp.out %>% dplyr::arrange(cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10)
-tmp.out %>% dplyr::arrange(-cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10)
-
-
 expression.glass.metadata <- expression.glass.metadata %>% 
   dplyr::left_join(tmp.out , by=c('gene_uid'='gene_uid'), keep=F,suffix = c("", "")) # force overwrite
+
+
+expression.glass.metadata %>% dplyr::arrange(cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10)
+expression.glass.metadata %>% dplyr::arrange(-cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10)
+
+
+expression.glass.metadata %>% dplyr::arrange(cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10) %>% dplyr::pull(gene_name)
+expression.glass.metadata %>% dplyr::arrange(-cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10) %>% dplyr::pull(gene_name)
+
 
 
 rm(tmp.metadata, tmp.data, tmp.out)
@@ -93,12 +98,17 @@ tmp.out <- data.frame(cor.t.dna.purity.manual.Erik = apply(tmp.data,1, function(
   tibble::rownames_to_column('gene_uid')
 
 
-tmp.out %>% dplyr::arrange(cor.t.dna.purity.manual.Erik) %>% head(n=10)
-tmp.out %>% dplyr::arrange(-cor.t.dna.purity.manual.Erik) %>% head(n=10)
-
 
 expression.glass.metadata <- expression.glass.metadata %>% 
   dplyr::left_join(tmp.out , by=c('gene_uid'='gene_uid'), keep=F,suffix = c("", "")) # force overwrite
+
+
+expression.glass.metadata %>% dplyr::arrange(cor.t.dna.purity.manual.Erik) %>% head(n=10)
+expression.glass.metadata %>% dplyr::arrange(-cor.t.dna.purity.manual.Erik) %>% head(n=10)
+
+
+expression.glass.metadata %>% dplyr::arrange(cor.t.dna.purity.manual.Erik) %>% head(n=10) %>% dplyr::pull(gene_name)
+expression.glass.metadata %>% dplyr::arrange(-cor.t.dna.purity.manual.Erik) %>% head(n=10) %>% dplyr::pull(gene_name)
 
 
 rm(tmp.metadata, tmp.data, tmp.out)
