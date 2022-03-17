@@ -39,11 +39,11 @@ tmp.metadata <- metadata.glass.per.patient %>%
 
 
 tmp.data <- expression.glass %>%
-  dplyr::select(all_of( tmp.metadata.2$genomescan.sid ))
+  dplyr::select(all_of( tmp.metadata$genomescan.sid ))
 
 
 
-stopifnot(colnames(tmp.data.2) == tmp.metadata.2$genomescan.sid)
+stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
 
 
 
@@ -90,11 +90,11 @@ tmp.metadata <- metadata.glass.per.patient %>%
 
 
 tmp.data <- expression.glass %>%
-  dplyr::select(all_of( tmp.metadata.2$genomescan.sid ))
+  dplyr::select(all_of( tmp.metadata$genomescan.sid ))
 
 
 
-stopifnot(colnames(tmp.data.2) == tmp.metadata.2$genomescan.sid)
+stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
 
 
 
