@@ -89,12 +89,18 @@ rm(parse_fastp_json_files)
 # per resection ----
 
 
-metadata.glass.per.resection <- read.csv('output/tables/metadata/Samplesheet_GLASS.txt',header=T) %>% 
-  dplyr::filter(group == "Glioma") %>% 
-  dplyr::mutate(group=NULL) %>% 
+
+metadata.glass.per.resection <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Samplesheet_GLASS_RNAseq__ALL.csv') %>% 
+  dplyr::mutate(institute = gsub("^.+_(.+)_.+$","\\1",GLASS_ID)) %>% 
   dplyr::rename(genomescan.sid = GS_ID) %>% 
-  dplyr::mutate(pid = as.factor(gsub("^([0-9]+)_.+$","g-nl.\\1",GLASS_ID))) %>% 
-  dplyr::mutate(resection = gsub("^.+_(.+)$","\\1",GLASS_ID))
+  dplyr::mutate(rid = paste0(gsub("^(.+_)[^_]+$","\\1",GLASS_ID),Sample_Name)) %>% 
+  dplyr::rename(Exclude.by.Wies.on.complete.pair = Exclude) %>% 
+  dplyr::mutate(Sample_Type = case_when(Sample_Type == "I" ~ "initial",
+                                        Sample_Type == "R" ~ "recurrent",
+                                        T ~ "X")) %>% 
+  dplyr::mutate(Sample_Type = factor(Sample_Type, levels=c('initial','recurrent','X')))
+
+
 
 
 
@@ -131,6 +137,8 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   )
 
 
+stopifnot(is.na(metadata.glass.per.resection$fastp.total_reads) == F) # ENSURE ALL SAMPLE HAVE THIS METADATA
+
 rm(tmp)
 
 
@@ -145,6 +153,7 @@ parse_star_log_final_out <- function(star_log_final_out) {
     'star.n.uniquely.mapped.reads' = tmp %>% dplyr::filter(grepl('Uniquely mapped reads number',V1)) %>%  dplyr::pull(V2) %>% as.numeric,
     'star.pct.uniquely.mapped.reads' = tmp %>% dplyr::filter(grepl('Uniquely mapped reads %',V1)) %>% dplyr::mutate(V2= gsub('%','',V2)) %>% dplyr::pull(V2) %>%  as.numeric
   )
+
   return(out)
 }
 
@@ -168,6 +177,9 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(
     tmp, by=c('genomescan.sid'='genomescan.sid')
   )
+
+
+stopifnot(is.na(metadata.glass.per.resection$star.input.reads) == F)
 
 
 rm(tmp, parse_star_log_final_out)
@@ -208,10 +220,16 @@ tmp <- data.frame(idxstats = Sys.glob("output/tables/qc/idxstats/*.txt")) %>%
   `colnames<-`(paste0("idxstats.",colnames(.))) %>% 
   tibble::rownames_to_column('genomescan.sid')
 
+
+
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
   dplyr::left_join(
     tmp, by=c('genomescan.sid'='genomescan.sid')
   )
+
+
+
+stopifnot(is.na(metadata.glass.per.resection$idxstats.alternate.loci) == F)
 
 
 rm(tmp, parse_idxstats)
@@ -247,24 +265,111 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   )
 
 
+
+stopifnot(is.na(metadata.glass.per.resection$featureCounts.Assigned) == F)
+
+
 rm(tmp)
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection%>% 
+  dplyr::mutate(assigned.reads.status = factor(
+    ifelse(featureCounts.Assigned > 750000,"PASS","INSUFFICIENT"),
+    levels=c("PASS","INSUFFICIENT")))
+
+
+
+
+
+
+## classify sample as incl/excl ----
+
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::mutate(excluded.reason = case_when(
+    assigned.reads.status == "INSUFFICIENT" ~ "featureCounts.Assigned",
+    T ~ '-' # keep all those that are not excluded
+  )) %>% 
+  dplyr::mutate(excluded = ifelse(excluded.reason == "-", FALSE, TRUE))
+
 
 
 
 
 # per patient ----s
 
-# metadata.glass.per.patient <- 
-#   read.csv('data/glass/Clinical data/Cleaned/Survival data_GLASS_12082021.csv') %>% 
-#   dplyr::mutate(X=NULL) %>% 
-#   dplyr::mutate(data_of_birth = NULL) %>% 
-#   dplyr::mutate(Date_of_Death = as.Date(Date_of_Death , format = "%d-%m-%Y")) %>% 
-#   dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%d-%m-%Y")) %>% 
-#   dplyr::mutate(Date_Last_Followup = as.Date(Date_Last_Followup , format = "%d-%m-%Y")) %>% 
-#   dplyr::mutate(overall.survival = difftime(Date_of_Death , Date_of_Diagnosis, units = 'days')) %>% 
-#   dplyr::mutate(time.until.last.followup = difftime(Date_Last_Followup, Date_of_Diagnosis, units = 'days'))
-# 
 
 
+
+
+metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_GLASS RNAseq__ALL.csv') %>% 
+  dplyr::mutate(data_of_birth = NULL) %>%
+  # dplyr::mutate(Age_at_Diagnosis = NULL) %>%
+  dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) %>%
+  dplyr::mutate(Date_of_Death = as.Date(Date_of_Death , format = "%Y-%m-%d")) %>%
+  dplyr::mutate(Date_Last_Followup = as.Date(Date_Last_Followup , format = "%Y-%m-%d")) %>%
+  dplyr::mutate(overall.survival = difftime(Date_of_Death , Date_of_Diagnosis, units = 'days')) %>%
+  dplyr::mutate(time.until.last.followup = difftime(Date_Last_Followup, Date_of_Diagnosis, units = 'days')) %>% 
+  dplyr::mutate(
+    Date_Last_Followup = NULL,
+    Date_of_Birth = NULL,
+    Date_of_Death = NULL,
+    Date_of_Diagnosis = NULL
+  ) %>% 
+  dplyr::mutate(overall.survival.event = ifelse(is.na(overall.survival),0,1),
+                overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival)) %>% 
+  dplyr::mutate(Sample_Name.I = NA, Sample_Name.R = NA, genomescan.sid.I = NA, genomescan.sid.R = NA)
+
+
+
+# missing metadata for those 3 patients lacking a matching pair
+stopifnot(metadata.glass.per.resection$GLASS_ID %in% metadata.glass.per.patient$GLASS_ID)
+
+
+for(pid in metadata.glass.per.patient$GLASS_ID) {
+  slice <- metadata.glass.per.patient %>% 
+    dplyr::filter(GLASS_ID == pid)
   
-# reshape?!
+  r.I <- metadata.glass.per.resection %>% 
+    dplyr::filter(GLASS_ID == pid & Sample_Type == "initial" & excluded == F) %>% 
+    dplyr::arrange(resection) %>% 
+    dplyr::slice_head(n=1)
+  
+  if(nrow(r.I) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(Sample_Name.I = ifelse(GLASS_ID == pid, r.I$Sample_Name, Sample_Name.I)) %>% 
+      dplyr::mutate(genomescan.sid.I = ifelse(GLASS_ID == pid, r.I$genomescan.sid, genomescan.sid.I))
+  }
+  
+  r.R <- metadata.glass.per.resection %>% 
+    dplyr::filter(GLASS_ID == pid & Sample_Type == "recurrent" & excluded == F) %>% 
+    dplyr::arrange(resection) %>% 
+    dplyr::slice_tail(n=1)
+
+  if(nrow(r.R) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(Sample_Name.R = ifelse(GLASS_ID == pid, r.R$Sample_Name, Sample_Name.R) ) %>% 
+      dplyr::mutate(genomescan.sid.R = ifelse(GLASS_ID == pid, r.R$genomescan.sid, genomescan.sid.R))
+  }
+}
+rm(r.I, r.R, pid, slice)
+
+
+
+metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+  dplyr::mutate(pair.status = case_when(
+    !is.na(Sample_Name.I) & !is.na(Sample_Name.R) ~ "complete",
+    is.na(Sample_Name.I) & !is.na(Sample_Name.R) ~ "missing initial",
+    !is.na(Sample_Name.I) & is.na(Sample_Name.R) ~ "missing recurrent",
+    T ~ "excluded"
+  )) %>% 
+  dplyr::mutate(pair.status = factor(pair.status, levels=c("complete","missing recurrent","missing initial" ,"excluded"))) %>% 
+  dplyr::mutate(patient.correction.id = ifelse(pair.status == "complete", GLASS_ID, "remaining.individual.samples")) %>% 
+  dplyr::mutate(excluded = ifelse(pair.status == "excluded",T,F))
+
+
+
+
+
+

@@ -14,7 +14,7 @@ source('scripts/R/job_gg_theme.R')
 # data ----
 
 
-source('scripts/metadata.R')
+source('scripts/load_metadata.R')
 
 
 # plots ----
@@ -279,23 +279,26 @@ plt <- plt %>%
 
 
 ggplot(plt, aes(x = reorder(genomescan.sid,order) ,y = freq, fill=name, label=genomescan.sid)) +
-  coord_flip() + 
+  #coord_flip() + 
   geom_bar(stat = "identity", position = "stack",colour="black") + 
   scale_y_continuous(labels = scales::unit_format(unit = "%")) + 
   theme_bw() + 
   theme( axis.title.y = element_text(size = 11) ,
          axis.text.x = element_text(angle = 90, size = 5 ))
 
-
+ggsave("output/figures/qc/per_patients__idxstats-rainbox.png",width=15,height=6)
 
 
 
 ## all / patient sample ----
 
 
+library(patchwork)
+
 
 plt <- metadata.glass.per.resection %>% 
   dplyr::mutate(order = rank(-rank(featureCounts.M.Assigned))) 
+
 
 plt <- rbind(plt, plt %>%
                dplyr::mutate(fastp.insert_size.0.ratio = 0,
@@ -310,9 +313,11 @@ plt <- rbind(plt, plt %>%
                              
                              idxstats.freq.alternate.loci = 0)) %>% 
   dplyr::select(genomescan.sid,order,assigned.reads.status,
-                fastp.insert_size.0.ratio, featureCounts.M.Assigned, avg.read.trim, fastp.gc.rmse, fastp.percentage.c, fastp.low.complexity.reads, fastp.duplication.rate, fastp.ratio.reads.not.passed.filtering, freq.alternate.loci) %>% 
+                fastp.insert_size.0.ratio, featureCounts.M.Assigned,
+                fastp.avg.read.trim, fastp.gc.rmse, fastp.percentage.c, fastp.low.complexity.reads,
+                fastp.duplication.rate, fastp.ratio.reads.not.passed.filtering, idxstats.freq.alternate.loci) %>% 
   pivot_longer(cols = -c(genomescan.sid,order,assigned.reads.status)) %>% 
-  dplyr::mutate(name = gsub( "avg.read.trim" ,'Avg trim',name)) %>% 
+  dplyr::mutate(name = gsub( "fastp.avg.read.trim" ,'Avg trim',name)) %>% 
   dplyr::mutate(name = gsub( "fastp.duplication.rate" ,'Dupl rate',name)) %>% 
   dplyr::mutate(name = gsub( "fastp.gc.rmse" ,'ACTG RMSE',name)) %>% 
   dplyr::mutate(name = gsub( "fastp.insert_size.0.ratio" ,'Inst size != 0',name)) %>% 
@@ -320,16 +325,49 @@ plt <- rbind(plt, plt %>%
   dplyr::mutate(name = gsub( "fastp.percentage.c" ,'%C',name)) %>% 
   dplyr::mutate(name = gsub( "fastp.ratio.reads.not.passed.filtering" ,'Not pass filter',name)) %>% 
   dplyr::mutate(name = gsub( "featureCounts.M.Assigned" ,'M Assigned',name)) %>% 
-  dplyr::mutate(name = gsub( "freq.alternate.loci" ,'rRNA / Alternate loci/',name)) %>% 
-  dplyr::mutate(name = factor(name, levels=c("M Assigned", "Avg trim", "ACTG RMSE", "%C", "Low cplxty", "Dupl rate","Inst size != 0",  "Not pass filter", "rRNA / Alternate loci/")))
+  dplyr::mutate(name = gsub( "idxstats.freq.alternate.loci" ,'rRNA; Alternate loci',name)) %>% 
+  dplyr::mutate(name = factor(name, levels=c("M Assigned", "Avg trim", "ACTG RMSE", "%C", "Low cplxty", "Dupl rate","Inst size != 0",  "Not pass filter", "rRNA; Alternate loci")))
 
 
 
-ggplot(plt, aes(x = reorder(genomescan.sid, order),y=value, group=genomescan.sid)) +
+p1 <- ggplot(plt, aes(x = reorder(genomescan.sid, order),y=value, group=genomescan.sid)) +
   geom_line() +
   labs(x=NULL) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) + 
+  #theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) + 
+  theme(axis.text.x = element_blank()) + 
   facet_grid(cols = vars(assigned.reads.status), row=vars(name), scale="free", space= "free_x")
+
+
+
+
+
+plt <- metadata.glass.per.resection %>% 
+  dplyr::mutate(order = rank(-rank(featureCounts.M.Assigned))) 
+#  dplyr::mutate(assigned.reads.status = factor(
+#    ifelse(featureCounts.Assigned > 750000,"PASS","INSUFFICIENT"),
+#    levels=c("PASS","INSUFFICIENT")))
+
+# plt <- plt %>% 
+#   dplyr::mutate(institute = genomescan.sid %in% c('104059-002-009','104059-002-010'))%>% 
+#   dplyr::mutate(institute = genomescan.sid %in% c('104059-002-054','104059-003-035','104059-002-103','104059-002-176')) %>% 
+#   dplyr::mutate(institute = genomescan.sid %in% c("104059-002-009", "104059-002-010", "104059-002-012", "104059-002-013", "104059-002-033", "104059-002-060", "104059-002-063", "104059-002-096", "104059-002-105", "104059-002-120"))
+
+
+p2 <- ggplot(plt, aes(x = reorder(genomescan.sid, order),y=1, fill=institute)) +
+  geom_tile(col="black") +
+  facet_grid(cols = vars(assigned.reads.status),space= "free_x",scale="free") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) +
+  scale_color_brewer(palette="Accent") +
+  labs(x=NULL)
+
+
+
+p1 / p2 +   plot_layout(heights = c(10,0.5))
+
+
+
+ggsave("output/figures/qc/per_patients__all-stats-overview.png",width=15,height=8.5)
+
 
 
 
@@ -338,18 +376,38 @@ ggplot(plt, aes(x = reorder(genomescan.sid, order),y=value, group=genomescan.sid
 
 
 
-plt <- qc.stats.collapsed %>% 
-  dplyr::left_join(metadata.glass.per.resection, by = c('genomescan.sid'='GS_ID')) %>%
-  dplyr::mutate(col = assigned.reads.status) %>% 
-  dplyr::mutate(resection = factor(resection, levels = c('R1','R2','R3','R4','MW1','MW2','MW7') )) %>% 
-  dplyr::filter(group == "Glioma")
+plt <- metadata.glass.per.resection %>% 
+  dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, pair.status,Sample_Name.I,Sample_Name.R), by=c('GLASS_ID'='GLASS_ID')) 
 
-ggplot(plt, aes(x=pid, y=resection, fill=col)) +
+
+
+p1 <- ggplot(plt, aes(x=GLASS_ID, y=resection, fill=assigned.reads.status)) +
   geom_tile() +
-  scale_fill_manual(values=c('TOO LOW'='red','PASSED'='darkgreen')) +
-  youri_gg_theme
+  scale_fill_manual(values=c('INSUFFICIENT'='red','PASS'='darkgreen')) +
+  youri_gg_theme +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) +
+  facet_grid(cols = vars(pair.status), scales = "free", space="free") 
 
 
+plt <- metadata.glass.per.resection %>% 
+  dplyr::filter(!duplicated(GLASS_ID)) %>% 
+  dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, pair.status,Sample_Name.I,Sample_Name.R), by=c('GLASS_ID'='GLASS_ID'))
+
+
+p2 <- ggplot(plt, aes(x=GLASS_ID, y=1, fill=institute)) +
+  geom_tile(col="black") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size=6)) +
+  scale_color_brewer(palette="Accent") +
+  # coord_equal() +
+  facet_grid(cols = vars(pair.status), scales = "free", space="free") 
+
+
+p1 / p2 + plot_layout(heights = c(6,0.25))
+
+
+
+ggsave("output/figures/qc/per_patients__sample_overview.png",width=15,height=8.5)
+ggsave("output/figures/qc/per_patients__sample_overview.pdf",width=15,height=8.5)
 
 
 
