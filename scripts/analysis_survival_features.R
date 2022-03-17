@@ -4,6 +4,9 @@
 # load data ----
 
 
+source('scripts/R/youri_gg_theme.R')
+
+
 if(!exists("metadata.glass.per.resection")) {
   source('scripts/load_metadata.R')
 }
@@ -66,7 +69,7 @@ svvl.obj <- tmp.metadata %>%
   dplyr::select(genomescan.sid, svvl, status) %>% 
   dplyr::left_join(
     tmp.data %>%
-      dplyr::slice_head(n=150) %>% 
+      dplyr::slice_head(n=500) %>% 
       t %>%
       as.data.frame(stringsAsFactors=F) %>% 
       tibble::rownames_to_column('genomescan.sid'),
@@ -77,8 +80,26 @@ svvl.obj <- tmp.metadata %>%
 
 
 
-pbc.obj <- rfsrc(Surv(svvl,status) ~ ., svvl.obj , importance = TRUE,ntree=1000)
-plot(pbc.obj)
+pbc.obj <- rfsrc(Surv(svvl,status) ~ ., svvl.obj , importance = TRUE,ntree=5000)
+plot.rfsrc(pbc.obj)
+
+
+plot.variable.rfsrc(pbc.obj)
+
+
+plt <- data.frame(pbc.obj$importance) %>% 
+  dplyr::arrange(abs(pbc.obj.importance)) %>% 
+  dplyr::top_n(20) %>% 
+  dplyr::arrange(-pbc.obj.importance) %>% 
+  tibble::rownames_to_column('gene_uid') %>% 
+  dplyr::mutate(baseline = 0) %>% 
+  dplyr::mutate(y = rank(pbc.obj.importance)) %>% 
+  tidyr::pivot_longer(cols = -c(gene_uid, y))
+
+
+ggplot(plt, aes(x=value,y=reorder(gene_uid, y), group=gene_uid)) +
+  geom_line(lwd=2) +
+  youri_gg_theme
 
 
 
