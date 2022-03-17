@@ -19,7 +19,3 @@ plot(pbc.obj)
 # Van alle resecties tijd tot dood of laatste event nodig
 
 
-
-
-
-

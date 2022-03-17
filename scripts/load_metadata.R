@@ -296,8 +296,66 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 
 
 
+## attach per-resection survival ----
 
-# per patient ----s
+# find dates of last event
+
+tmp.1 <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Surgery data_GLASS RNAseq.csv')
+tmp.1 <- rbind(
+  tmp.1 %>%
+    dplyr::select(`GLASS_ID` | ends_with("_S1")) %>%
+    `colnames<-`(gsub('_S[1-4]$','',colnames(.)))
+  ,
+  tmp.1 %>%
+    dplyr::select(`GLASS_ID` | ends_with("_S2")) %>% 
+    `colnames<-`(gsub('_S[1-4]$','',colnames(.))),
+  tmp.1 %>%
+    dplyr::select(`GLASS_ID` | ends_with("_S3")) %>%
+    `colnames<-`(gsub('_S[1-4]$','',colnames(.))),
+  tmp.1 %>% dplyr::select(`GLASS_ID` | ends_with("_S4")) %>%
+    `colnames<-`(gsub('_S[1-4]$','',colnames(.)))
+) %>% 
+  tidyr::drop_na(Sample_Name) %>% 
+  dplyr::arrange(Sample_Name)
+  #dplyr::select(Sample_Name, Date_Surgery, GLASS_ID)
+
+
+stopifnot(tmp.1$GLASS_ID %in% tmp.2$GLASS_ID)
+
+
+tmp.2 <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_GLASS RNAseq__ALL.csv') %>% 
+  dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) %>% 
+  dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Death , format = "%Y-%m-%d")) %>% 
+  dplyr::select(GLASS_ID, Date_of_Death, Date_Last_Followup) %>% 
+  dplyr::mutate(Date_Last_Event = ifelse(is.na(Date_of_Death), Date_Last_Followup , Date_of_Death)) %>% 
+  dplyr::mutate(Date_Last_Event.status = ifelse(is.na(Date_of_Death), 0 , 1) ) %>% 
+  dplyr::mutate(Date_of_Death = NULL,  Date_Last_Followup = NULL)
+
+
+tmp <- tmp.1 %>% dplyr::left_join(tmp.2, by=c('GLASS_ID'='GLASS_ID')) %>% 
+  dplyr::mutate(time.resection.until.last.event = difftime(Date_Last_Event,Date_Surgery, units = 'days')) %>% 
+  dplyr::rename(status.resection.until.last.event = Date_Last_Event.status) %>% 
+  dplyr::select(Sample_Name, time.resection.until.last.event, status.resection.until.last.event)
+
+
+stopifnot(tmp$time.resection.until.last.event > 0)
+rm(tmp.1, tmp.2)
+
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>%
+  dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'),suffix = c("", ""))
+
+
+
+metadata.glass.per.resection %>%  dplyr::filter(is.na(status.resection.until.last.event))
+
+
+rm(tmp)
+
+
+
+# per patient ----
 
 
 

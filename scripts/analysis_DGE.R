@@ -389,6 +389,8 @@ ggplot(p3, aes(x = `.`, y=ENSG00000128713_HOXD11, col=Sample_Type.x)) +
   geom_point()
 
 
+# recursiveCorPlot ----
+
 
 sign <- res.paired.a %>% 
   dplyr::filter(padj < 0.01) %>% 
@@ -401,15 +403,38 @@ cp <- expression.glass.vst %>%
   `rownames<-`(gsub("^ENS.+_","",rownames(.)))
 
 
+dim(cp)
+# find n PCA - 5 features?!
+pca <- prcomp(t(cp))
+plot(pca)
+dev.off()
+
+
+pcs <- pca$rotation[,1:5] %>%
+  as.data.frame() %>% 
+  dplyr::mutate(main.PC = {names(.)[max.col(.)]}) %>% 
+  dplyr::select(main.PC) %>% 
+  tibble::rownames_to_column('gene_name') %>% 
+  dplyr::mutate(PC1 = ifelse(main.PC == "PC1", NA , F )) %>% 
+  dplyr::mutate(PC2 = ifelse(main.PC == "PC2", NA , F )) %>% 
+  dplyr::mutate(PC3 = ifelse(main.PC == "PC3", NA , F )) %>% 
+  dplyr::mutate(PC4 = ifelse(main.PC == "PC4", NA , F )) %>% 
+  dplyr::mutate(PC5 = ifelse(main.PC == "PC5", NA , F )) %>% 
+  dplyr::mutate(main.PC = NULL)
+
+
+
+
 cpm <- data.frame(gid=rownames(cp)) %>% 
   dplyr::mutate(HOX = grepl("^HOX", gid)) %>% 
-  dplyr::mutate(COL = ifelse(grepl("^COL", gid),"red","green")) %>% 
+  dplyr::mutate(COL = ifelse(grepl("^COL", gid),"red","green")) %>%
+  dplyr::left_join(pcs, by=c('gid'='gene_name')) %>% 
   tibble::column_to_rownames('gid')
 
 
-recursiveCorPlot::recursiveCorPlot(cp, cpm, 2 ,2)
+h <- recursiveCorPlot::recursiveCorPlot(cp, cpm, 2 ,2)
 
-#ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
+ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
 
 
 
