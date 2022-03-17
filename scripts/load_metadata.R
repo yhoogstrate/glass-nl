@@ -320,9 +320,6 @@ tmp.1 <- rbind(
   #dplyr::select(Sample_Name, Date_Surgery, GLASS_ID)
 
 
-stopifnot(tmp.1$GLASS_ID %in% tmp.2$GLASS_ID)
-
-
 tmp.2 <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_GLASS RNAseq__ALL.csv') %>% 
   dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) %>% 
   dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Death , format = "%Y-%m-%d")) %>% 
@@ -330,6 +327,9 @@ tmp.2 <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_
   dplyr::mutate(Date_Last_Event = ifelse(is.na(Date_of_Death), Date_Last_Followup , Date_of_Death)) %>% 
   dplyr::mutate(Date_Last_Event.status = ifelse(is.na(Date_of_Death), 0 , 1) ) %>% 
   dplyr::mutate(Date_of_Death = NULL,  Date_Last_Followup = NULL)
+
+
+stopifnot(tmp.1$GLASS_ID %in% tmp.2$GLASS_ID)
 
 
 tmp <- tmp.1 %>% dplyr::left_join(tmp.2, by=c('GLASS_ID'='GLASS_ID')) %>% 
