@@ -174,9 +174,7 @@ tmp <- data.frame(star.log.final.out = Sys.glob("data/glass/RNAseq/alignments/al
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
-  dplyr::left_join(
-    tmp, by=c('genomescan.sid'='genomescan.sid')
-  )
+  dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'))
 
 
 stopifnot(is.na(metadata.glass.per.resection$star.input.reads) == F)
@@ -213,7 +211,7 @@ tmp <- data.frame(idxstats = Sys.glob("output/tables/qc/idxstats/*.txt")) %>%
   dplyr::mutate(idxstats = NULL, `X.` = NULL)  %>% 
   tibble::column_to_rownames('genomescan.sid') %>% 
   dplyr::mutate(total = rowSums(.))  %>% 
-  dplyr::mutate(alternate.loci = rowSums(select(., contains("_")))) %>% 
+  dplyr::mutate(alternate.loci = rowSums(dplyr::select(., contains("_")))) %>% 
   dplyr::mutate(freq.alternate.loci = alternate.loci / total ) %>% 
   dplyr::select(!contains("_")) %>% 
   dplyr::select(-c('chrM', 'chrEBV'))  %>% 
@@ -228,11 +226,11 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   )
 
 
-
 stopifnot(is.na(metadata.glass.per.resection$idxstats.alternate.loci) == F)
 
 
 rm(tmp, parse_idxstats)
+
 
 
 ##  featurecounts ----
@@ -260,9 +258,7 @@ tmp <- read.delim("data/glass/RNAseq/alignments/alignments-new/GLASS.LGG.EMC.RNA
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
-  dplyr::left_join(
-    tmp, by=c('genomescan.sid'='genomescan.sid')
-  )
+  dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'))
 
 
 
