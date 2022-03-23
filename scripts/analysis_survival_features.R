@@ -154,6 +154,7 @@ plt2 <- plt2 %>%
   #dplyr::mutate(log.importance = log(pbc.obj.importance)) %>% 
   dplyr::mutate(log.importance = log10(plt2$pbc.obj.importance- min(plt2$pbc.obj.importance) + 0.00001)) %>% 
   dplyr::mutate(abs.Z = abs(Z)) %>% 
+  dplyr::mutate(abs.log.HR = abs(log(HR))) %>% 
   dplyr::mutate(m.10log.LR = -log10(LogRank)) %>% 
   dplyr::mutate(m.10log.W = -log10(Wald)) %>% 
   dplyr::mutate(vis = log.importance > -2.4 | log.importance < -4 | m.10log.LR > 6) %>% 
@@ -162,6 +163,11 @@ plt2 <- plt2 %>%
 
 
 ggplot(plt2, aes(x=log.importance, y=abs.Z, label=label)) +
+  geom_point(pch=21) +
+  ggrepel::geom_text_repel(data = plt2 %>%  dplyr::filter(vis == T)) +
+  youri_gg_theme
+
+ggplot(plt2, aes(x=log.importance, y=m.10log.LR, label=label)) +
   geom_point(pch=21) +
   ggrepel::geom_text_repel(data = plt2 %>%  dplyr::filter(vis == T)) +
   youri_gg_theme
@@ -182,9 +188,6 @@ ggplot(plt2, aes(x=log.importance, y=m.10log.W, label=label)) +
 
 
 # R1 svvl ----
-
-# Van alle resecties tijd tot dood of laatste event nodig
-
 
 
 tmp.metadata <- metadata.glass.per.patient %>%
@@ -273,5 +276,63 @@ coxph.res <- RegParallel(
   conflevel = 95)
 
 
+
+plt2 <- data.frame(pbc.obj$importance) %>%
+  tibble::rownames_to_column('gene_uid') %>% 
+  dplyr::left_join(
+    coxph.res, by=c('gene_uid'='Variable')
+  )
+
+
+# Z
+plot(log(plt2$pbc.obj.importance), abs(plt2$Z),pch=19,cex=0.25)
+plot(log10(plt2$pbc.obj.importance- min(plt2$pbc.obj.importance) + 0.00001), abs(plt2$Z),pch=19,cex=0.25)
+
+
+# HR
+plot(log(plt2$pbc.obj.importance), abs(log(plt2$HR)),pch=19,cex=0.25)
+
+# LR
+plot(log(plt2$pbc.obj.importance), -log10(plt2$LogRank),pch=19,cex=0.25)
+
+# W
+plot(log(plt2$pbc.obj.importance), -log10(plt2$Wald),pch=19,cex=0.25)
+
+
+plt2 <- plt2 %>% 
+  #dplyr::mutate(log.importance = log(pbc.obj.importance)) %>% 
+  dplyr::mutate(log.importance = log10(plt2$pbc.obj.importance- min(plt2$pbc.obj.importance) + 0.00001)) %>% 
+  dplyr::mutate(abs.Z = abs(Z)) %>% 
+  dplyr::mutate(abs.log.HR = abs(log(HR))) %>% 
+  dplyr::mutate(m.10log.LR = -log10(LogRank)) %>% 
+  dplyr::mutate(m.10log.W = -log10(Wald)) %>% 
+  dplyr::mutate(vis = log.importance > -2.6 | log.importance < -4 | m.10log.LR > 6) %>% 
+  dplyr::mutate(label = gsub("^[^_]+_","",gene_uid))
+
+
+
+ggplot(plt2, aes(x=log.importance, y=abs.Z, label=label)) +
+  geom_point(pch=21) +
+  ggrepel::geom_text_repel(data = plt2 %>%  dplyr::filter(vis == T)) +
+  xlim(-3.4,-2.4) +
+  youri_gg_theme
+
+ggplot(plt2, aes(x=log.importance, y=m.10log.LR, label=label)) +
+  geom_point(pch=21) +
+  ggrepel::geom_text_repel(data = plt2 %>%  dplyr::filter(vis == T)) +
+  xlim(-3.4,-2.4) +
+  youri_gg_theme
+
+ggplot(plt2, aes(x=log.importance, y=m.10log.LR, label=label)) +
+  geom_point(pch=21) +
+  ggrepel::geom_text_repel(data = plt2 %>%  dplyr::filter(vis == T)) +
+  xlim(-3.4,-2.4) +
+  youri_gg_theme
+
+ggplot(plt2, aes(x=log.importance, y=m.10log.W, label=label)) +
+  geom_point(pch=21) +
+  ggrepel::geom_text_repel(data = plt2 %>%  dplyr::filter(vis == T)) +
+  xlim(-3.4,-2.4) +
+  youri_gg_theme
 
 

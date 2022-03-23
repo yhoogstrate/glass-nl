@@ -15,6 +15,7 @@ source('scripts/R/job_gg_theme.R')
 
 
 source('scripts/load_metadata.R')
+source('scripts/load_tumour_purities.R')
 
 
 # plots ----

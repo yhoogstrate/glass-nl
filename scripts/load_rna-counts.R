@@ -1,11 +1,15 @@
 #!/usr/bin/env R
 
+# load metadata ----
 
 if(!exists("metadata.glass.per.resection")) {
   warning('metadata was not loaded')
   
   source('scripts/load_metadata.R')
 }
+
+
+# load GTF file (gene annot) ----
 
 
 expression.glass.gtf <- read.delim('data/gencode.v34.primary_assembly.annotation.gtf',comment.char = "#",sep="\t",header=F) %>% 
@@ -18,6 +22,7 @@ expression.glass.gtf <- read.delim('data/gencode.v34.primary_assembly.annotation
   dplyr::mutate(gene_uid = paste0(ENSID , "_", gene_name))
 
 
+# load read counts ----
 
 
 expression.glass <- read.delim('data/glass/RNAseq/alignments/alignments-new/GLASS.LGG.EMC.RNA.readcounts.deduplicated_s_2.txt',skip=1,header=T) %>% 
@@ -29,6 +34,7 @@ expression.glass <- read.delim('data/glass/RNAseq/alignments/alignments-new/GLAS
   dplyr::left_join(expression.glass.gtf %>% dplyr::select(gene_id, gene_uid),by=c('gene_id'='gene_id'))
 
 
+## merge GTF and featureCounts per-gene stats ----
 
 
 expression.glass.metadata <- expression.glass %>% 
@@ -46,6 +52,9 @@ rm(expression.glass.gtf)
 stopifnot(metadata.glass.per.resection$genomescan.sid %in% colnames(expression.glass)) # all metadata included samples must exist expression data
 
 
+# cleanup counts ----
+## remove non count columns ----
+
 
 expression.glass <- expression.glass %>%
   dplyr::select(-c('gene_id', 'Chr', 'Start', 'End', 'Strand', 'Length')) %>% 
@@ -56,6 +65,7 @@ expression.glass <- expression.glass %>%
       dplyr::pull('genomescan.sid'))
 
 
+## exclude non relevant gene types ----
 
 # Select protein_coding and lncRNA genes with an average read count >= 3
 sel <- expression.glass %>% 
@@ -86,17 +96,14 @@ stopifnot(rownames(expression.glass) == expression.glass.metadata$gene_uid)
 
 
 
-## VST transform ----
+# VST transform ----
 
 
 expression.glass.vst <- expression.glass %>% 
   DESeq2::DESeqDataSetFromMatrix( data.frame(cond = as.factor(paste0('c',round(runif(ncol(.)))+1) )), ~cond) %>% 
-  DESeq2::vst(blind=F) %>% 
+  DESeq2::vst(blind=T) %>% 
   SummarizedExperiment::assay() %>% 
   as.data.frame(stringsAsFactors=F)
-
-
-
 
 
 

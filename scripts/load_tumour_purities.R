@@ -5,6 +5,7 @@
 
 library(readxl)
 library(tidyverse)
+
 source('scripts/R/job_gg_theme.R')
 source('scripts/R/youri_gg_theme.R')
 
@@ -125,13 +126,43 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 
 
 
+# export for Tobias/Marcel ----
+
+tmp <- metadata.glass.per.resection %>%
+  dplyr::select(-contains('fastp')) %>%
+  dplyr::select(-contains('featureC')) %>%
+  dplyr::select(-contains('idxstats')) %>%
+  dplyr::select(-contains('star')) %>%
+  dplyr::select(
+    -c("resection",
+       "Sample_Type",
+       "Recurrent_Type",
+       "Sample_Sex",
+       "Exclude.by.Wies.on.complete.pair", 
+       "Surgery_ID",
+       "methylation.purity.estimate",
+       "institute",
+       "rid",
+       "assigned.reads.status",
+       "excluded.reason",
+       "excluded",
+       "time.resection.until.last.event", 
+       "status.resection.until.last.event"
+       )
+  ) 
+
+#write.csv(tmp, "/tmp/2022-03-22_purity-export_GLASS_NL_YH.csv")
+rm(tmp)
+
 
 
 # some basic qc plots ----
 
 
-plt <- dnaseq.purities %>% 
-  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name'))
+plt <- dnaseq.purities %>%
+  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+  dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
+  dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
 
 
 
@@ -140,28 +171,54 @@ ggplot(plt, aes(x=dna.shallow.ACE.purity,y=dna.wes.VAF_IDH * 2, label=Sample_Nam
   geom_point() +
   scale_x_continuous(limits = c(0, 1)) +
   scale_y_continuous(limits = c(0, 1.2))  +
-  youri_gg_theme + 
-  geom_smooth(method="lm", se = FALSE) 
+  youri_gg_theme +
+  geom_smooth(method="lm", se = FALSE)
   #ggrepel:: geom_text_repel(size=3, col="gray80")
+
 
 
 ## ACE x WES/VAF ----
 
 
-ggplot(plt, aes(x=dna.shallow.ACE.purity,y=dna.wes.VAF_IDH * 2, label=Sample_Name)) +
+ggplot(plt, aes(x=dna.shallow.ACE.purity,y=dna.wes.VAF_IDH * 2, label=Sample_Name,col=status)) +
   geom_point() +
   scale_x_continuous(limits = c(0, 1)) +
-  scale_y_continuous(limits = c(0, 1.2))  +
+  scale_y_continuous(limits = c(0, 1.2)) +
+  scale_color_manual(values=c('unconfident'='red','regular'='black')) +
   youri_gg_theme 
 
 
 ## ACE x Meth/RF[abs] ----
 
-ggplot(plt, aes(x=log(dna.shallow.ACE.purity),y=methylation.purity.absolute, label=Sample_Name)) +
+
+ggplot(plt, aes(x=dna.shallow.ACE.purity,y=methylation.purity.absolute, label=Sample_Name,col=status)) +
+  geom_point() +
+  #scale_x_continuous(limits = c(0, 1)) +
+  scale_y_continuous(limits = c(0.25, 0.75)) +
+  scale_color_manual(values=c('unconfident'='red','regular'='black')) +
+  youri_gg_theme 
+
+
+
+### log(ACE) x Meth/RF[abs] ----
+
+
+ggplot(plt, aes(x=log(dna.shallow.ACE.purity),y=methylation.purity.absolute, label=Sample_Name,col=status)) +
+  geom_point() +
+  #scale_x_continuous(limits = c(0, 1)) +
+  #scale_y_continuous(limits = c(0.25, 0.75)) +
+  scale_color_manual(values=c('unconfident'='red','regular'='black')) +
+  youri_gg_theme 
+
+
+## Manual Fit x Meth/RF[abs] ----
+
+
+ggplot(plt, aes(x=dna.purity.manual.Erik,y=methylation.purity.absolute, label=Sample_Name,col=status.manual.fit)) +
   geom_point() +
   scale_x_continuous(limits = c(0, 1)) +
   scale_y_continuous(limits = c(0.25, 0.75))  +
-  youri_gg_theme 
+  youri_gg_theme
 
 
 ## WES/VAF x Meth/RF[abs] ----
@@ -179,24 +236,21 @@ ggplot(plt, aes(x=dna.wes.VAF_IDH * 2,y=methylation.purity.absolute, label=Sampl
 
 ## ACE x Meth/RF[est] ----
 
-ggplot(plt, aes(x=dna.shallow.ACE.purity,y=methylation.purity.estimate, label=Sample_Name)) +
-  geom_point() +
-  scale_x_continuous(limits = c(0, 1)) +
-  scale_y_continuous(limits = c(0, 1.0))  +
-  youri_gg_theme 
+# ggplot(plt, aes(x=dna.shallow.ACE.purity,y=methylation.purity.estimate, label=Sample_Name)) +
+#   geom_point() +
+#   scale_x_continuous(limits = c(0, 1)) +
+#   scale_y_continuous(limits = c(0, 1.0))  +
+#   youri_gg_theme 
 
 
+## WES/VAF x Meth/RF[est] -- -
 
 
-## WES/VAF x Meth/RF[est] ----
-
-ggplot(plt, aes(x=dna.wes.VAF_IDH * 2,y=methylation.purity.estimate, label=Sample_Name)) +
-  geom_point() +
-  scale_x_continuous(limits = c(0, 1)) +
-  scale_y_continuous(limits = c(0.5, 1.0))  +
-  youri_gg_theme 
-
-
+# ggplot(plt, aes(x=dna.wes.VAF_IDH * 2,y=methylation.purity.estimate, label=Sample_Name)) +
+#   geom_point() +
+#   scale_x_continuous(limits = c(0, 1)) +
+#   scale_y_continuous(limits = c(0.5, 1.0))  +
+#   youri_gg_theme 
 
 
 ## beeswarm ----
