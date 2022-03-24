@@ -350,11 +350,49 @@ metadata.glass.per.resection %>%  dplyr::filter(is.na(status.resection.until.las
 rm(tmp)
 
 
+## attach growth annotations ----
+
+tmp.1 <- read.csv('data/glass/Imaging/220314_glass_imaging_data_summary.csv')
+tmp.2 <- read.csv('data/glass/Imaging/220314_growth_annotations.csv') %>% 
+  dplyr::mutate(SUBJECT=NULL,
+                `t2_flair_sign`=NULL,
+                growth_pattern=NULL)
+
+stopifnot(tmp.2$X %in% tmp.1$Image_ID)
+stopifnot(duplicated(tmp.1$Image_ID) == F)
+stopifnot(duplicated(tmp.2$X) == F)
+
+
+tmp <- tmp.1 %>% 
+  dplyr::left_join(tmp.2, by=c('Image_ID'='X')) %>% 
+  #dplyr::mutate(Date_Surgery = as.Date(Date_Surgery , format = "%d/%m/%Y")) %>% # not needed for current analysis
+  #dplyr::mutate(Date = as.Date(Date , format = "%Y-%m-%d")) %>% # not needed for current analysis
+  dplyr::mutate(SUBJECT = NULL, Date_Image = NULL, Sample_ID = NULL, Date_Surgery = NULL, Status = NULL, Date = NULL ) %>% 
+  dplyr::rename(imaging.volume.cet = Volume_CET) %>% 
+  dplyr::rename(imaging.volume.wt = Volume_WT) %>% 
+  dplyr::rename(imaging.growth_pattern = growth_pattern) %>% 
+  dplyr::mutate(imaging.growth_pattern = ifelse(imaging.growth_pattern %in% c("","Not sure"), NA, imaging.growth_pattern)) %>% 
+  dplyr::rename(imaging.t2_flair_sign = t2_flair_sign) %>% 
+  dplyr::mutate(imaging.t2_flair_sign = ifelse(imaging.t2_flair_sign %in% c("","Not sure"), NA, imaging.t2_flair_sign)) %>% 
+  dplyr::rename(imaging.comments = COMMENTS) %>% 
+  dplyr::rename(imaging.rater = RATER) %>% 
+  dplyr::rename(imaging.t2_flair_comments = t2_flair_comments) %>% 
+  dplyr::rename(imaging.growth_pattern_comment = growth_pattern_comment) %>% 
+  dplyr::select(Sample_Name, imaging.volume.cet, imaging.volume.wt, imaging.growth_pattern, imaging.t2_flair_sign)
+
+
+rm(tmp.1, tmp.2)
+
+
+#tmp$Sample_Name[tmp$Sample_Name %in% metadata.glass.per.resection$Sample_Name == F] # some are unique for imaging
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'))
+
+
 
 # per patient ----
-
-
-
 
 
 metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_GLASS RNAseq__ALL.csv') %>% 
