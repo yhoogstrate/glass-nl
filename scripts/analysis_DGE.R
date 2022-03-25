@@ -5,6 +5,7 @@
 
 
 source('scripts/R/youri_gg_theme.R')
+
 library(DESeq2)
 library(EnhancedVolcano)
 
@@ -439,6 +440,74 @@ ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
 
 
 "CD248" %in% rownames(cp)
+
+
+
+# DE invasive ~ expansive ----
+
+
+tmp.metadata <- metadata.glass.per.resection %>% 
+  dplyr::filter(excluded == F & !is.na(imaging.growth_pattern) & imaging.growth_pattern %in% c('Mostly expansive','Mostly invasive')) %>% 
+  dplyr::mutate(imaging.growth_pattern = factor(gsub(" ",".",imaging.growth_pattern),levels=c('Mostly.expansive','Mostly.invasive')))
+
+
+tmp.data <- expression.glass %>%
+  dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+
+
+stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+
+
+dds <- DESeq2::DESeqDataSetFromMatrix(countData = tmp.data,
+                                         colData = tmp.metadata,
+                                         design= ~ imaging.growth_pattern) %>% 
+  DESeq2::DESeq()
+
+res <- DESeq2::results(dds) %>% 
+  as.data.frame(stringsAsFactors=F) %>% 
+  tibble::rownames_to_column('gene_uid') %>% 
+  dplyr::filter(!is.na(padj)) %>% 
+  dplyr::arrange(pvalue,padj) %>% 
+  dplyr::left_join(expression.glass.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
+
+
+res %>%
+  dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
+  dplyr::filter(padj < 0.01) %>% 
+  dim
+
+
+EnhancedVolcano(res,
+                lab = res$gene_name,
+                x = 'log2FoldChange',
+                y = 'padj',
+                pCutoff = 0.01)
+
+
+
+plt <- metadata.glass.per.resection %>% 
+#plt <- tmp.metadata %>% 
+  dplyr::filter(excluded == F) %>% 
+  dplyr::left_join(
+    expression.glass.vst %>%
+      t() %>%
+      as.data.frame %>%
+      tibble::rownames_to_column('genomescan.sid') %>% 
+      dplyr::select( genomescan.sid , ENSG00000167244_IGF2, ENSG00000128710_HOXD10), by=c('genomescan.sid'='genomescan.sid')
+  )
+
+
+
+ggplot(plt, aes(x=time.resection.until.last.event, y=ENSG00000167244_IGF2, col=imaging.growth_pattern)) +
+  geom_point() +
+  theme_bw()
+
+ggplot(plt, aes(x=time.resection.until.last.event, y=ENSG00000128710_HOXD10, col=imaging.growth_pattern)) +
+  geom_point() +
+  theme_bw()
+
+
+
 
 
 

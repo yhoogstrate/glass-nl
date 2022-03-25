@@ -12,7 +12,7 @@ if(!exists("metadata.glass.per.resection")) {
 # load GTF file (gene annot) ----
 
 
-expression.glass.gtf <- read.delim('data/gencode.v34.primary_assembly.annotation.gtf',comment.char = "#",sep="\t",header=F) %>% 
+expression.glass.gtf <- read.delim('data/glass/RNAseq/gencode.v34.primary_assembly.annotation.gtf',comment.char = "#",sep="\t",header=F) %>% 
   dplyr::filter(V3 == "gene") %>% 
   dplyr::mutate(gene_id = gsub("^.*gene_id[ ]+([^;]+);.+$","\\1", V9)) %>% 
   dplyr::filter(grepl("_PAR_", gene_id) == F) %>%  # these are odd equivalents of chrX positioned at chrY
@@ -32,6 +32,13 @@ expression.glass <- read.delim('data/glass/RNAseq/alignments/alignments-new/GLAS
   dplyr::filter(grepl("_PAR_", Geneid) == F) %>%  # these are odd equivalents of chrX positioned at chrY
   dplyr::rename(gene_id = Geneid) %>% 
   dplyr::left_join(expression.glass.gtf %>% dplyr::select(gene_id, gene_uid),by=c('gene_id'='gene_id'))
+
+
+expression.glass %>%
+  #tibble::rownames_to_column('gene_name') %>% 
+  dplyr::filter(grepl("EGFR",gene_uid)) %>% 
+  dplyr::select(`104059-002-042`)
+
 
 
 ## merge GTF and featureCounts per-gene stats ----
