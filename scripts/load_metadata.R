@@ -233,7 +233,7 @@ rm(tmp, parse_idxstats)
 
 
 
-##  featurecounts ----
+## featurecounts ----
 
 
 tmp <- read.delim("data/glass/RNAseq/alignments/alignments-new/GLASS.LGG.EMC.RNA.readcounts.deduplicated_s_2.txt.summary",skip=0,header=T,check.names=F) %>% 

@@ -27,15 +27,15 @@ if(!exists("expression.glass.vst")) {
 
 # example RF model ----
 
-
-data(pbc, package = "randomForestSRC")
-
-
-pbc.obj <- rfsrc(Surv(days,status) ~ ., pbc, importance = TRUE)
-#find.interaction(pbc.obj, method = "vimp", nvar = 8)
-
-plot(pbc.obj)
-
+# 
+# data(pbc, package = "randomForestSRC")
+# 
+# 
+# pbc.obj <- rfsrc(Surv(days,status) ~ ., pbc, importance = TRUE)
+# #find.interaction(pbc.obj, method = "vimp", nvar = 8)
+# 
+# plot(pbc.obj)
+# 
 
 # R2 svvl ----
 
@@ -105,6 +105,39 @@ ggplot(plt, aes(x=RFSRC.importance,y=reorder(gene_uid, y), group=gene_uid)) +
   youri_gg_theme +
   labs(y=NULL)
 
+
+
+### example co-expression top features ----
+
+# ENSG00000232093_DCST1.AS1
+
+plt <- data.frame(pbc.obj$importance) %>% 
+  dplyr::arrange(-abs(pbc.obj.importance)) %>% 
+  dplyr::top_n(5) %>% 
+  tibble::rownames_to_column("gene_uid") %>% 
+  dplyr::mutate(gene_tmp_uid = gsub("_.+$","",gene_uid)) %>% 
+  dplyr::mutate(gene_uid = NULL) %>% 
+  dplyr::left_join(
+    expression.glass.vst %>% 
+      tibble::rownames_to_column("gene_uid") %>% 
+      dplyr::mutate(gene_tmp_uid = gsub("_.+$","",gene_uid))     ,
+    by=c('gene_tmp_uid'='gene_tmp_uid')
+  ) %>% 
+  dplyr::mutate(gene_tmp_uid = NULL) %>% 
+  tibble::column_to_rownames('gene_uid') %>% 
+  dplyr::mutate(pbc.obj.importance = NULL)
+
+
+labels <- data.frame(gid = rownames(plt),'a'=T) %>% 
+  tibble::column_to_rownames('gid')
+
+
+library(recursiveCorPlot)
+recursiveCorPlot(plt, labels, 2 ,2)
+
+# recursiveCorPlot::
+
+recursiveCorPlot(G.SAM.corrected.DE.genes.VST, G.SAM.corrected.DE.labels, 2 ,2)
 
 
 
@@ -334,5 +367,11 @@ ggplot(plt2, aes(x=log.importance, y=m.10log.W, label=label)) +
   ggrepel::geom_text_repel(data = plt2 %>%  dplyr::filter(vis == T)) +
   xlim(-3.4,-2.4) +
   youri_gg_theme
+
+
+
+
+
+
 
 

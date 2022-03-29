@@ -5,6 +5,8 @@
 
 
 source('scripts/R/youri_gg_theme.R')
+source('scripts/R/chrom_sizes.R')
+
 
 library(DESeq2)
 library(EnhancedVolcano)
@@ -244,14 +246,28 @@ p1 <- res.unpaired.a %>%
     , by=c('gene_uid'='gene_uid')
   ) %>% 
   dplyr::filter(!is.na(stat.unpaired) & !is.na(stat.paired)) %>% 
-  dplyr::mutate(dist = abs(stat.unpaired - stat.paired))
+  dplyr::mutate(dist = abs(stat.unpaired - stat.paired)) %>% 
+  dplyr::mutate(proteomics.rf.imp = gene_name %in%
+                  c("GCLC","SORD","SNX18","AGRN","METTL7A","BAG6","FCGBP",
+                    "NADK2","ACAA2","SEMA4B") |
+                  grepl("ENSG00000001084",gene_uid) |
+                  grepl("ENSG00000140263",gene_uid) |
+                  grepl("ENSG00000152620",gene_uid) |
+                  grepl("ENSG00000167315",gene_uid)
+                )
 
 
-ggplot(p1, aes(x= stat.unpaired, y=stat.paired,label=gene_name)) +
-  geom_point() +
+ggplot(p1, aes(x= stat.unpaired, y=stat.paired,label=gene_name,col=proteomics.rf.imp)) +
+  geom_point(data = p1 %>% dplyr::filter(proteomics.rf.imp == F)) +
+  geom_point(data = p1 %>% dplyr::filter(proteomics.rf.imp == T)) +
   youri_gg_theme + 
-  ggpubr::stat_cor() +
-  ggrepel::geom_text_repel(data = subset(p1, dist > 5))
+  #ggpubr::stat_cor() +
+  ggrepel::geom_text_repel(data = subset(p1, dist > 5 | proteomics.rf.imp)) +
+  scale_color_manual(values=c('TRUE'='black','FALSE'='red'))
+
+
+
+
 
 
 
@@ -277,29 +293,118 @@ ggplot(p1, aes(x= stat.unpaired, y=stat.paired,label=gene_name)) +
 
 
 
-## chromosome plot
+## chromosome plot ----
 
-source('scripts/R/chrom_sizes.R')
 
-plt <- res.paired %>% 
+plt <- res.paired.a %>% 
   dplyr::left_join(chrs_hg38_s, by=c('gene_chr'='chr')) %>% 
   dplyr::mutate(x = gene_chr_center_loc + pos) %>% 
   dplyr::mutate(gene_chr = factor(gene_chr, levels=gtools::mixedsort(unique(as.character(gene_chr))) ))
 
 
-ggplot(plt , aes(x=x,y=stat,col=gene_chr)) + 
-  geom_point(pch=19,cex=0.2) +
-  geom_smooth() +
-  youri_gg_theme
+# ggplot(plt , aes(x=x,y=stat,col=gene_chr)) + 
+#   geom_point(pch=19,cex=0.2) +
+#   geom_smooth() +
+#   youri_gg_theme
 
 ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=stat,col=gene_chr)) + 
   facet_grid(cols = vars(gene_chr), scales = "free", space="free") +
   geom_point(pch=19,cex=0.2) +
-  geom_smooth() +
-  youri_gg_theme
+  geom_smooth(se=F,col="black", lwd=0.7) +
+  youri_gg_theme + labs(x=NULL)
 
 
-plt$gene_chr = factor(plt$gene_chr, levels = unique(plt$gene_chr))
+#plt$gene_chr = factor(plt$gene_chr, levels = unique(plt$gene_chr))
+
+
+### chromomsome 9 ----
+
+plt <- res.paired.a %>%
+  dplyr::filter(gene_chr == "chr9") %>% 
+  dplyr::left_join(chrs_hg38_s, by=c('gene_chr'='chr')) %>% 
+  dplyr::mutate(x = gene_chr_center_loc + pos) %>% 
+  dplyr::mutate(gene_chr = factor(gene_chr, levels=gtools::mixedsort(unique(as.character(gene_chr))) )) %>% 
+  dplyr::mutate(m.l.padj = -log10(padj)) %>% 
+  tidyr::pivot_longer(cols=c(m.l.padj, log2FoldChange, stat)) %>% 
+  dplyr::mutate(name = factor(name, levels=c('m.l.padj', 'log2FoldChange', 'stat') ))
+
+
+ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=value,col=gene_chr)) + 
+  facet_grid(cols = vars(gene_chr), rows=vars(name), scales = "free", space="free_x") +
+  geom_smooth(alpha=0.5, se = FALSE, col="gray60") +
+  geom_point(pch=19,cex=0.2) +
+  youri_gg_theme +
+  labs(x=NULL,y="DESeq2 wald statistic") +
+  geom_vline(xintercept = 36, alpha=0.4)
+#geom_vline(xintercept = 33.67, alpha=0.4)
+#geom_vline(xintercept = 36, alpha=0.4)
+
+
+
+### chromomsome 11 ----
+
+
+plt <- res.paired.a %>%
+  dplyr::filter(gene_chr == "chr11") %>% 
+  dplyr::left_join(chrs_hg38_s, by=c('gene_chr'='chr')) %>% 
+  dplyr::mutate(x = gene_chr_center_loc + pos) %>% 
+  dplyr::mutate(gene_chr = factor(gene_chr, levels=gtools::mixedsort(unique(as.character(gene_chr))) )) %>% 
+  dplyr::mutate(m.l.padj = -log10(padj)) %>% 
+  tidyr::pivot_longer(cols=c(m.l.padj, log2FoldChange, stat)) %>% 
+  dplyr::mutate(name = factor(name, levels=c('m.l.padj', 'log2FoldChange', 'stat') ))
+
+
+ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=value,col=gene_chr)) + 
+  facet_grid(cols = vars(gene_chr), rows=vars(name), scales = "free", space="free_x") +
+  #geom_point(data = plt %>% dplyr::filter(gene_name == "CCND1"), pch=19,cex=1.2,col="black") +
+  geom_point(data = plt %>% dplyr::filter(gene_name %in% c("CD248","CDCA5")), pch=19,cex=1.2,col="black") +
+  geom_point(pch=19,cex=0.2) +
+  geom_smooth(alpha=0.5, se = FALSE, col="gray60") +
+  youri_gg_theme + 
+  labs(x=NULL)
+
+
+
+
+res.paired.a %>%
+  dplyr::filter(gene_chr == "chr11") %>%
+  dplyr::filter(stat > 4) %>%
+  dplyr::filter(gene_chr_center_loc > 50000000 & gene_chr_center_loc < 75000000) %>% 
+  dplyr::arrange(gene_chr_center_loc)
+
+
+### chromomsome 19 ----
+
+
+plt <- res.paired.a %>%
+  dplyr::filter(gene_chr == "chr19") %>% 
+  dplyr::left_join(chrs_hg38_s, by=c('gene_chr'='chr')) %>% 
+  dplyr::mutate(x = gene_chr_center_loc + pos) %>% 
+  dplyr::mutate(gene_chr = factor(gene_chr, levels=gtools::mixedsort(unique(as.character(gene_chr))) )) %>% 
+  dplyr::mutate(m.l.padj = -log10(padj)) %>% 
+  tidyr::pivot_longer(cols=c(m.l.padj, log2FoldChange, stat)) %>% 
+  dplyr::mutate(name = factor(name, levels=c('m.l.padj', 'log2FoldChange', 'stat') ))
+
+
+ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=value,col=gene_chr)) + 
+  facet_grid(cols = vars(gene_chr), rows=vars(name), scales = "free", space="free_x") +
+  geom_vline(xintercept = 19.937823 , alpha=0.4) +
+  geom_vline(xintercept = 24.219001, alpha=0.4) +
+  geom_point(pch=19,cex=0.2) +
+  geom_smooth(alpha=0.5, se = FALSE, col="gray60") +
+  youri_gg_theme + 
+  labs(x=NULL)
+
+
+
+
+res.paired.a %>%
+  dplyr::filter(gene_chr == "chr19") %>%
+  dplyr::filter(stat > 4) %>%
+  dplyr::filter(gene_chr_center_loc > 50000000 & gene_chr_center_loc < 75000000) %>% 
+  dplyr::arrange(gene_chr_center_loc)
+
+
 
 ## enhancedvolcano's ----
 
@@ -508,6 +613,44 @@ ggplot(plt, aes(x=time.resection.until.last.event, y=ENSG00000128710_HOXD10, col
 
 
 
+## tmp ----
+
+
+plt.tmp <- res.paired.a %>% 
+  dplyr::left_join(
+    data.frame(pbc.obj$importance) %>% tibble::rownames_to_column('gene_uid'),
+    by=c('gene_uid' = 'gene_uid')
+  ) %>% 
+  dplyr::mutate(m.l.padj = -log10(padj))  %>%
+  dplyr::mutate(pbc.obj.importance = log((pbc.obj.importance * 1000) + 1 ))
+
+
+
+ggplot(plt.tmp, aes(x = m.l.padj, y= pbc.obj.importance) ) +
+  geom_point(pch=19, cex=0.5) +
+  xlim(0,5.5)  +
+  labs(x = "adjusted p-value time difference", y="importance predicting survival") +
+  theme_bw()
+
+
+## tmp2 ----
+
+
+plt.tmp <- res %>% 
+  dplyr::left_join(
+    data.frame(pbc.obj$importance) %>% tibble::rownames_to_column('gene_uid'),
+    by=c('gene_uid' = 'gene_uid')
+  ) %>% 
+  dplyr::mutate(m.l.padj = -log10(padj))  %>%
+  dplyr::mutate(pbc.obj.importance = log((pbc.obj.importance * 1000) + 1 ))
+
+
+
+ggplot(plt.tmp, aes(x = m.l.padj, y= pbc.obj.importance) ) +
+  geom_point(pch=19, cex=0.5) +
+  xlim(0,2)  +
+  labs(x = "adjusted p-value time difference", y="importance predicting survival") +
+  theme_bw()
 
 
 

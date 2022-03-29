@@ -2,19 +2,20 @@
 
 
 
+    #-f \
 
 
 nice ./bin/subread-2.0.1-Linux-x86_64/bin/featureCounts \
     -a data/glass/RNAseq/gencode.v34.primary_assembly.annotation.gtf \
     -o output/tables/rna-seq/GLASS.LGG.EMC.RNA.readcounts.deduplicated_s_2.per-gene.txt \
-    --tmpDir /dev/shm \
+    --tmpDir tmp/tmp \
     -s 2 \
     -T 24 \
     --primary \
     --ignoreDup \
     -C \
     -p \
-    -f \
+    -t gene \
 data/glass/RNAseq/alignments/alignments-new/104059-001-012/Aligned.sortedByCoord.out.markduplicate.bam \
 data/glass/RNAseq/alignments/alignments-new/104059-001-037/Aligned.sortedByCoord.out.markduplicate.bam \
 data/glass/RNAseq/alignments/alignments-new/104059-001-060/Aligned.sortedByCoord.out.markduplicate.bam \
@@ -247,19 +248,19 @@ data/glass/RNAseq/alignments/alignments-new/104059-003-050/Aligned.sortedByCoord
 
 
 
-
+#-f \
 
 nice ./bin/subread-2.0.1-Linux-x86_64/bin/featureCounts \
     -a data/glass/RNAseq/gencode.v34.primary_assembly.annotation.gtf \
     -o output/tables/rna-seq/GLASS.LGG.EMC.RNA.readcounts.deduplicated_s_1.per-gene.txt \
-    --tmpDir /dev/shm \
+    --tmpDir tmp/tmp \
     -s 1 \
     -T 24 \
     --primary \
     --ignoreDup \
     -C \
     -p \
-    -f \
+    -t gene \
 data/glass/RNAseq/alignments/alignments-new/104059-001-012/Aligned.sortedByCoord.out.markduplicate.bam \
 data/glass/RNAseq/alignments/alignments-new/104059-001-037/Aligned.sortedByCoord.out.markduplicate.bam \
 data/glass/RNAseq/alignments/alignments-new/104059-001-060/Aligned.sortedByCoord.out.markduplicate.bam \
