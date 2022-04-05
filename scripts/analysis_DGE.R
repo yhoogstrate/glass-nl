@@ -71,7 +71,8 @@ if(file.exists("cache/res.unpaired.a.exon.Rds")) {
     dplyr::left_join(expression.glass.exon.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
   
 
-  saveRDS(res.unpaired.a, "cache/res.unpaired.a.Rds")
+  saveRDS(res.unpaired.a.exon, "cache/res.unpaired.a.exon.Rds")
+
 }  
 
 
@@ -262,7 +263,7 @@ if(file.exists("cache/res.unpaired.a.gene.Rds")) {
     dplyr::left_join(expression.glass.gene.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
   
   
-  saveRDS(res.unpaired.a, "cache/res.unpaired.a.Rds")
+  saveRDS(res.unpaired.gene.exon, "cache/res.unpaired.a.gene.Rds")
   
   
 }  
