@@ -221,4 +221,8 @@ expression.glass.gene.vst <- expression.glass.gene %>%
 rm(expression.glass.gtf)
 
 
+# power test X/Y plot?
+
+
+
 
