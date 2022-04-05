@@ -100,97 +100,267 @@ expression.glass.exon.metadata <- expression.glass.exon.metadata %>%
 # 2a. paired exon [incomplete as separate group] ----
 
 
-tmp.metadata <- metadata.glass.per.patient %>%
-  dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
-  tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
-  tidyr::drop_na(value) %>%
-  dplyr::mutate(name=NULL) %>%
-  dplyr::rename(genomescan.sid = value) %>%
-  dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
-  dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
-  dplyr::arrange(Sample_Type, genomescan.sid)
+if(file.exists("cache/res.paired.a.exon.Rds")) {
+  
+  # load from cache
+  print("Loading 'cache/res.paired.a.exon.Rds' from cache")
+  res.paired.a.exon <- readRDS("cache/res.paired.a.exon.Rds")
+  
+} else {
+  
+  tmp.metadata <- metadata.glass.per.patient %>%
+    dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
+    tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
+    tidyr::drop_na(value) %>%
+    dplyr::mutate(name=NULL) %>%
+    dplyr::rename(genomescan.sid = value) %>%
+    dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+    dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
+    dplyr::arrange(Sample_Type, genomescan.sid)
+  
+  
+  tmp.data <- expression.glass.exon %>%
+    dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+  
+  
+  stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+  
+  
+  
+  dds.paired.a.exon <- DESeqDataSetFromMatrix(countData = tmp.data,
+                                colData = tmp.metadata,
+                                design= ~ patient.correction.id + Sample_Type)
+  
+  
+  
+  dds.paired.a.exon <- DESeq(dds.paired.a.exon)
+  res.paired.a.exon <- results(dds.paired.a.exon) %>% 
+    as.data.frame() %>% 
+    dplyr::filter(!is.na(padj)) %>% 
+    dplyr::arrange(pvalue,padj) %>% 
+    tibble::rownames_to_column('gene_uid') %>% 
+    dplyr::left_join(expression.glass.exon.metadata %>% 
+                       dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
+
+  
+  saveRDS(res.paired.a.exon, "cache/res.paired.a.exon.Rds")
+}
 
 
-tmp.data <- expression.glass.exon %>%
-  dplyr::select(all_of( tmp.metadata$genomescan.sid ))
-
-
-stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
-
-
-
-dds.paired.a <- DESeqDataSetFromMatrix(countData = tmp.data,
-                              colData = tmp.metadata,
-                              design= ~ patient.correction.id + Sample_Type)
-
-
-
-dds.paired.a <- DESeq(dds.paired.a)
-res.paired.a <- results(dds.paired.a) %>% 
-  as.data.frame() %>% 
-  dplyr::filter(!is.na(padj)) %>% 
-  dplyr::arrange(pvalue,padj) %>% 
-  tibble::rownames_to_column('gene_uid') %>% 
-  dplyr::left_join(expression.glass.metadata %>% 
-                     dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
-
-
-
-
-res.paired.a %>%
+# n sign
+res.paired.a.exon %>%
   dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
   dplyr::filter(padj < 0.01) %>% 
   dim
 
 
-#saveRDS(res.paired.a, "cache/res.paired.a.Rds")
-res.paired.a <- readRDS("cache/res.paired.a.Rds")
+
+# append results
+expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
+  dplyr::left_join(
+    res.paired.a.exon %>% 
+      dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
+      tibble::column_to_rownames('gene_uid') %>% 
+      `colnames<-`(paste0(colnames(.),".partially.paired.exon")) %>% 
+      tibble::rownames_to_column('gene_uid'),
+    by=c('gene_uid'='gene_uid'),suffix = c("", "")
+  ) 
+
+
 
 
 
 # 2b. paired exon [only paired] ----
+# 
+# 
+# tmp.metadata <- metadata.glass.per.patient %>% 
+#   dplyr::filter(pair.status == "complete") %>% 
+#   dplyr::select(genomescan.sid.I, genomescan.sid.R) %>% 
+#   tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>% 
+#   dplyr::mutate(name=NULL) %>% 
+#   dplyr::rename(genomescan.sid = value) %>% 
+#   dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+#   dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID'))
+# 
+# 
+# tmp.data <- expression.exon.glass %>% 
+#   dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+# 
+# 
+# stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+# 
+# 
+# 
+# dds.paired.b <- DESeqDataSetFromMatrix(countData = tmp.data,
+#                               colData = tmp.metadata,
+#                               design= ~ patient.correction.id + Sample_Type)
+# 
+# 
+# 
+# dds.paired.b <- DESeq(dds.paired.b)
+# res.paired.b <- results(dds.paired.b) %>% 
+#   as.data.frame() %>% 
+#   dplyr::filter(!is.na(padj)) %>% 
+#   dplyr::arrange(pvalue,padj) %>% 
+#   tibble::rownames_to_column('gene_uid') %>% 
+#   dplyr::left_join(expression.glass.metadata %>% 
+#                      dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
+# 
+# 
+# 
+# 
+# res.paired.b %>%
+#   dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
+#   dplyr::filter(padj < 0.01) %>% 
+#   dim
+# 
 
 
-tmp.metadata <- metadata.glass.per.patient %>% 
-  dplyr::filter(pair.status == "complete") %>% 
-  dplyr::select(genomescan.sid.I, genomescan.sid.R) %>% 
-  tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>% 
-  dplyr::mutate(name=NULL) %>% 
-  dplyr::rename(genomescan.sid = value) %>% 
-  dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
-  dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID'))
+
+# 3. unpaired gene ----
 
 
-tmp.data <- expression.exon.glass %>% 
-  dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+if(file.exists("cache/res.unpaired.a.gene.Rds")) {
+  
+  print("Loading 'cache/res.unpaired.a.gene.Rds' from cache")
+  res.unpaired.a.gene <- readRDS("cache/res.unpaired.a.gene.Rds")
+  
+} else {
+
+  tmp.metadata <- metadata.glass.per.patient %>%
+    dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
+    tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
+    tidyr::drop_na(value) %>%
+    dplyr::mutate(name=NULL) %>%
+    dplyr::rename(genomescan.sid = value) %>%
+    dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+    dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
+    dplyr::arrange(Sample_Type, genomescan.sid)
+  
+  
+  tmp.data <- expression.glass.gene %>%
+    dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+  
+  
+  
+  stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+  
+  
+  
+  dds.unpaired.a.gene <- DESeqDataSetFromMatrix(countData = tmp.data,
+                                                colData = tmp.metadata,
+                                                design= ~ Sample_Type)
+  
+  
+  
+  dds.unpaired.a.gene <- DESeq(dds.unpaired.a.gene)
+  res.unpaired.a.gene <- results(dds.unpaired.a.gene) %>% 
+    as.data.frame(stringsAsFactors=F) %>% 
+    tibble::rownames_to_column('gene_uid') %>% 
+    dplyr::filter(!is.na(padj)) %>% 
+    dplyr::arrange(pvalue,padj) %>% 
+    dplyr::left_join(expression.glass.gene.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
+  
+  
+  saveRDS(res.unpaired.a, "cache/res.unpaired.a.Rds")
+  
+  
+}  
 
 
-stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
-
-
-
-dds.paired.b <- DESeqDataSetFromMatrix(countData = tmp.data,
-                              colData = tmp.metadata,
-                              design= ~ patient.correction.id + Sample_Type)
-
-
-
-dds.paired.b <- DESeq(dds.paired.b)
-res.paired.b <- results(dds.paired.b) %>% 
-  as.data.frame() %>% 
-  dplyr::filter(!is.na(padj)) %>% 
-  dplyr::arrange(pvalue,padj) %>% 
-  tibble::rownames_to_column('gene_uid') %>% 
-  dplyr::left_join(expression.glass.metadata %>% 
-                     dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
-
-
-
-
-res.paired.b %>%
+# n-sig
+res.unpaired.a.gene %>%
   dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
   dplyr::filter(padj < 0.01) %>% 
   dim
+
+
+# append results
+expression.glass.gene.metadata <- expression.glass.gene.metadata %>% 
+  dplyr::left_join(
+    res.unpaired.a.gene %>% 
+      dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
+      tibble::column_to_rownames('gene_uid') %>% 
+      `colnames<-`(paste0(colnames(.),".unpaired.gene")) %>% 
+      tibble::rownames_to_column('gene_uid'),
+    by=c('gene_uid'='gene_uid'),suffix = c("", "")
+  ) 
+
+
+
+
+
+# 4a. paired gene [incomplete as separate group] ----
+
+
+if(file.exists("cache/res.paired.a.gene.Rds")) {
+  
+  # load from cache
+  print("Loading 'cache/res.paired.a.gene.Rds' from cache")
+  res.paired.a.gene <- readRDS("cache/res.paired.a.gene.Rds")
+  
+} else {
+  
+  tmp.metadata <- metadata.glass.per.patient %>%
+    dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
+    tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
+    tidyr::drop_na(value) %>%
+    dplyr::mutate(name=NULL) %>%
+    dplyr::rename(genomescan.sid = value) %>%
+    dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+    dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
+    dplyr::arrange(Sample_Type, genomescan.sid)
+  
+  
+  tmp.data <- expression.glass.gene %>%
+    dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+  
+  
+  stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+  
+  
+  
+  dds.paired.a.gene <- DESeqDataSetFromMatrix(countData = tmp.data,
+                                              colData = tmp.metadata,
+                                              design= ~ patient.correction.id + Sample_Type)
+  
+  
+  
+  dds.paired.a.gene <- DESeq(dds.paired.a.gene)
+  res.paired.a.gene <- results(dds.paired.a.gene) %>% 
+    as.data.frame() %>% 
+    dplyr::filter(!is.na(padj)) %>% 
+    dplyr::arrange(pvalue,padj) %>% 
+    tibble::rownames_to_column('gene_uid') %>% 
+    dplyr::left_join(expression.glass.gene.metadata %>% 
+                       dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
+  
+  
+  saveRDS(res.paired.a.gene, "cache/res.paired.a.gene.Rds")
+}
+
+
+# n sign
+res.paired.a.gene %>%
+  dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
+  dplyr::filter(padj < 0.01) %>% 
+  dim
+
+
+
+# append results
+expression.glass.gene.metadata <- expression.glass.gene.metadata %>% 
+  dplyr::left_join(
+    res.paired.a.gene %>% 
+      dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
+      tibble::column_to_rownames('gene_uid') %>% 
+      `colnames<-`(paste0(colnames(.),".partially.paired.gene")) %>% 
+      tibble::rownames_to_column('gene_uid'),
+    by=c('gene_uid'='gene_uid'),suffix = c("", "")
+  ) 
+
+
+
 
 
 
