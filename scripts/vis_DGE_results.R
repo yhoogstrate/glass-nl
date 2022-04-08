@@ -30,8 +30,16 @@ if("padj.partially.paired.exon" %in% colnames(expression.glass.exon.metadata) ==
 
 ## recursiveCorPlot [histone genes + cell types + cycling] ----
 
-#@todo script deze met LFC, chr6 en ^H
-sel.hist <- c("H4C1", "H3C2", "H2AC4", "H3C3", "H1-6", "H3C7", "H2BC9", "H2BC11", "H2AC11", "H2BC12", "H2AC12", "H2BC13", "H2AC13", "H3C10", "H2AC14", "H2BC14", "H2AC15", "H2AC16", "H1-5", "H3C11", "H3C12", "H2BC17")
+
+sel.hist <- expression.glass.exon.metadata %>% 
+  dplyr::filter(padj.partially.paired.exon < 0.01) %>% 
+  dplyr::filter(gene_chr == "chr6") %>% 
+  dplyr::filter(log2FoldChange.partially.paired.exon > 0.75) %>% 
+  dplyr::filter(gene_chr_center_loc > 25000000 & gene_chr_center_loc < 30000000) %>% 
+  dplyr::filter(grepl("^H",gene_name)) %>% 
+  dplyr::filter(grepl("^HLA-",gene_name) == F) %>% 
+  dplyr::pull(gene_name)
+
 
 sel.tum <- c("SOX4","SOX2","GFAP","OLIG1") # Tum
 sel.tam1 <- c("CD74","NEAT1") # TAM.1

@@ -19,14 +19,9 @@ if(!exists("metadata.glass.per.resection")) {
   source('scripts/load_metadata.R')
 }
 
-if(!exists("expression.glass.vst")) {
+if(!exists("expression.glass.exon.vst")) {
   source('scripts/load_rna-counts.R')
 }
-
-if("cor.t.methylation.purity.absolute" %in% names(expression.glass.metadata) == F) {
-  source('scripts/load_correlation_expression_purity.R') 
-}
-
 
 
 
@@ -710,6 +705,14 @@ EnhancedVolcano(res.paired.b,
 
 
 # geiserplot x tpc ----
+
+
+
+if("cor.t.methylation.purity.absolute" %in% names(expression.glass.metadata) == F) {
+  source('scripts/load_correlation_expression_purity.R') 
+}
+
+
 
 
 plt <- res.paired.a %>% 
