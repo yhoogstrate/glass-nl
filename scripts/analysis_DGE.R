@@ -27,7 +27,12 @@ if("cor.t.methylation.purity.absolute" %in% names(expression.glass.metadata) == 
   source('scripts/load_correlation_expression_purity.R') 
 }
 
+
+
+
+
 # 1. unpaired exon ----
+
 
 
 if(file.exists("cache/res.unpaired.a.exon.Rds")) {
@@ -36,6 +41,7 @@ if(file.exists("cache/res.unpaired.a.exon.Rds")) {
   res.unpaired.a.exon <- readRDS("cache/res.unpaired.a.exon.Rds")
   
 } else {
+
   tmp.metadata <- metadata.glass.per.patient %>%
     dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
     tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
@@ -93,6 +99,10 @@ expression.glass.exon.metadata <- expression.glass.exon.metadata %>%
       tibble::rownames_to_column('gene_uid'),
     by=c('gene_uid'='gene_uid'),suffix = c("", "")
   ) 
+
+
+
+rm(res.unpaired.a.exon) # cleanup, is joined to gene metadata anyway
 
 
 
@@ -167,6 +177,10 @@ expression.glass.exon.metadata <- expression.glass.exon.metadata %>%
     by=c('gene_uid'='gene_uid'),suffix = c("", "")
   ) 
 
+
+
+
+rm(res.paired.a.exon) # cleanup, is joined to gene metadata anyway
 
 
 
@@ -263,7 +277,7 @@ if(file.exists("cache/res.unpaired.a.gene.Rds")) {
     dplyr::left_join(expression.glass.gene.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
   
   
-  saveRDS(res.unpaired.gene.exon, "cache/res.unpaired.a.gene.Rds")
+  saveRDS(res.unpaired.a.gene, "cache/res.unpaired.a.gene.Rds")
   
   
 }  
@@ -289,6 +303,8 @@ expression.glass.gene.metadata <- expression.glass.gene.metadata %>%
 
 
 
+rm(res.unpaired.a.gene) # cleanup, is joined to gene metadata anyway
+
 
 
 # 4a. paired gene [incomplete as separate group] ----
@@ -300,6 +316,7 @@ if(file.exists("cache/res.paired.a.gene.Rds")) {
   print("Loading 'cache/res.paired.a.gene.Rds' from cache")
   res.paired.a.gene <- readRDS("cache/res.paired.a.gene.Rds")
   
+
 } else {
   
   tmp.metadata <- metadata.glass.per.patient %>%
@@ -338,6 +355,9 @@ if(file.exists("cache/res.paired.a.gene.Rds")) {
   
   
   saveRDS(res.paired.a.gene, "cache/res.paired.a.gene.Rds")
+  
+  
+  
 }
 
 
@@ -361,6 +381,71 @@ expression.glass.gene.metadata <- expression.glass.gene.metadata %>%
   ) 
 
 
+
+
+rm(res.paired.a.gene) # cleanup, is joined to gene metadata anyway
+
+
+# small plot on concordange gene/exon ----
+
+
+plt <- dplyr::inner_join(
+  expression.glass.exon.metadata,
+  expression.glass.gene.metadata,
+  by=c('gene_uid'='gene_uid') ) %>%
+  dplyr::mutate(signi.paired = padj.partially.paired.exon < 0.01 | padj.partially.paired.gene < 0.01) %>%
+  dplyr::mutate(signi.unpaired = padj.unpaired.exon < 0.01 | padj.unpaired.gene < 0.01)
+
+
+
+p1 <- ggplot(plt, aes(x=stat.partially.paired.exon,
+                y=stat.partially.paired.gene,col=signi.paired)) +
+  geom_point(pch=19,cex=0.5) +
+  xlim(-8.5,8.5) +
+  ylim(-8.5,8.5) +
+  geom_abline(intercept = 0,col="gray60",lty=1,lwd=0.5) +
+  geom_smooth(method="lm",col="black",lwd=0.5) +
+  theme_bw()
+
+
+
+
+p2 <- ggplot(plt, aes(x=stat.unpaired.exon,
+                      y=stat.unpaired.gene,col=signi.unpaired)) +
+  geom_point(pch=19,cex=0.5) +
+  xlim(-8.5,8.5) +
+  ylim(-8.5,8.5) +
+  geom_abline(intercept = 0,col="gray60",lty=1,lwd=0.5) +
+  geom_smooth(method="lm",col="black",lwd=0.5) +
+  theme_bw()
+
+p1+p2
+
+
+
+p1 <- ggplot(plt, aes(x=-log10(padj.unpaired.exon),
+                y=-log10(padj.unpaired.gene),
+                col=signi.unpaired)) +
+  geom_point(pch=19,cex=0.5) +
+  xlim(-0.1,22) +
+  ylim(-0.1,22) +
+  geom_abline(intercept = 0,col="gray30",lty=1,lwd=0.5) +
+  #geom_smooth(method="lm",col="black",lwd=0.5) +
+  theme_bw()
+
+
+p2 <- ggplot(plt, aes(x=-log10(padj.partially.paired.exon),
+                y=-log10(padj.partially.paired.gene),
+                col=signi.paired)) +
+  geom_point(pch=19,cex=0.5) +
+  xlim(-0.1,11) +
+  ylim(-0.1,11) +
+  geom_abline(intercept = 0,col="gray30",lty=1,lwd=0.5) +
+  #geom_smooth(method="lm",col="black",lwd=0.5) +
+  theme_bw()
+
+
+p1 + p2
 
 
 
@@ -482,13 +567,15 @@ ggplot(p1, aes(x= stat.unpaired, y=stat.paired,label=gene_name)) +
 
 
 
-## chromosome plot ----
+# chromosome plot ----
 
 
-plt <- res.paired.a %>% 
+plt <- expression.glass.exon.metadata %>% 
   dplyr::left_join(chrs_hg38_s, by=c('gene_chr'='chr')) %>% 
   dplyr::mutate(x = gene_chr_center_loc + pos) %>% 
-  dplyr::mutate(gene_chr = factor(gene_chr, levels=gtools::mixedsort(unique(as.character(gene_chr))) ))
+  dplyr::mutate(gene_chr = factor(gene_chr, levels=gtools::mixedsort(unique(as.character(gene_chr))) )) %>% 
+  dplyr::mutate(significant = padj.partially.paired.exon < 0.01 & abs(log2FoldChange.partially.paired.exon) > 0.75)
+
 
 
 # ggplot(plt , aes(x=x,y=stat,col=gene_chr)) + 
@@ -496,14 +583,18 @@ plt <- res.paired.a %>%
 #   geom_smooth() +
 #   youri_gg_theme
 
-ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=stat,col=gene_chr)) + 
+ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=stat.partially.paired.exon,col=gene_chr)) + 
   facet_grid(cols = vars(gene_chr), scales = "free", space="free") +
   geom_point(pch=19,cex=0.2) +
+  geom_point(data = subset(plt, significant==T), pch=21,cex=0.8,col='black',fill=NA) +
   geom_smooth(se=F,col="black", lwd=0.7) +
   youri_gg_theme + labs(x=NULL)
 
 
-#plt$gene_chr = factor(plt$gene_chr, levels = unique(plt$gene_chr))
+
+plt %>%
+  dplyr::filter(gene_chr == "chr6" & significant == T) %>% 
+  dplyr::select(gene_name, gene_loc, log2FoldChange.partially.paired.exon)
 
 
 ### chromomsome 9 ----
@@ -684,56 +775,6 @@ ggplot(p3, aes(x = `.`, y=ENSG00000128713_HOXD11, col=Sample_Type.x)) +
   geom_point()
 
 
-# recursiveCorPlot ----
-
-
-sign <- res.paired.a %>% 
-  dplyr::filter(padj < 0.01) %>% 
-  dplyr::filter(abs(log2FoldChange) >= 0.75)
-
-cp <- expression.glass.vst %>%
-  dplyr::select(tmp.metadata$genomescan.sid) %>% 
-  dplyr::filter(rownames(.) %in% sign$gene_uid) %>% 
-  `rownames<-`(gsub("ENSG00000284906_ARHGAP11B","ENSG00000284906_ARHGAP11B.2",rownames(.),fixed=T)) %>% 
-  `rownames<-`(gsub("^ENS.+_","",rownames(.)))
-
-
-dim(cp)
-# find n PCA - 5 features?!
-pca <- prcomp(t(cp))
-plot(pca)
-dev.off()
-
-
-pcs <- pca$rotation[,1:5] %>%
-  as.data.frame() %>% 
-  dplyr::mutate(main.PC = {names(.)[max.col(.)]}) %>% 
-  dplyr::select(main.PC) %>% 
-  tibble::rownames_to_column('gene_name') %>% 
-  dplyr::mutate(PC1 = ifelse(main.PC == "PC1", NA , F )) %>% 
-  dplyr::mutate(PC2 = ifelse(main.PC == "PC2", NA , F )) %>% 
-  dplyr::mutate(PC3 = ifelse(main.PC == "PC3", NA , F )) %>% 
-  dplyr::mutate(PC4 = ifelse(main.PC == "PC4", NA , F )) %>% 
-  dplyr::mutate(PC5 = ifelse(main.PC == "PC5", NA , F )) %>% 
-  dplyr::mutate(main.PC = NULL)
-
-
-
-
-cpm <- data.frame(gid=rownames(cp)) %>% 
-  dplyr::mutate(HOX = grepl("^HOX", gid)) %>% 
-  dplyr::mutate(COL = ifelse(grepl("^COL", gid),"red","green")) %>%
-  dplyr::left_join(pcs, by=c('gid'='gene_name')) %>% 
-  tibble::column_to_rownames('gid')
-
-
-h <- recursiveCorPlot::recursiveCorPlot(cp, cpm, 2 ,2)
-
-ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
-
-
-
-"CD248" %in% rownames(cp)
 
 
 
