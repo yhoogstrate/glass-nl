@@ -5,7 +5,6 @@
 
 
 source('scripts/R/youri_gg_theme.R')
-source('scripts/R/chrom_sizes.R')
 
 
 library(DESeq2)
@@ -562,34 +561,6 @@ ggplot(p1, aes(x= stat.unpaired, y=stat.paired,label=gene_name)) +
 
 
 
-# chromosome plot ----
-
-
-plt <- expression.glass.exon.metadata %>% 
-  dplyr::left_join(chrs_hg38_s, by=c('gene_chr'='chr')) %>% 
-  dplyr::mutate(x = gene_chr_center_loc + pos) %>% 
-  dplyr::mutate(gene_chr = factor(gene_chr, levels=gtools::mixedsort(unique(as.character(gene_chr))) )) %>% 
-  dplyr::mutate(significant = padj.partially.paired.exon < 0.01 & abs(log2FoldChange.partially.paired.exon) > 0.75)
-
-
-
-# ggplot(plt , aes(x=x,y=stat,col=gene_chr)) + 
-#   geom_point(pch=19,cex=0.2) +
-#   geom_smooth() +
-#   youri_gg_theme
-
-ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=stat.partially.paired.exon,col=gene_chr)) + 
-  facet_grid(cols = vars(gene_chr), scales = "free", space="free") +
-  geom_point(pch=19,cex=0.2) +
-  geom_point(data = subset(plt, significant==T), pch=21,cex=0.8,col='black',fill=NA) +
-  geom_smooth(se=F,col="black", lwd=0.7) +
-  youri_gg_theme + labs(x=NULL)
-
-
-
-plt %>%
-  dplyr::filter(gene_chr == "chr6" & significant == T) %>% 
-  dplyr::select(gene_name, gene_loc, log2FoldChange.partially.paired.exon)
 
 
 ### chromomsome 9 ----

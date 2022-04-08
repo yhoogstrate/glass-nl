@@ -1,5 +1,16 @@
 #!/usr/bin/env R
 
+# load libs ----
+
+
+library(tidyverse)
+
+
+# load data ----
+
+
+source('scripts/R/chrom_sizes.R')
+
 
 # if metadata was not loaded, load it
 if(!exists("metadata.glass.per.resection")) {
@@ -26,9 +37,15 @@ if("padj.partially.paired.exon" %in% colnames(expression.glass.exon.metadata) ==
 
 
 
+if(!exists('cycling.cell.markers')) {
+  warning('cycling cell marker genes were not loaded')
+  
+  source('scripts/load_cycling_cell_marker_genes.R')
+}
 
 
-## recursiveCorPlot [histone genes + cell types + cycling] ----
+
+# recursiveCorPlot [histone genes + cell types + cycling] ----
 
 
 sel.hist <- expression.glass.exon.metadata %>% 
@@ -39,6 +56,7 @@ sel.hist <- expression.glass.exon.metadata %>%
   dplyr::filter(grepl("^H",gene_name)) %>% 
   dplyr::filter(grepl("^HLA-",gene_name) == F) %>% 
   dplyr::pull(gene_name)
+
 
 
 sel.tum <- c("SOX4","SOX2","GFAP","OLIG1") # Tum
@@ -94,6 +112,8 @@ recursiveCorPlot(plt, metadata, 7, 1.5)
 
 
 
+
+
 # recursiveCorPlot [all DGE] ----
 
 
@@ -144,5 +164,44 @@ ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
 
 
 "CD248" %in% rownames(cp)
+
+
+
+# chromosome plot [all DGE] ----
+
+plt <- expression.glass.exon.metadata %>% 
+  dplyr::left_join(chrs_hg38_s, by=c('gene_chr'='chr')) %>% 
+  dplyr::mutate(x = gene_chr_center_loc + pos) %>% 
+  dplyr::mutate(gene_chr = factor(gene_chr, levels=gtools::mixedsort(unique(as.character(gene_chr))) )) %>% 
+  dplyr::mutate(significant = padj.partially.paired.exon < 0.01 & abs(log2FoldChange.partially.paired.exon) > 0.75)
+
+
+
+ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=stat.partially.paired.exon,col=gene_chr)) + 
+  facet_grid(cols = vars(gene_chr), scales = "free", space="free") +
+  geom_point(pch=19,cex=0.2) +
+  geom_point(data = subset(plt, significant==T), pch=21,cex=0.8,col='black',fill=NA) +
+  geom_smooth(se=F,col="black", lwd=0.7) +
+  youri_gg_theme + labs(x=NULL)
+
+
+
+# chromosome plot [all DGE + hist & cycling] ----
+
+plt <- expression.glass.exon.metadata %>% 
+  dplyr::left_join(chrs_hg38_s, by=c('gene_chr'='chr')) %>% 
+  dplyr::mutate(x = gene_chr_center_loc + pos) %>% 
+  dplyr::mutate(gene_chr = factor(gene_chr, levels=gtools::mixedsort(unique(as.character(gene_chr))) )) %>% 
+  dplyr::mutate(significant = padj.partially.paired.exon < 0.01 & abs(log2FoldChange.partially.paired.exon) > 0.75)
+
+
+
+ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=stat.partially.paired.exon,col=gene_chr)) + 
+  facet_grid(cols = vars(gene_chr), scales = "free", space="free") +
+  geom_point(pch=19,cex=0.2) +
+  geom_point(data = subset(plt, significant==T), pch=21,cex=0.8,col='black',fill=NA) +
+  geom_smooth(se=F,col="black", lwd=0.7) +
+  youri_gg_theme + labs(x=NULL)
+
 
 
