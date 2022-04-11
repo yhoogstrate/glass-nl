@@ -15,6 +15,7 @@ source('scripts/R/job_gg_theme.R')
 
 
 source('scripts/load_metadata.R')
+source('scripts/load_tumour_purities.R')
 
 
 # plots ----
@@ -372,7 +373,7 @@ ggsave("output/figures/qc/per_patients__all-stats-overview.png",width=15,height=
 
 
 
-# all / patient combined
+# all / patient combined ----
 
 
 
