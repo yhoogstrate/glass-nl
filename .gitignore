@@ -4,3 +4,4 @@
 .Rhistory
 data/*.gtf
 .directory
+*.RData
