@@ -26,59 +26,35 @@ if(!exists("expression.glass.vst")) {
 }
 
 
-## load survival data proteomics ----
-## and cross check, both survival as censoring
+# link per resection metadata ---
 
 
-View(readxl::read_xlsx('data/glass/Proteomics/2022-03-31_data_update/Annotation_Reduced_withControls.xlsx'))
+metadata <- metadata.glass.per.patient %>% 
+  dplyr::left_join(
+    metadata.glass.per.resection %>% dplyr::select(genomescan.sid, lts1, lts2, lts3, lts4 , lts4a , lts4b) %>% 
+      dplyr::rename( lts1.I = lts1, lts2.I = lts2, lts3.I = lts3, lts4.I = lts4 , lts4a.I = lts4a , lts4b.I = lts4b),
+    by=c('genomescan.sid.I'='genomescan.sid')) %>% 
+  dplyr::left_join(
+    metadata.glass.per.resection %>% dplyr::select(genomescan.sid, lts1, lts2, lts3, lts4 , lts4a , lts4b) %>% 
+      dplyr::rename( lts1.R = lts1, lts2.R = lts2, lts3.R = lts3, lts4.R = lts4 , lts4a.R = lts4a , lts4b.R = lts4b),
+    by=c('genomescan.sid.R'='genomescan.sid'))
 
-data.check <- readxl::read_xlsx('data/glass/Proteomics/2022-03-31_data_update/Annotation_Reduced_withControls.xlsx') %>% 
-  dplyr::select(GLASS_ID, Deceased, 
-                "OS_diagnosis_years",
-                "OS_FirstSurgery_years",
-                "Survival_FirstRecurrenceSurgery_years",
-                "PFS_years") %>% 
-  dplyr::filter(!duplicated(GLASS_ID)) %>% 
 
-  dplyr::mutate(OS_diagnosis_years = ifelse(OS_diagnosis_years == "NA", NA, OS_diagnosis_years )) %>%
-  dplyr::mutate(OS_FirstSurgery_years = ifelse(OS_FirstSurgery_years == "NA", NA, OS_FirstSurgery_years )) %>%
-  dplyr::mutate(Survival_FirstRecurrenceSurgery_years = ifelse(Survival_FirstRecurrenceSurgery_years == "NA", NA, Survival_FirstRecurrenceSurgery_years )) %>%
-  dplyr::mutate(PFS_years = ifelse(PFS_years == "NA", NA, PFS_years )) %>%
-  
-  dplyr::mutate(OS_diagnosis_years = as.numeric(OS_diagnosis_years) ) %>%
-  dplyr::mutate(OS_FirstSurgery_years = as.numeric(OS_FirstSurgery_years) ) %>%
-  dplyr::mutate(Survival_FirstRecurrenceSurgery_years = as.numeric(Survival_FirstRecurrenceSurgery_years) ) %>%
-  dplyr::mutate(PFS_years = as.numeric(PFS_years) ) %>%
-  
-  dplyr::mutate(Survival_FirstRecurrenceSurgery_days = 365.25 * Survival_FirstRecurrenceSurgery_years) %>% 
-  dplyr::mutate(PFS_days = 365.25 * PFS_years) %>% 
-  dplyr::mutate(OS_diagnosis_days = 365.25 * OS_diagnosis_years)%>% 
-  dplyr::mutate(OS_FirstSurgery_days = 365.25 * OS_FirstSurgery_years) %>% 
-  
-  dplyr::filter(!is.na(OS_diagnosis_days))
+ggplot(metadata, aes(x=overall.survival ,y=lts2.I )) + 
+  geom_point()
+
+
+ggplot(metadata, aes(x=survival.R ,y=lts1.R )) + 
+  geom_point() + 
+  labs(x= "Survival from R2", y="Collagen signature @ R2") +
+  theme_bw()
 
 
 
-tmp <- metadata.glass.per.patient %>%
-  dplyr::select(GLASS_ID,overall.survival,overall.survival.event) %>% 
-  dplyr::left_join(data.check, by=c('GLASS_ID'='GLASS_ID')) %>% 
-  dplyr::filter(!is.na(OS_diagnosis_days)) %>% 
-  
-  dplyr::select(overall.survival.event, Deceased,
-                overall.survival, OS_diagnosis_days)
-
-
-# those that did not die of Tumor:
-# 7  GLNL_EMCR_110          Other
-# 8  GLNL_EMCR_113          Other
-# 9  GLNL_EMCR_118          Other
-# 11 GLNL_EMCR_148          Other
-# 12 GLNL_EMCR_156          Other
-# 13 GLNL_EMCR_160          Other
-# 14 GLNL_EMCR_162          Other
-# 15 GLNL_EMCR_174          Other
-# 16 GLNL_UMCU_207          Other
-
+ggplot(metadata, aes(x=survival.R ,y=lts2.R )) + 
+  geom_point() + 
+  labs(x= "Survival from R2", y="Cell cycle signature @ R2") +
+  theme_bw()
 
 
 # example RF model ----

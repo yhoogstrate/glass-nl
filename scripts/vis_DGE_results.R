@@ -151,12 +151,12 @@ pcs <- pca$rotation[,1:5] %>%
 
 
 
-clusters <- data.frame(cluster = cutree(readRDS('cache/h.Rds'), k=5)) %>% 
-  dplyr::mutate(cluster = paste0('c',cluster)) %>% 
-  dplyr::mutate(val=T) %>% 
-  tibble::rownames_to_column('gene_name') %>% 
-  dplyr::mutate(marker=T) %>% 
-  tidyr::pivot_wider(names_from = cluster,values_from = marker, values_fill=F)
+# clusters <- data.frame(cluster = cutree(readRDS('cache/h.Rds'), k=5)) %>% 
+#   dplyr::mutate(cluster = paste0('c',cluster)) %>% 
+#   dplyr::mutate(val=T) %>% 
+#   tibble::rownames_to_column('gene_name') %>% 
+#   dplyr::mutate(marker=T) %>% 
+#   tidyr::pivot_wider(names_from = cluster,values_from = marker, values_fill=F)
 
 
 h.up <- dendextend::prune(h,cutree(h,2) %>% purrr::keep(function(x) x == "1") %>%  names )

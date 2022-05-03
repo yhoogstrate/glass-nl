@@ -419,14 +419,6 @@ metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadat
   dplyr::mutate(overall.survival = difftime(Date_of_Death , Date_of_Diagnosis, units = 'days')) %>%
   dplyr::mutate(time.until.last.followup = difftime(Date_Last_Followup, Date_of_Diagnosis, units = 'days')) %>% 
   dplyr::mutate(deceased = !is.na(Date_of_Death)) %>% 
-  dplyr::mutate(
-    Date_Last_Followup = NULL,
-    Date_of_Birth = NULL,
-    Date_of_Death = NULL,
-    Date_of_Diagnosis = NULL
-  ) %>% 
-  dplyr::mutate(overall.survival.event = ifelse(is.na(overall.survival),0,1),
-                overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival)) %>% 
   dplyr::mutate(Sample_Name.I = NA, Sample_Name.R = NA, genomescan.sid.I = NA, genomescan.sid.R = NA) %>% 
   dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_148", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
   dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_160", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
@@ -447,7 +439,10 @@ metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadat
   dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_017", "Other" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
   dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_UMCU_207", "Other" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
   
-  dplyr::mutate(Cause_of_Death = ifelse(Cause_of_Death == "", "Unkown" , Cause_of_Death)) # unknown, but deceased
+  dplyr::mutate(Cause_of_Death = ifelse(Cause_of_Death == "", "Unkown" , Cause_of_Death)) %>% # unknown, but deceased
+
+  dplyr::mutate(overall.survival.event = ifelse(is.na(overall.survival) | Cause_of_Death == "Other",0,1),
+              overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival))
   
 
 
@@ -498,6 +493,41 @@ metadata.glass.per.patient <- metadata.glass.per.patient %>%
 
 
 
+tmp <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Surgery data_GLASS RNAseq.csv')
+tmp <- rbind(
+  tmp %>% dplyr::select(Date_Surgery_S1, Sample_Name_S1, GS_ID_S1) %>%
+    dplyr::rename(Date_Surgery = Date_Surgery_S1, Sample_Name = Sample_Name_S1, genomescan.sid = GS_ID_S1),
+  tmp %>% dplyr::select(Date_Surgery_S2, Sample_Name_S2, GS_ID_S2) %>% 
+    dplyr::rename(Date_Surgery = Date_Surgery_S2, Sample_Name = Sample_Name_S2, genomescan.sid = GS_ID_S2),
+  tmp %>% dplyr::select(Date_Surgery_S3, Sample_Name_S3, GS_ID_S3) %>% 
+    dplyr::rename(Date_Surgery = Date_Surgery_S3, Sample_Name = Sample_Name_S3, genomescan.sid = GS_ID_S3),
+  tmp %>% dplyr::select(Date_Surgery_S4, Sample_Name_S4, GS_ID_S4) %>% 
+    dplyr::rename(Date_Surgery = Date_Surgery_S4, Sample_Name = Sample_Name_S4, genomescan.sid = GS_ID_S4)
+  ) %>% 
+  dplyr::filter(!is.na(Sample_Name) & !is.na(genomescan.sid)) %>% 
+  dplyr::mutate(Date_Surgery = as.Date(Date_Surgery , format = "%Y-%m-%d")) %>% 
+  dplyr::mutate(Sample_Name = NULL)
 
+metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+  dplyr::left_join(tmp %>% dplyr::rename(Date_Surgery.I = Date_Surgery), by=c('genomescan.sid.I' = 'genomescan.sid')) %>% 
+  dplyr::left_join(tmp %>% dplyr::rename(Date_Surgery.R = Date_Surgery), by=c('genomescan.sid.R' = 'genomescan.sid')) %>% 
+  dplyr::mutate(survival.I = difftime(Date_of_Death , Date_Surgery.I, units = 'days')) %>%
+  dplyr::mutate(survival.R = difftime(Date_of_Death , Date_Surgery.R, units = 'days')) 
+
+#  104059-002-121  no date inital
+#  104059-002-015  no date recurrent
+#  104059-003-014  no date recurrent
+
+rm(tmp)
+
+
+
+# remove privacy sensitive information
+metadata.glass.per.patient <- metadata.glass.per.patient %>% dplyr::mutate(
+  Date_Last_Followup = NULL,
+  Date_of_Birth = NULL,
+  Date_of_Death = NULL,
+  Date_of_Diagnosis = NULL
+)
 
 
