@@ -26,6 +26,61 @@ if(!exists("expression.glass.vst")) {
 }
 
 
+## load survival data proteomics ----
+## and cross check, both survival as censoring
+
+
+View(readxl::read_xlsx('data/glass/Proteomics/2022-03-31_data_update/Annotation_Reduced_withControls.xlsx'))
+
+data.check <- readxl::read_xlsx('data/glass/Proteomics/2022-03-31_data_update/Annotation_Reduced_withControls.xlsx') %>% 
+  dplyr::select(GLASS_ID, Deceased, 
+                "OS_diagnosis_years",
+                "OS_FirstSurgery_years",
+                "Survival_FirstRecurrenceSurgery_years",
+                "PFS_years") %>% 
+  dplyr::filter(!duplicated(GLASS_ID)) %>% 
+
+  dplyr::mutate(OS_diagnosis_years = ifelse(OS_diagnosis_years == "NA", NA, OS_diagnosis_years )) %>%
+  dplyr::mutate(OS_FirstSurgery_years = ifelse(OS_FirstSurgery_years == "NA", NA, OS_FirstSurgery_years )) %>%
+  dplyr::mutate(Survival_FirstRecurrenceSurgery_years = ifelse(Survival_FirstRecurrenceSurgery_years == "NA", NA, Survival_FirstRecurrenceSurgery_years )) %>%
+  dplyr::mutate(PFS_years = ifelse(PFS_years == "NA", NA, PFS_years )) %>%
+  
+  dplyr::mutate(OS_diagnosis_years = as.numeric(OS_diagnosis_years) ) %>%
+  dplyr::mutate(OS_FirstSurgery_years = as.numeric(OS_FirstSurgery_years) ) %>%
+  dplyr::mutate(Survival_FirstRecurrenceSurgery_years = as.numeric(Survival_FirstRecurrenceSurgery_years) ) %>%
+  dplyr::mutate(PFS_years = as.numeric(PFS_years) ) %>%
+  
+  dplyr::mutate(Survival_FirstRecurrenceSurgery_days = 365.25 * Survival_FirstRecurrenceSurgery_years) %>% 
+  dplyr::mutate(PFS_days = 365.25 * PFS_years) %>% 
+  dplyr::mutate(OS_diagnosis_days = 365.25 * OS_diagnosis_years)%>% 
+  dplyr::mutate(OS_FirstSurgery_days = 365.25 * OS_FirstSurgery_years) %>% 
+  
+  dplyr::filter(!is.na(OS_diagnosis_days))
+
+
+
+tmp <- metadata.glass.per.patient %>%
+  dplyr::select(GLASS_ID,overall.survival,overall.survival.event) %>% 
+  dplyr::left_join(data.check, by=c('GLASS_ID'='GLASS_ID')) %>% 
+  dplyr::filter(!is.na(OS_diagnosis_days)) %>% 
+  
+  dplyr::select(overall.survival.event, Deceased,
+                overall.survival, OS_diagnosis_days)
+
+
+# those that did not die of Tumor:
+# 7  GLNL_EMCR_110          Other
+# 8  GLNL_EMCR_113          Other
+# 9  GLNL_EMCR_118          Other
+# 11 GLNL_EMCR_148          Other
+# 12 GLNL_EMCR_156          Other
+# 13 GLNL_EMCR_160          Other
+# 14 GLNL_EMCR_162          Other
+# 15 GLNL_EMCR_174          Other
+# 16 GLNL_UMCU_207          Other
+
+
+
 # example RF model ----
 
 # 

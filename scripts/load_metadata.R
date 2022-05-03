@@ -394,6 +394,18 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 rm(tmp)
 
 
+## attach longitudinal transcriptional signatures ----
+
+
+tmp <- readRDS('cache/transcriptional.signatures.Rds')
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'),suffix = c("", ""))
+
+
+rm(tmp)
+
 
 # per patient ----
 
