@@ -28,33 +28,48 @@ if(!exists("expression.glass.vst")) {
 
 # link per resection metadata ---
 
+# lts.up1 = cell cycling
+# lts.up2 = collagen + CD248
+# lts.up3 = fuzzy
+# lts
 
 metadata <- metadata.glass.per.patient %>% 
   dplyr::left_join(
-    metadata.glass.per.resection %>% dplyr::select(genomescan.sid, lts1, lts2, lts3, lts4 , lts4a , lts4b) %>% 
-      dplyr::rename( lts1.I = lts1, lts2.I = lts2, lts3.I = lts3, lts4.I = lts4 , lts4a.I = lts4a , lts4b.I = lts4b),
+    metadata.glass.per.resection %>% dplyr::select(genomescan.sid, lts.up1, lts.up2, lts.up3, lts.down , lts.down.a , lts.down.b) %>% 
+      dplyr::rename( lts.up1.I = lts.up1, lts.up2.I = lts.up2, lts.up3.I = lts.up3, lts.down.I = lts.down , lts.down.a.I = lts.down.a , lts.down.b.I = lts.down.b),
     by=c('genomescan.sid.I'='genomescan.sid')) %>% 
   dplyr::left_join(
-    metadata.glass.per.resection %>% dplyr::select(genomescan.sid, lts1, lts2, lts3, lts4 , lts4a , lts4b) %>% 
-      dplyr::rename( lts1.R = lts1, lts2.R = lts2, lts3.R = lts3, lts4.R = lts4 , lts4a.R = lts4a , lts4b.R = lts4b),
+    metadata.glass.per.resection %>% dplyr::select(genomescan.sid, lts.up1, lts.up2, lts.up3, lts.down , lts.down.a , lts.down.b) %>% 
+      dplyr::rename( lts.up1.R = lts.up1, lts.up2.R = lts.up2, lts.up3.R = lts.up3, lts.down.R = lts.down , lts.down.a.R = lts.down.a , lts.down.b.R = lts.down.b),
     by=c('genomescan.sid.R'='genomescan.sid'))
 
 
-ggplot(metadata, aes(x=overall.survival ,y=lts2.I )) + 
+
+ggplot(metadata, aes(x=overall.survival ,y=lts.up2.I )) + 
   geom_point()
 
 
-ggplot(metadata, aes(x=survival.R ,y=lts1.R )) + 
+ggplot(metadata, aes(x=survival.R ,y=lts.up1.R )) + 
+  geom_point() + 
+  labs(x= "Survival from R2", y="Cell cyclign signature @ R2") +
+  theme_bw()
+
+ggplot(metadata, aes(x=survival.R ,y=lts.up2.R )) + 
   geom_point() + 
   labs(x= "Survival from R2", y="Collagen signature @ R2") +
   theme_bw()
 
-
-
-ggplot(metadata, aes(x=survival.R ,y=lts2.R )) + 
+ggplot(metadata, aes(x=survival.R ,y=lts.up3.R )) + 
   geom_point() + 
-  labs(x= "Survival from R2", y="Cell cycle signature @ R2") +
+  labs(x= "Survival from R2", y="fuzzy up signature @ R2") +
   theme_bw()
+
+ggplot(metadata, aes(x=survival.R ,y=lts.down.R )) + 
+  geom_point() + 
+  labs(x= "Survival from R2", y="fuzzy up signature @ R2") +
+  theme_bw()
+
+
 
 
 # example RF model ----
