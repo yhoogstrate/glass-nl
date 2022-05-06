@@ -3,6 +3,8 @@
 # load libs ----
 
 
+library(base)
+library(utils)
 library(tidyverse)
 library(rjson)
 
@@ -399,12 +401,71 @@ rm(tmp)
 
 tmp <- readRDS('cache/transcriptional.signatures.Rds')
 
-
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
   dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'),suffix = c("", ""))
 
+rm(tmp)
+
+
+## attach methylation identifiers ----
+# sid mismatch: 204808700074_R07C01 - geen heidelberg folder van ge-upload
+
+
+tmp.1 <- read.csv('data/glass/Methylation/Metadata/Datasheet4.csv') %>%
+  dplyr::mutate(X=NULL) %>% 
+  dplyr::mutate(GLASS_ID = NULL,
+                Surgery_ID = NULL,
+                Sample_Sex = NULL,
+                Recurrent_Type = NULL,
+                Sample_Type = NULL,
+                Sample_Resection = NULL)
+
+  
+tmp.2 <- data.frame(Heidelberg.segment.file = Sys.glob("data/glass/Methylation/Heidelberg/Heidelberg_unzip/*/cnvp_v3.0/*.segments.seg")) %>%
+  dplyr::mutate(Sample_ID = gsub("^.+_unzip/([^/]+)_Run.+$","\\1",Heidelberg.segment.file))
+
+
+tmp.3 <- read.csv('data/glass/Clinical data/(Epi)genetic data methylation/(Epi)genetic data_GLASS-NL_01092021.csv') %>% 
+  dplyr::mutate(X=NULL)
+
+
+stopifnot(duplicated(tmp.1$Sample_ID) == FALSE)
+stopifnot(duplicated(tmp.2$Sample_ID) == FALSE)
+stopifnot(duplicated(tmp.3$Sample_ID) == FALSE)
+stopifnot(tmp.1$Sample_ID %in% tmp.3$Sample_ID)
+stopifnot(tmp.3$Sample_ID %in% tmp.1$Sample_ID)
+
+
+tmp <- tmp.1 %>% 
+  dplyr::left_join(tmp.2, by=c('Sample_ID'='Sample_ID')) %>% 
+  dplyr::left_join(tmp.3, by=c('Sample_ID'='Sample_ID')) %>% 
+  dplyr::rename(methylation.sid = Sample_ID)
+  
+
+
+stopifnot(sum(is.na(tmp$Heidelberg.segment.file)) > 1) # one file missing so far, that's known
+
+
+rm(tmp.1,tmp.2,tmp.3)
+
+
+#dim(tmp)
+#dim(metadata.glass.per.resection)
+
+# 
+#tmp$Sample_Name %in% metadata.glass.per.resection$Sample_Name
+#metadata.glass.per.resection$Sample_Name %in% tmp$Sample_Name
+#metadata.glass.per.resection %>%  dplyr::filter(Sample_Name %in% tmp$Sample_Name == F )
+
+# een hoop waarvan wel methylering en metadata is niet in glass metadata tabel
+# drie waarvan wel metadata is geen methylaring
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>%
+  dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'))
 
 rm(tmp)
+
 
 
 # per patient ----

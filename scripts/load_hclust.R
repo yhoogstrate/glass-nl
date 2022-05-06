@@ -26,6 +26,8 @@ dge.partially.paired.clusters <-
   tidyr::pivot_wider(names_from = cluster,values_from = marker, values_fill=F) %>% 
   dplyr::mutate(val = NULL) %>% 
   dplyr::mutate(gene_name = gsub('^ARHGAP11B.2$','ARHGAP11B',gene_name)) %>% 
+  dplyr::mutate(down = down.1 | down.2) %>% 
+  dplyr::select(gene_name  , up.1 , up.2, up.3, down , down.1, down.2 ) %>% 
   dplyr::left_join(expression.glass.exon.metadata %>% dplyr::select('gene_uid','gene_name'), by=c('gene_name'='gene_name'))
 
 

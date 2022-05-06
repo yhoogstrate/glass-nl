@@ -8,6 +8,7 @@ library(randomForestSRC)# https://cran.r-project.org/web/packages/randomForestSR
 library(survival)
 library(RegParallel)
 library(recursiveCorPlot)
+library(patchwork)
 
 
 
@@ -66,11 +67,53 @@ ggplot(metadata, aes(x=survival.R ,y=lts.up3.R )) +
 
 ggplot(metadata, aes(x=survival.R ,y=lts.down.R )) + 
   geom_point() + 
-  labs(x= "Survival from R2", y="fuzzy up signature @ R2") +
+  labs(x= "Survival from R2", y="overall down signature @ R2") +
   theme_bw()
 
 
+# plot ----
 
+
+plt <- metadata %>% 
+  dplyr::filter(!is.na( lts.up1.I) & !is.na(survival.R)) %>% 
+  dplyr::mutate(order = rank(-survival.R, -survival.I))
+
+
+plt.expanded <- plt %>% 
+  dplyr::select(GLASS_ID, order, survival.I, survival.R, lts.up1.I,  lts.up2.I,  lts.up3.I,  lts.down.I,  lts.up1.R,  lts.up2.R,  lts.up3.R,  lts.down.R) %>% 
+  tidyr::pivot_longer(cols = c(lts.up1.I,  lts.up2.I,  lts.up3.I,  lts.down.I, lts.up1.R,  lts.up2.R,  lts.up3.R,  lts.down.R)) %>% 
+  dplyr::mutate(facet = gsub("^(.+).[IR]$","\\1",name)) %>% 
+  dplyr::mutate(arrow.order = ifelse(gsub("^.+(.)$","\\1",name) == "I",1,2)) %>% 
+  dplyr::arrange(GLASS_ID, facet, arrow.order) %>% 
+  dplyr::rename(`DGE signature type` = name, `DGE signature contribution` = value)
+
+
+p1 <- ggplot(plt.expanded, aes(x = reorder(GLASS_ID, order), y = `survival.R` )) +
+  geom_segment(aes(x=reorder(GLASS_ID, order), xend=reorder(GLASS_ID, order), y= `survival.R`, yend=0)) +
+  geom_point() +
+  theme_bw() +
+  theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25)) +
+  labs(y = "Survival time from recurrence")
+
+ggplot(plt.expanded, aes(x = order, y = `DGE signature contribution`, group = GLASS_ID )) +
+  geom_smooth(method='lm', aes(group=NULL), data = subset(plt.expanded, arrow.order == 2),se=F, col="gray", lwd=1,lty=2) +
+  geom_path(arrow = arrow(ends = "last", type = "closed", angle=15, length = unit(0.125, "inches"))) +
+  facet_grid(rows = vars(facet), scales = "free") +
+  theme_bw() +
+  theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25))
+
+
+
+# p1 / p2 + plot_layout(heights = c(1, 4))
+
+data = plt.expanded  %>% 
+  dplyr::rename(x = order) %>% 
+  dplyr::rename(y= `DGE signature contribution`) %>% 
+  dplyr::filter(`DGE signature type` == "lts.down.I")
+
+ggplot(data,aes(x=x, y=y, group=GLASS_ID)) +
+  geom_smooth(aes(group = NULL),method='lm',se=FALSE) + #, formula= y~x) +
+  geom_point()
 
 # example RF model ----
 
