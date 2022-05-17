@@ -27,22 +27,32 @@ if(!exists("expression.glass.vst")) {
 }
 
 
-# link per resection metadata ---
+# load per resection metadata ---
 
-# lts.up1 = cell cycling
-# lts.up2 = collagen + CD248
-# lts.up3 = fuzzy
-# lts
 
 metadata <- metadata.glass.per.patient %>% 
   dplyr::left_join(
-    metadata.glass.per.resection %>% dplyr::select(genomescan.sid, lts.up1, lts.up2, lts.up3, lts.down , lts.down.a , lts.down.b) %>% 
-      dplyr::rename( lts.up1.I = lts.up1, lts.up2.I = lts.up2, lts.up3.I = lts.up3, lts.down.I = lts.down , lts.down.a.I = lts.down.a , lts.down.b.I = lts.down.b),
+    metadata.glass.per.resection %>%
+      dplyr::select(genomescan.sid, 
+                    lts.up1, lts.up2, lts.up3, lts.down , lts.down.a , lts.down.b,
+                    methylation.sub.diagnosis, mgmt_status, classification, Epigenetic.subtypes.TCGA, CCND2_stat, CDK4_stat, CDK6_stat, MYC_stat, PTEN_stat, PTCH1_stat, PDGFRA_stat, RB1_stat, TERT_stat, NF2_stat, CDKN2AB
+      ) %>% 
+      `colnames<-`(paste0(colnames(.),".I")) %>% 
+      dplyr::rename(genomescan.sid = genomescan.sid.I)
+      ,
     by=c('genomescan.sid.I'='genomescan.sid')) %>% 
   dplyr::left_join(
-    metadata.glass.per.resection %>% dplyr::select(genomescan.sid, lts.up1, lts.up2, lts.up3, lts.down , lts.down.a , lts.down.b) %>% 
-      dplyr::rename( lts.up1.R = lts.up1, lts.up2.R = lts.up2, lts.up3.R = lts.up3, lts.down.R = lts.down , lts.down.a.R = lts.down.a , lts.down.b.R = lts.down.b),
+    metadata.glass.per.resection %>%
+      dplyr::select(genomescan.sid, 
+                    lts.up1, lts.up2, lts.up3, lts.down , lts.down.a , lts.down.b,
+                    methylation.sub.diagnosis, mgmt_status, classification, Epigenetic.subtypes.TCGA, CCND2_stat, CDK4_stat, CDK6_stat, MYC_stat, PTEN_stat, PTCH1_stat, PDGFRA_stat, RB1_stat, TERT_stat, NF2_stat, CDKN2AB
+      ) %>% 
+      `colnames<-`(paste0(colnames(.),".R")) %>% 
+      dplyr::rename(genomescan.sid = genomescan.sid.R),
     by=c('genomescan.sid.R'='genomescan.sid'))
+
+
+## some test plots ----
 
 
 
@@ -50,28 +60,32 @@ ggplot(metadata, aes(x=overall.survival ,y=lts.up2.I )) +
   geom_point()
 
 
-ggplot(metadata, aes(x=survival.R ,y=lts.up1.R )) + 
+p1 <- ggplot(metadata, aes(x=survival.R ,y=lts.up1.R )) + 
   geom_point() + 
-  labs(x= "Survival from R2", y="Cell cyclign signature @ R2") +
+  labs(x= "Survival from R2", y="Cell cycling signature @ R2") +
   theme_bw()
 
-ggplot(metadata, aes(x=survival.R ,y=lts.up2.R )) + 
+p2 <- ggplot(metadata, aes(x=survival.R ,y=lts.up2.R )) + 
   geom_point() + 
   labs(x= "Survival from R2", y="Collagen signature @ R2") +
   theme_bw()
 
-ggplot(metadata, aes(x=survival.R ,y=lts.up3.R )) + 
+p3 <- ggplot(metadata, aes(x=survival.R ,y=lts.up3.R )) + 
   geom_point() + 
   labs(x= "Survival from R2", y="fuzzy up signature @ R2") +
   theme_bw()
 
-ggplot(metadata, aes(x=survival.R ,y=lts.down.R )) + 
+p4 <- ggplot(metadata, aes(x=survival.R ,y=lts.down.R )) + 
   geom_point() + 
   labs(x= "Survival from R2", y="overall down signature @ R2") +
   theme_bw()
 
 
-# plot ----
+
+(p1 + p2 ) / (p3 + p4)
+
+
+## paired plot by svvl ----
 
 
 plt <- metadata %>% 
@@ -95,7 +109,7 @@ p1 <- ggplot(plt.expanded, aes(x = reorder(GLASS_ID, order), y = `survival.R` ))
   theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25)) +
   labs(y = "Survival time from recurrence")
 
-ggplot(plt.expanded, aes(x = order, y = `DGE signature contribution`, group = GLASS_ID )) +
+p2 <- ggplot(plt.expanded, aes(x = order, y = `DGE signature contribution`, group = GLASS_ID )) +
   geom_smooth(method='lm', aes(group=NULL), data = subset(plt.expanded, arrow.order == 2),se=F, col="gray", lwd=1,lty=2) +
   geom_path(arrow = arrow(ends = "last", type = "closed", angle=15, length = unit(0.125, "inches"))) +
   facet_grid(rows = vars(facet), scales = "free") +
@@ -104,7 +118,336 @@ ggplot(plt.expanded, aes(x = order, y = `DGE signature contribution`, group = GL
 
 
 
-# p1 / p2 + plot_layout(heights = c(1, 4))
+
+plt.expanded2 <-  plt %>% 
+  dplyr::select(GLASS_ID, 
+                methylation.sub.diagnosis.I, mgmt_status.I, classification.I, Epigenetic.subtypes.TCGA.I, CCND2_stat.I, CDK4_stat.I, CDK6_stat.I, MYC_stat.I, PTEN_stat.I, PTCH1_stat.I, PDGFRA_stat.I, RB1_stat.I, TERT_stat.I, NF2_stat.I, CDKN2AB.I,
+                methylation.sub.diagnosis.R, mgmt_status.R, classification.R, Epigenetic.subtypes.TCGA.R, CCND2_stat.R, CDK4_stat.R, CDK6_stat.R, MYC_stat.R, PTEN_stat.R, PTCH1_stat.R, PDGFRA_stat.R, RB1_stat.R, TERT_stat.R, NF2_stat.R, CDKN2AB.R) %>% 
+  tidyr::pivot_longer(cols = c(methylation.sub.diagnosis.I, mgmt_status.I, classification.I, Epigenetic.subtypes.TCGA.I, CCND2_stat.I, CDK4_stat.I, CDK6_stat.I, MYC_stat.I, PTEN_stat.I, PTCH1_stat.I, PDGFRA_stat.I, RB1_stat.I, TERT_stat.I, NF2_stat.I, CDKN2AB.I,
+                               methylation.sub.diagnosis.R, mgmt_status.R, classification.R, Epigenetic.subtypes.TCGA.R, CCND2_stat.R, CDK4_stat.R, CDK6_stat.R, MYC_stat.R, PTEN_stat.R, PTCH1_stat.R, PDGFRA_stat.R, RB1_stat.R, TERT_stat.R, NF2_stat.R, CDKN2AB.R)) %>% 
+  dplyr::mutate(facet = ifelse(grepl("^.+I$", name), "Initial", "Recurrent")) %>% 
+  dplyr::mutate(name = gsub("\\.[IR]$","",name)) %>% 
+  dplyr::left_join(plt.expanded %>%  dplyr::select(GLASS_ID, order) %>% dplyr::distinct(), by=c('GLASS_ID'='GLASS_ID'))
+  #dplyr::filter(name == "classification")
+
+
+p3 <- ggplot(plt.expanded2, aes(x=reorder(GLASS_ID, order), y=name, fill=value)) +
+  facet_grid(rows = vars(facet), scales = "free") + 
+  geom_tile(col="black")
+
+
+
+p1 / p2 / p3 + plot_layout(heights = c(1, 3, 2))
+
+
+
+
+## paired plot by sig1 [CCy] ----
+
+
+rm(plt, plt.expanded, plt.expanded2)
+
+plt <- metadata %>% 
+  dplyr::filter(!is.na( lts.up1.I) & !is.na(lts.up1.R)) %>% 
+  dplyr::filter(!is.na( survival.I) & !is.na(survival.R)) %>% 
+  dplyr::mutate(order = rank(-lts.up1.R, -lts.up1.I))
+
+
+plt.expanded <- plt %>% 
+  dplyr::select(GLASS_ID, order, survival.I, survival.R, lts.up1.I,  lts.up2.I,  lts.up3.I,  lts.down.I,  lts.up1.R,  lts.up2.R,  lts.up3.R,  lts.down.R) %>% 
+  tidyr::pivot_longer(cols = c(lts.up1.I,  lts.up2.I,  lts.up3.I,  lts.down.I, lts.up1.R,  lts.up2.R,  lts.up3.R,  lts.down.R)) %>% 
+  dplyr::mutate(facet = gsub("^(.+).[IR]$","\\1",name)) %>% 
+  dplyr::mutate(arrow.order = ifelse(gsub("^.+(.)$","\\1",name) == "I",1,2)) %>% 
+  dplyr::arrange(GLASS_ID, facet, arrow.order) %>% 
+  dplyr::rename(`DGE signature type` = name, `DGE signature contribution` = value) %>% 
+  dplyr::mutate(facet = factor(facet, levels=c( "lts.up1",  "lts.up2",  "lts.up3", "lts.down")))
+
+
+p1 <- ggplot(plt.expanded, aes(x = reorder(GLASS_ID, order), y = `survival.R` )) +
+  geom_segment(aes(x=reorder(GLASS_ID, order), xend=reorder(GLASS_ID, order), y= `survival.R`, yend=0)) +
+  geom_point() +
+  theme_bw() +
+  theme( axis.text.x  = element_blank()) + # element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25)) +
+  labs(y = "Survival time from recurrence")
+
+p2 <- ggplot(plt.expanded, aes(x = reorder(GLASS_ID, order), y = `DGE signature contribution`, group = GLASS_ID )) +
+  #geom_smooth(method='lm', aes(group=NULL), data = subset(plt.expanded, arrow.order == 2),se=F, col="gray", lwd=1,lty=2) +
+  geom_path(arrow = arrow(ends = "last", type = "closed", angle=15, length = unit(0.125, "inches"))) +
+  facet_grid(rows = vars(facet)) +
+  theme_bw()
+theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25))
+
+
+
+
+plt.expanded2 <-  plt %>% 
+  dplyr::select(GLASS_ID, 
+                methylation.sub.diagnosis.I, mgmt_status.I, classification.I, Epigenetic.subtypes.TCGA.I, CCND2_stat.I, CDK4_stat.I, CDK6_stat.I, MYC_stat.I, PTEN_stat.I, PTCH1_stat.I, PDGFRA_stat.I, RB1_stat.I, TERT_stat.I, NF2_stat.I, CDKN2AB.I,
+                methylation.sub.diagnosis.R, mgmt_status.R, classification.R, Epigenetic.subtypes.TCGA.R, CCND2_stat.R, CDK4_stat.R, CDK6_stat.R, MYC_stat.R, PTEN_stat.R, PTCH1_stat.R, PDGFRA_stat.R, RB1_stat.R, TERT_stat.R, NF2_stat.R, CDKN2AB.R) %>% 
+  tidyr::pivot_longer(cols = c(methylation.sub.diagnosis.I, mgmt_status.I, classification.I, Epigenetic.subtypes.TCGA.I, CCND2_stat.I, CDK4_stat.I, CDK6_stat.I, MYC_stat.I, PTEN_stat.I, PTCH1_stat.I, PDGFRA_stat.I, RB1_stat.I, TERT_stat.I, NF2_stat.I, CDKN2AB.I,
+                               methylation.sub.diagnosis.R, mgmt_status.R, classification.R, Epigenetic.subtypes.TCGA.R, CCND2_stat.R, CDK4_stat.R, CDK6_stat.R, MYC_stat.R, PTEN_stat.R, PTCH1_stat.R, PDGFRA_stat.R, RB1_stat.R, TERT_stat.R, NF2_stat.R, CDKN2AB.R)) %>% 
+  dplyr::mutate(facet = ifelse(grepl("^.+I$", name), "Initial", "Recurrent")) %>% 
+  dplyr::mutate(name = gsub("\\.[IR]$","",name)) %>% 
+  dplyr::left_join(plt.expanded %>%  dplyr::select(GLASS_ID, order) %>% dplyr::distinct(), by=c('GLASS_ID'='GLASS_ID')) %>% 
+  #dplyr::filter(name %in% c("CDK4_stat","CDK6_stat",  "CCND2_stat", "MYC_stat", "NF2_stat", "PDGFRA_stat", "PTCH1_stat", "PTEN_stat", "RB1_stat", "TERT_stat")) # ok, MYC?
+  #dplyr::filter(name == "classification") # ok
+  #dplyr::filter(name == "Epigenetic.subtypes.TCGA") # nah?
+  #plyr::filter(name == "methylation.sub.diagnosis") # quite well
+  #dplyr::filter(name == "mgmt_status") # not at all
+  #dplyr::filter(name == "CDKN2AB")
+  dplyr::filter(name %in% c("CDKN2AB", "methylation.sub.diagnosis") ) %>%  # no / little 
+  dplyr::mutate(value = ifelse(value %in% c("A_IDH", "CONTR_HEMI", "O_IDH", "PLEX_PED_B"), "A_IDH / CONTR_HEMI / O_IDH / PLEX_PED_B", value))
+
+
+p3 <- ggplot(plt.expanded2, aes(x=reorder(GLASS_ID, order), y=name, fill=value)) +
+  facet_grid(rows = vars(facet), scales = "free") + 
+  geom_tile(col="black") +
+  theme_bw() +
+  theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25))
+
+
+p1 / p2 / p3 + plot_layout(heights = c(1, 3, 3)) # quite a bit
+
+
+
+
+## paired plot by sig2 [COL] ----
+
+
+rm(plt, plt.expanded, plt.expanded2)
+
+plt <- metadata %>% 
+  dplyr::filter(!is.na( lts.up1.I) & !is.na(lts.up1.R)) %>% 
+  dplyr::filter(!is.na( survival.I) & !is.na(survival.R)) %>% 
+  dplyr::mutate(order = rank(-lts.up2.R, -lts.up2.I))
+
+
+plt.expanded <- plt %>% 
+  dplyr::select(GLASS_ID, order, survival.I, survival.R, lts.up1.I,  lts.up2.I,  lts.up3.I,  lts.down.I,  lts.up1.R,  lts.up2.R,  lts.up3.R,  lts.down.R) %>% 
+  tidyr::pivot_longer(cols = c(lts.up1.I,  lts.up2.I,  lts.up3.I,  lts.down.I, lts.up1.R,  lts.up2.R,  lts.up3.R,  lts.down.R)) %>% 
+  dplyr::mutate(facet = gsub("^(.+).[IR]$","\\1",name)) %>% 
+  dplyr::mutate(arrow.order = ifelse(gsub("^.+(.)$","\\1",name) == "I",1,2)) %>% 
+  dplyr::arrange(GLASS_ID, facet, arrow.order) %>% 
+  dplyr::rename(`DGE signature type` = name, `DGE signature contribution` = value) %>% 
+  dplyr::mutate(facet = factor(facet, levels=c( "lts.up1",  "lts.up2",  "lts.up3", "lts.down")))
+
+
+p1 <- ggplot(plt.expanded, aes(x = reorder(GLASS_ID, order), y = `survival.R` )) +
+  geom_segment(aes(x=reorder(GLASS_ID, order), xend=reorder(GLASS_ID, order), y= `survival.R`, yend=0)) +
+  geom_point() +
+  theme_bw() +
+  theme( axis.text.x  = element_blank()) + # element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25)) +
+  labs(y = "Survival time from recurrence")
+
+p2 <- ggplot(plt.expanded, aes(x = reorder(GLASS_ID, order), y = `DGE signature contribution`, group = GLASS_ID )) +
+  #geom_smooth(method='lm', aes(group=NULL), data = subset(plt.expanded, arrow.order == 2),se=F, col="gray", lwd=1,lty=2) +
+  geom_path(arrow = arrow(ends = "last", type = "closed", angle=15, length = unit(0.125, "inches"))) +
+  facet_grid(rows = vars(facet)) +
+  theme_bw()
+theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25))
+
+
+
+
+plt.expanded2 <-  plt %>% 
+  dplyr::select(GLASS_ID, 
+                methylation.sub.diagnosis.I, mgmt_status.I, classification.I, Epigenetic.subtypes.TCGA.I, CCND2_stat.I, CDK4_stat.I, CDK6_stat.I, MYC_stat.I, PTEN_stat.I, PTCH1_stat.I, PDGFRA_stat.I, RB1_stat.I, TERT_stat.I, NF2_stat.I, CDKN2AB.I,
+                methylation.sub.diagnosis.R, mgmt_status.R, classification.R, Epigenetic.subtypes.TCGA.R, CCND2_stat.R, CDK4_stat.R, CDK6_stat.R, MYC_stat.R, PTEN_stat.R, PTCH1_stat.R, PDGFRA_stat.R, RB1_stat.R, TERT_stat.R, NF2_stat.R, CDKN2AB.R) %>% 
+  tidyr::pivot_longer(cols = c(methylation.sub.diagnosis.I, mgmt_status.I, classification.I, Epigenetic.subtypes.TCGA.I, CCND2_stat.I, CDK4_stat.I, CDK6_stat.I, MYC_stat.I, PTEN_stat.I, PTCH1_stat.I, PDGFRA_stat.I, RB1_stat.I, TERT_stat.I, NF2_stat.I, CDKN2AB.I,
+                               methylation.sub.diagnosis.R, mgmt_status.R, classification.R, Epigenetic.subtypes.TCGA.R, CCND2_stat.R, CDK4_stat.R, CDK6_stat.R, MYC_stat.R, PTEN_stat.R, PTCH1_stat.R, PDGFRA_stat.R, RB1_stat.R, TERT_stat.R, NF2_stat.R, CDKN2AB.R)) %>% 
+  dplyr::mutate(facet = ifelse(grepl("^.+I$", name), "Initial", "Recurrent")) %>% 
+  dplyr::mutate(name = gsub("\\.[IR]$","",name)) %>% 
+  dplyr::left_join(plt.expanded %>%  dplyr::select(GLASS_ID, order) %>% dplyr::distinct(), by=c('GLASS_ID'='GLASS_ID')) %>% 
+  #dplyr::filter(name %in% c("CDK4_stat","CDK6_stat",  "CCND2_stat", "MYC_stat", "NF2_stat", "PDGFRA_stat", "PTCH1_stat", "PTEN_stat", "RB1_stat", "TERT_stat")) # nah
+  #dplyr::filter(name == "classification") # nah
+  #dplyr::filter(name == "Epigenetic.subtypes.TCGA") # nah
+  #dplyr::filter(name == "methylation.sub.diagnosis") # quite well
+  #dplyr::filter(name == "mgmt_status") # nah
+  #dplyr::filter(name == "CDKN2AB") # nah
+  dplyr::filter(name %in% c("CDKN2AB", "methylation.sub.diagnosis") ) %>%  # no / little 
+  dplyr::mutate(value = ifelse(value %in% c("A_IDH", "CONTR_HEMI", "O_IDH", "PLEX_PED_B"), "A_IDH / CONTR_HEMI / O_IDH / PLEX_PED_B", value))
+
+
+p3 <- ggplot(plt.expanded2, aes(x=reorder(GLASS_ID, order), y=name, fill=value)) +
+  facet_grid(rows = vars(facet), scales = "free") + 
+  geom_tile(col="black") +
+  theme_bw() +
+  theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25))
+
+
+p1 / p2 / p3 + plot_layout(heights = c(1, 3, 3))
+
+
+
+
+## paired plot by sig3 [COL] ----
+
+
+rm(plt, plt.expanded, plt.expanded2)
+
+plt <- metadata %>% 
+  dplyr::filter(!is.na( lts.up3.I) & !is.na(lts.up3.R)) %>% 
+  dplyr::filter(!is.na( survival.I) & !is.na(survival.R)) %>% 
+  dplyr::mutate(order = rank(-lts.up3.R, -lts.up3.I))
+
+
+plt.expanded <- plt %>% 
+  dplyr::select(GLASS_ID, order, survival.I, survival.R, lts.up1.I,  lts.up2.I,  lts.up3.I,  lts.down.I,  lts.up1.R,  lts.up2.R,  lts.up3.R,  lts.down.R) %>% 
+  tidyr::pivot_longer(cols = c(lts.up1.I,  lts.up2.I,  lts.up3.I,  lts.down.I, lts.up1.R,  lts.up2.R,  lts.up3.R,  lts.down.R)) %>% 
+  dplyr::mutate(facet = gsub("^(.+).[IR]$","\\1",name)) %>% 
+  dplyr::mutate(arrow.order = ifelse(gsub("^.+(.)$","\\1",name) == "I",1,2)) %>% 
+  dplyr::arrange(GLASS_ID, facet, arrow.order) %>% 
+  dplyr::rename(`DGE signature type` = name, `DGE signature contribution` = value) %>% 
+  dplyr::mutate(facet = factor(facet, levels=c( "lts.up1",  "lts.up2",  "lts.up3", "lts.down")))
+
+
+p1 <- ggplot(plt.expanded, aes(x = reorder(GLASS_ID, order), y = `survival.R` )) +
+  geom_segment(aes(x=reorder(GLASS_ID, order), xend=reorder(GLASS_ID, order), y= `survival.R`, yend=0)) +
+  geom_point() +
+  theme_bw() +
+  theme( axis.text.x  = element_blank()) + # element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25)) +
+  labs(y = "Survival time from recurrence")
+
+p2 <- ggplot(plt.expanded, aes(x = reorder(GLASS_ID, order), y = `DGE signature contribution`, group = GLASS_ID )) +
+  #geom_smooth(method='lm', aes(group=NULL), data = subset(plt.expanded, arrow.order == 2),se=F, col="gray", lwd=1,lty=2) +
+  geom_path(arrow = arrow(ends = "last", type = "closed", angle=15, length = unit(0.125, "inches"))) +
+  facet_grid(rows = vars(facet)) +
+  theme_bw()
+theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25))
+
+
+
+
+plt.expanded2 <-  plt %>% 
+  dplyr::select(GLASS_ID, 
+                methylation.sub.diagnosis.I, mgmt_status.I, classification.I, Epigenetic.subtypes.TCGA.I, CCND2_stat.I, CDK4_stat.I, CDK6_stat.I, MYC_stat.I, PTEN_stat.I, PTCH1_stat.I, PDGFRA_stat.I, RB1_stat.I, TERT_stat.I, NF2_stat.I, CDKN2AB.I,
+                methylation.sub.diagnosis.R, mgmt_status.R, classification.R, Epigenetic.subtypes.TCGA.R, CCND2_stat.R, CDK4_stat.R, CDK6_stat.R, MYC_stat.R, PTEN_stat.R, PTCH1_stat.R, PDGFRA_stat.R, RB1_stat.R, TERT_stat.R, NF2_stat.R, CDKN2AB.R) %>% 
+  tidyr::pivot_longer(cols = c(methylation.sub.diagnosis.I, mgmt_status.I, classification.I, Epigenetic.subtypes.TCGA.I, CCND2_stat.I, CDK4_stat.I, CDK6_stat.I, MYC_stat.I, PTEN_stat.I, PTCH1_stat.I, PDGFRA_stat.I, RB1_stat.I, TERT_stat.I, NF2_stat.I, CDKN2AB.I,
+                               methylation.sub.diagnosis.R, mgmt_status.R, classification.R, Epigenetic.subtypes.TCGA.R, CCND2_stat.R, CDK4_stat.R, CDK6_stat.R, MYC_stat.R, PTEN_stat.R, PTCH1_stat.R, PDGFRA_stat.R, RB1_stat.R, TERT_stat.R, NF2_stat.R, CDKN2AB.R)) %>% 
+  dplyr::mutate(facet = ifelse(grepl("^.+I$", name), "Initial", "Recurrent")) %>% 
+  dplyr::mutate(name = gsub("\\.[IR]$","",name)) %>% 
+  dplyr::left_join(plt.expanded %>%  dplyr::select(GLASS_ID, order) %>% dplyr::distinct(), by=c('GLASS_ID'='GLASS_ID')) %>% 
+  #dplyr::filter(name %in% c("CDK4_stat","CDK6_stat",  "CCND2_stat", "MYC_stat", "NF2_stat", "PDGFRA_stat", "PTCH1_stat", "PTEN_stat", "RB1_stat", "TERT_stat")) # no
+  #dplyr::filter(name == "classification") # barely/nah
+  #dplyr::filter(name == "Epigenetic.subtypes.TCGA") # no
+  #dplyr::filter(name == "methylation.sub.diagnosis") # a little
+  #dplyr::filter(name == "mgmt_status") # no
+  #dplyr::filter(name == "CDKN2AB") # a little
+  dplyr::filter(name %in% c("CDKN2AB", "methylation.sub.diagnosis") ) %>%  # no / little 
+  dplyr::mutate(value = ifelse(value %in% c("A_IDH", "CONTR_HEMI", "O_IDH", "PLEX_PED_B"), "A_IDH / CONTR_HEMI / O_IDH / PLEX_PED_B", value))
+
+
+
+p3 <- ggplot(plt.expanded2, aes(x=reorder(GLASS_ID, order), y=name, fill=value)) +
+  facet_grid(rows = vars(facet), scales = "free") + 
+  geom_tile(col="black") +
+  theme_bw() +
+  theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25))
+
+
+p1 / p2 / p3 + plot_layout(heights = c(1, 3, 3))
+
+
+
+
+## paired plot by sig4/down [COL] ----
+
+
+rm(plt, plt.expanded, plt.expanded2)
+
+plt <- metadata %>% 
+  dplyr::filter(!is.na( lts.down.I) & !is.na(lts.down.R)) %>% 
+  dplyr::filter(!is.na( survival.I) & !is.na(survival.R)) %>% 
+  dplyr::mutate(order = rank(-lts.down.R, -lts.down.I))
+
+
+plt.expanded <- plt %>% 
+  dplyr::select(GLASS_ID, order, survival.I, survival.R, lts.up1.I,  lts.up2.I,  lts.up3.I,  lts.down.I,  lts.up1.R,  lts.up2.R,  lts.up3.R,  lts.down.R) %>% 
+  tidyr::pivot_longer(cols = c(lts.up1.I,  lts.up2.I,  lts.up3.I,  lts.down.I, lts.up1.R,  lts.up2.R,  lts.up3.R,  lts.down.R)) %>% 
+  dplyr::mutate(facet = gsub("^(.+).[IR]$","\\1",name)) %>% 
+  dplyr::mutate(arrow.order = ifelse(gsub("^.+(.)$","\\1",name) == "I",1,2)) %>% 
+  dplyr::arrange(GLASS_ID, facet, arrow.order) %>% 
+  dplyr::rename(`DGE signature type` = name, `DGE signature contribution` = value) %>% 
+  dplyr::mutate(facet = factor(facet, levels=c( "lts.up1",  "lts.up2",  "lts.up3", "lts.down")))
+
+
+p1 <- ggplot(plt.expanded, aes(x = reorder(GLASS_ID, order), y = `survival.R` )) +
+  geom_segment(aes(x=reorder(GLASS_ID, order), xend=reorder(GLASS_ID, order), y= `survival.R`, yend=0)) +
+  geom_point() +
+  theme_bw() +
+  theme( axis.text.x  = element_blank()) + # element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25)) +
+  labs(y = "Survival time from recurrence")
+
+p2 <- ggplot(plt.expanded, aes(x = reorder(GLASS_ID, order), y = `DGE signature contribution`, group = GLASS_ID )) +
+  #geom_smooth(method='lm', aes(group=NULL), data = subset(plt.expanded, arrow.order == 2),se=F, col="gray", lwd=1,lty=2) +
+  geom_path(arrow = arrow(ends = "last", type = "closed", angle=15, length = unit(0.125, "inches"))) +
+  facet_grid(rows = vars(facet)) +
+  theme_bw() +
+  theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25))
+
+
+
+
+plt.expanded2 <-  plt %>% 
+  dplyr::select(GLASS_ID, 
+                methylation.sub.diagnosis.I, mgmt_status.I, classification.I, Epigenetic.subtypes.TCGA.I, CCND2_stat.I, CDK4_stat.I, CDK6_stat.I, MYC_stat.I, PTEN_stat.I, PTCH1_stat.I, PDGFRA_stat.I, RB1_stat.I, TERT_stat.I, NF2_stat.I, CDKN2AB.I,
+                methylation.sub.diagnosis.R, mgmt_status.R, classification.R, Epigenetic.subtypes.TCGA.R, CCND2_stat.R, CDK4_stat.R, CDK6_stat.R, MYC_stat.R, PTEN_stat.R, PTCH1_stat.R, PDGFRA_stat.R, RB1_stat.R, TERT_stat.R, NF2_stat.R, CDKN2AB.R) %>% 
+  tidyr::pivot_longer(cols = c(methylation.sub.diagnosis.I, mgmt_status.I, classification.I, Epigenetic.subtypes.TCGA.I, CCND2_stat.I, CDK4_stat.I, CDK6_stat.I, MYC_stat.I, PTEN_stat.I, PTCH1_stat.I, PDGFRA_stat.I, RB1_stat.I, TERT_stat.I, NF2_stat.I, CDKN2AB.I,
+                               methylation.sub.diagnosis.R, mgmt_status.R, classification.R, Epigenetic.subtypes.TCGA.R, CCND2_stat.R, CDK4_stat.R, CDK6_stat.R, MYC_stat.R, PTEN_stat.R, PTCH1_stat.R, PDGFRA_stat.R, RB1_stat.R, TERT_stat.R, NF2_stat.R, CDKN2AB.R)) %>% 
+  dplyr::mutate(facet = ifelse(grepl("^.+I$", name), "Initial", "Recurrent")) %>% 
+  dplyr::mutate(name = gsub("\\.[IR]$","",name)) %>% 
+  dplyr::left_join(plt.expanded %>%  dplyr::select(GLASS_ID, order) %>% dplyr::distinct(), by=c('GLASS_ID'='GLASS_ID')) %>% 
+  #dplyr::filter(name %in% c("CDK4_stat","CDK6_stat",  "CCND2_stat", "MYC_stat", "NF2_stat", "PDGFRA_stat", "PTCH1_stat", "PTEN_stat", "RB1_stat", "TERT_stat")) # meh, MYC?
+  #dplyr::filter(name == "classification") # good
+  #dplyr::filter(name == "Epigenetic.subtypes.TCGA") # no?
+  #dplyr::filter(name == "methylation.sub.diagnosis") #  good
+  # dplyr::filter(name == "mgmt_status") # no
+  #dplyr::filter(name == "CDKN2AB") # no / little
+  dplyr::filter(name %in% c("CDKN2AB", "methylation.sub.diagnosis") ) %>%  # no / little 
+  dplyr::mutate(value = ifelse(value %in% c("A_IDH", "CONTR_HEMI", "O_IDH", "PLEX_PED_B"), "A_IDH / CONTR_HEMI / O_IDH / PLEX_PED_B", value))
+
+
+p3 <- ggplot(plt.expanded2, aes(x=reorder(GLASS_ID, order), y=name, fill=value)) +
+  facet_grid(rows = vars(facet), scales = "free") + 
+  geom_tile(col="black") +
+  theme_bw() +
+  theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25))
+
+
+p1 / p2 / p3 + plot_layout(heights = c(1, 3, 3))
+
+
+
+
+plot(metadata.glass.per.resection$lts.down, log(metadata.glass.per.resection$A_IDH_HG_cal/metadata.glass.per.resection$A_IDH_cal),xlab="RNA Signature 4 (down) expression",ylab="Heidelberg Classifier log(IDH_LGG_HG score / IDH_LGG score)")
+
+p1 <- ggplot(metadata.glass.per.resection, aes(x = lts.up1, y=log(A_IDH_HG_cal/A_IDH_cal), col=resection)) +
+  geom_point() +
+  theme_bw() +
+  labs(x="RNA Signature 1 / Cell cycling (up) expression",y="Heidelberg Classifier log(IDH_LGG_HG score / IDH_LGG score)")
+
+p2 <- ggplot(metadata.glass.per.resection, aes(x = lts.up2, y=log(A_IDH_HG_cal/A_IDH_cal), col=resection)) +
+  geom_point() +
+  theme_bw() +
+  labs(x="RNA Signature 2 / Collagen (up) expression",y="Heidelberg Classifier log(IDH_LGG_HG score / IDH_LGG score)")
+
+p3 <- ggplot(metadata.glass.per.resection, aes(x = lts.up3, y=log(A_IDH_HG_cal/A_IDH_cal), col=resection)) +
+  geom_point() +
+  theme_bw() +
+  labs(x="RNA Signature 3 / Fuzzy (up) expression",y="Heidelberg Classifier log(IDH_LGG_HG score / IDH_LGG score)")
+
+p4 <- ggplot(metadata.glass.per.resection, aes(x = lts.down, y=log(A_IDH_HG_cal/A_IDH_cal), col=resection)) +
+  geom_point() +
+  theme_bw() +
+  labs(x="RNA Signature 4 / non-malignant astrocytes? (down) expression",y="Heidelberg Classifier log(IDH_LGG_HG score / IDH_LGG score)")
+
+
+
+
+
+
+### another plot ----
+
 
 data = plt.expanded  %>% 
   dplyr::rename(x = order) %>% 
@@ -114,6 +457,8 @@ data = plt.expanded  %>%
 ggplot(data,aes(x=x, y=y, group=GLASS_ID)) +
   geom_smooth(aes(group = NULL),method='lm',se=FALSE) + #, formula= y~x) +
   geom_point()
+
+
 
 # example RF model ----
 

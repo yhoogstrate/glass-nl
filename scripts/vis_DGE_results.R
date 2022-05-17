@@ -11,7 +11,6 @@ library(recursiveCorPlot)
 
  
 source('scripts/R/chrom_sizes.R')
-library(recursiveCorPlot)
 
 
 # if metadata was not loaded, load it

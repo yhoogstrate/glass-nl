@@ -352,6 +352,7 @@ metadata.glass.per.resection %>%  dplyr::filter(is.na(status.resection.until.las
 rm(tmp)
 
 
+
 ## attach growth annotations ----
 
 tmp.1 <- read.csv('data/glass/Imaging/220314_glass_imaging_data_summary.csv')
@@ -429,6 +430,48 @@ tmp.3 <- read.csv('data/glass/Clinical data/(Epi)genetic data methylation/(Epi)g
   dplyr::mutate(X=NULL)
 
 
+parse_predictbrain_csv <- function(file, suffix) {
+  # file = 'data/glass/Methylation/Heidelberg/Heidelberg_unzip/203989100107_R01C01_Run_78486/predictBrain_v2.1/203989100107_R01C01_scores.csv'
+  tmp <- read.csv(file)
+  colnames(tmp)[2] <- 'score'
+  
+  out <- list(
+    A_IDH =    tmp %>% dplyr::filter(grepl('^A_IDH$',X))    %>% dplyr::pull(score) %>% as.numeric,
+    A_IDH_HG = tmp %>% dplyr::filter(grepl('^A_IDH_HG$',X)) %>% dplyr::pull(score) %>% as.numeric,
+    O_IDH =    tmp %>% dplyr::filter(grepl('^O_IDH$',X))    %>% dplyr::pull(score) %>% as.numeric,
+    GBM_MES =  tmp %>% dplyr::filter(grepl('^GBM_MES$',X))  %>% dplyr::pull(score) %>% as.numeric
+  )
+  
+  names(out) <- paste0(names(out), suffix)
+  
+  return(out)
+}
+
+tmp.4 <- data.frame(predictBrain.scores.file = Sys.glob("data/glass/Methylation/Heidelberg/Heidelberg_unzip/*/predictBrain_v2.1/*_scores.csv")) %>%
+  dplyr::mutate(Sample_ID = gsub("^.+_v2.1/([^/]+)_scores.csv$","\\1", predictBrain.scores.file)) %>% 
+  dplyr::mutate(stats = lapply(predictBrain.scores.file, parse_predictbrain_csv, suffix='')) %>% 
+  mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
+  tidyr::unnest(tmp) %>% 
+  dplyr::mutate(stats = NULL, predictBrain.scores.file = NULL) %>% 
+  tibble::column_to_rownames('Sample_ID') %>% 
+  dplyr::mutate_all(as.numeric) %>% 
+  tibble::rownames_to_column('Sample_ID')
+
+
+tmp.5 <- data.frame(predictBrain.scores.file = Sys.glob("data/glass/Methylation/Heidelberg/Heidelberg_unzip/*/predictBrain_v2.1/*_scores_cal.csv")) %>%
+  dplyr::mutate(Sample_ID = gsub("^.+_v2.1/([^/]+)_scores_cal.csv$","\\1", predictBrain.scores.file)) %>% 
+  dplyr::mutate(stats = lapply(predictBrain.scores.file, parse_predictbrain_csv, suffix='_cal')) %>% 
+  mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
+  tidyr::unnest(tmp) %>% 
+  dplyr::mutate(stats = NULL, predictBrain.scores.file = NULL) %>% 
+  tibble::column_to_rownames('Sample_ID') %>% 
+  dplyr::mutate_all(as.numeric) %>% 
+  tibble::rownames_to_column('Sample_ID')
+
+
+
+
+
 stopifnot(duplicated(tmp.1$Sample_ID) == FALSE)
 stopifnot(duplicated(tmp.2$Sample_ID) == FALSE)
 stopifnot(duplicated(tmp.3$Sample_ID) == FALSE)
@@ -439,14 +482,20 @@ stopifnot(tmp.3$Sample_ID %in% tmp.1$Sample_ID)
 tmp <- tmp.1 %>% 
   dplyr::left_join(tmp.2, by=c('Sample_ID'='Sample_ID')) %>% 
   dplyr::left_join(tmp.3, by=c('Sample_ID'='Sample_ID')) %>% 
-  dplyr::rename(methylation.sid = Sample_ID)
-  
+  dplyr::left_join(tmp.4, by=c('Sample_ID'='Sample_ID')) %>% 
+  dplyr::left_join(tmp.5, by=c('Sample_ID'='Sample_ID')) %>% 
+  dplyr::rename(methylation.sid = Sample_ID) %>% 
+  dplyr::rename(methylation.Sample_Plate = Sample_Plate) %>% 
+  dplyr::rename(methylation.Basename = Basename) %>% 
+  dplyr::rename(methylation.Array = Array) %>% 
+  dplyr::rename(methylation.Slide = Slide) %>% 
+  dplyr::rename(methylation.sub.diagnosis = sub.diagnosis)
 
 
-stopifnot(sum(is.na(tmp$Heidelberg.segment.file)) > 1) # one file missing so far, that's known
+stopifnot(sum(is.na(tmp$Heidelberg.segment.file)) <= 1) # one file missing so far, that's known
 
 
-rm(tmp.1,tmp.2,tmp.3)
+rm(tmp.1,tmp.2,tmp.3,tmp.4,tmp.5)
 
 
 #dim(tmp)
@@ -590,5 +639,33 @@ metadata.glass.per.patient <- metadata.glass.per.patient %>% dplyr::mutate(
   Date_of_Death = NULL,
   Date_of_Diagnosis = NULL
 )
+
+
+
+
+# # zal wel RF score zijn
+# a = read.csv('/home/r361003/mnt/neuro-genomic-1-ro/glass/Methylation/Heidelberg/Heidelberg_unzip/203175700013_R01C01_Run_43241/predictBrain_v2.1/203175700013_R01C01_scores.csv')
+# sum(a$X203175700013_R01C01)
+# 
+# # lijkt op soort van probability uit een gefitte density, nooit nul?
+# b = read.csv('/home/r361003/mnt/neuro-genomic-1-ro/glass/Methylation/Heidelberg/Heidelberg_unzip/203175700013_R01C01_Run_43241/predictBrain_v2.1/203175700013_R01C01_scores_cal.csv')
+# sum(b$X203175700013_R01C01)
+
+
+# plot(metadata.glass.per.resection$lts.up2, log(metadata.glass.per.resection$A_IDH_HG_cal/metadata.glass.per.resection$A_IDH_cal),xlab="Signature 2 expression",ylab="Heidelberg Classifier log(IDH_LGG_HG score / IDH_LGG score)")
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_HG_cal)
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_cal)
+# 
+# 
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_HG - metadata.glass.per.resection$A_IDH)
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_HG)
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH)
+# 
+# 
+# plot(metadata.glass.per.resection$lts.down, log(metadata.glass.per.resection$A_IDH_HG_cal/metadata.glass.per.resection$A_IDH_cal),xlab="RNA Signature 4 (down) expression",ylab="Heidelberg Classifier log(IDH_LGG_HG score / IDH_LGG score)")
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_HG_cal)
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_cal)
+
+
 
 
