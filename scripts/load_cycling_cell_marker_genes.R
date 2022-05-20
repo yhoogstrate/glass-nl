@@ -31,7 +31,7 @@ cycling.cell.markers <- readODS::read_ods('data/scRNA-cycling-genes.ods',col_nam
   dplyr::mutate(F = ifelse(duplicated(F),NA,F)) %>% 
   dplyr::rename(G1.S.tirosh = A) %>% 
   dplyr::rename(G2.M.tirosh = B) %>% 
-  dplyr::rename(melanoma.tirosh = C) %>% 
+  dplyr::rename(cycling.melanoma.tirosh = C) %>% 
   dplyr::rename(G1.S.neftel = E) %>% 
   dplyr::rename(G2.M.neftel = F) %>% 
   dplyr::mutate(D = NULL) %>% 
@@ -109,5 +109,15 @@ cycling.cell.markers <- cycling.cell.markers %>%
 stopifnot(duplicated(cycling.cell.markers$gene_name) == F)
 stopifnot(cycling.cell.markers$gene_name %in% expression.glass.exon.metadata$gene_name)
 #cycling.cell.markers$gene_name[cycling.cell.markers$gene_name %in% expression.glass.exon.metadata$gene_name == F]
+
+
+
+cycling.cell.markers <- cycling.cell.markers %>% 
+  dplyr::left_join(
+    expression.glass.exon.metadata %>% dplyr::select(gene_name, gene_uid), by=c('gene_name'='gene_name')
+  ) %>% 
+  tibble::column_to_rownames('gene_name')
+
+
 
 

@@ -3,6 +3,8 @@
 # load libs ----
 
 
+library(base)
+library(utils)
 library(tidyverse)
 library(rjson)
 
@@ -350,6 +352,7 @@ metadata.glass.per.resection %>%  dplyr::filter(is.na(status.resection.until.las
 rm(tmp)
 
 
+
 ## attach growth annotations ----
 
 tmp.1 <- read.csv('data/glass/Imaging/220314_glass_imaging_data_summary.csv')
@@ -394,6 +397,125 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 rm(tmp)
 
 
+## attach longitudinal transcriptional signatures ----
+
+
+tmp <- readRDS('cache/transcriptional.signatures.Rds')
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'),suffix = c("", ""))
+
+rm(tmp)
+
+
+## attach methylation identifiers ----
+# sid mismatch: 204808700074_R07C01 - geen heidelberg folder van ge-upload
+
+
+tmp.1 <- read.csv('data/glass/Methylation/Metadata/Datasheet4.csv') %>%
+  dplyr::mutate(X=NULL) %>% 
+  dplyr::mutate(GLASS_ID = NULL,
+                Surgery_ID = NULL,
+                Sample_Sex = NULL,
+                Recurrent_Type = NULL,
+                Sample_Type = NULL,
+                Sample_Resection = NULL)
+
+  
+tmp.2 <- data.frame(Heidelberg.segment.file = Sys.glob("data/glass/Methylation/Heidelberg/Heidelberg_unzip/*/cnvp_v3.0/*.segments.seg")) %>%
+  dplyr::mutate(Sample_ID = gsub("^.+_unzip/([^/]+)_Run.+$","\\1",Heidelberg.segment.file))
+
+
+tmp.3 <- read.csv('data/glass/Clinical data/(Epi)genetic data methylation/(Epi)genetic data_GLASS-NL_01092021.csv') %>% 
+  dplyr::mutate(X=NULL)
+
+
+parse_predictbrain_csv <- function(file, suffix) {
+  # file = 'data/glass/Methylation/Heidelberg/Heidelberg_unzip/203989100107_R01C01_Run_78486/predictBrain_v2.1/203989100107_R01C01_scores.csv'
+  tmp <- read.csv(file)
+  colnames(tmp)[2] <- 'score'
+  
+  out <- list(
+    A_IDH =    tmp %>% dplyr::filter(grepl('^A_IDH$',X))    %>% dplyr::pull(score) %>% as.numeric,
+    A_IDH_HG = tmp %>% dplyr::filter(grepl('^A_IDH_HG$',X)) %>% dplyr::pull(score) %>% as.numeric,
+    O_IDH =    tmp %>% dplyr::filter(grepl('^O_IDH$',X))    %>% dplyr::pull(score) %>% as.numeric,
+    GBM_MES =  tmp %>% dplyr::filter(grepl('^GBM_MES$',X))  %>% dplyr::pull(score) %>% as.numeric
+  )
+  
+  names(out) <- paste0(names(out), suffix)
+  
+  return(out)
+}
+
+tmp.4 <- data.frame(predictBrain.scores.file = Sys.glob("data/glass/Methylation/Heidelberg/Heidelberg_unzip/*/predictBrain_v2.1/*_scores.csv")) %>%
+  dplyr::mutate(Sample_ID = gsub("^.+_v2.1/([^/]+)_scores.csv$","\\1", predictBrain.scores.file)) %>% 
+  dplyr::mutate(stats = lapply(predictBrain.scores.file, parse_predictbrain_csv, suffix='')) %>% 
+  mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
+  tidyr::unnest(tmp) %>% 
+  dplyr::mutate(stats = NULL, predictBrain.scores.file = NULL) %>% 
+  tibble::column_to_rownames('Sample_ID') %>% 
+  dplyr::mutate_all(as.numeric) %>% 
+  tibble::rownames_to_column('Sample_ID')
+
+
+tmp.5 <- data.frame(predictBrain.scores.file = Sys.glob("data/glass/Methylation/Heidelberg/Heidelberg_unzip/*/predictBrain_v2.1/*_scores_cal.csv")) %>%
+  dplyr::mutate(Sample_ID = gsub("^.+_v2.1/([^/]+)_scores_cal.csv$","\\1", predictBrain.scores.file)) %>% 
+  dplyr::mutate(stats = lapply(predictBrain.scores.file, parse_predictbrain_csv, suffix='_cal')) %>% 
+  mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
+  tidyr::unnest(tmp) %>% 
+  dplyr::mutate(stats = NULL, predictBrain.scores.file = NULL) %>% 
+  tibble::column_to_rownames('Sample_ID') %>% 
+  dplyr::mutate_all(as.numeric) %>% 
+  tibble::rownames_to_column('Sample_ID')
+
+
+
+
+
+stopifnot(duplicated(tmp.1$Sample_ID) == FALSE)
+stopifnot(duplicated(tmp.2$Sample_ID) == FALSE)
+stopifnot(duplicated(tmp.3$Sample_ID) == FALSE)
+stopifnot(tmp.1$Sample_ID %in% tmp.3$Sample_ID)
+stopifnot(tmp.3$Sample_ID %in% tmp.1$Sample_ID)
+
+
+tmp <- tmp.1 %>% 
+  dplyr::left_join(tmp.2, by=c('Sample_ID'='Sample_ID')) %>% 
+  dplyr::left_join(tmp.3, by=c('Sample_ID'='Sample_ID')) %>% 
+  dplyr::left_join(tmp.4, by=c('Sample_ID'='Sample_ID')) %>% 
+  dplyr::left_join(tmp.5, by=c('Sample_ID'='Sample_ID')) %>% 
+  dplyr::rename(methylation.sid = Sample_ID) %>% 
+  dplyr::rename(methylation.Sample_Plate = Sample_Plate) %>% 
+  dplyr::rename(methylation.Basename = Basename) %>% 
+  dplyr::rename(methylation.Array = Array) %>% 
+  dplyr::rename(methylation.Slide = Slide) %>% 
+  dplyr::rename(methylation.sub.diagnosis = sub.diagnosis)
+
+
+stopifnot(sum(is.na(tmp$Heidelberg.segment.file)) <= 1) # one file missing so far, that's known
+
+
+rm(tmp.1,tmp.2,tmp.3,tmp.4,tmp.5)
+
+
+#dim(tmp)
+#dim(metadata.glass.per.resection)
+
+# 
+#tmp$Sample_Name %in% metadata.glass.per.resection$Sample_Name
+#metadata.glass.per.resection$Sample_Name %in% tmp$Sample_Name
+#metadata.glass.per.resection %>%  dplyr::filter(Sample_Name %in% tmp$Sample_Name == F )
+
+# een hoop waarvan wel methylering en metadata is niet in glass metadata tabel
+# drie waarvan wel metadata is geen methylaring
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>%
+  dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'))
+
+rm(tmp)
+
+
 
 # per patient ----
 
@@ -406,16 +528,32 @@ metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadat
   dplyr::mutate(Date_Last_Followup = as.Date(Date_Last_Followup , format = "%Y-%m-%d")) %>%
   dplyr::mutate(overall.survival = difftime(Date_of_Death , Date_of_Diagnosis, units = 'days')) %>%
   dplyr::mutate(time.until.last.followup = difftime(Date_Last_Followup, Date_of_Diagnosis, units = 'days')) %>% 
-  dplyr::mutate(
-    Date_Last_Followup = NULL,
-    Date_of_Birth = NULL,
-    Date_of_Death = NULL,
-    Date_of_Diagnosis = NULL
-  ) %>% 
-  dplyr::mutate(overall.survival.event = ifelse(is.na(overall.survival),0,1),
-                overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival)) %>% 
-  dplyr::mutate(Sample_Name.I = NA, Sample_Name.R = NA, genomescan.sid.I = NA, genomescan.sid.R = NA)
+  dplyr::mutate(deceased = !is.na(Date_of_Death)) %>% 
+  dplyr::mutate(Sample_Name.I = NA, Sample_Name.R = NA, genomescan.sid.I = NA, genomescan.sid.R = NA) %>% 
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_148", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_160", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_162", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_137", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_110", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_113", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_118", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_156", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_174", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_002", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_018", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_020", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_022", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_029", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_017", "Other" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_UMCU_207", "Other" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  
+  dplyr::mutate(Cause_of_Death = ifelse(Cause_of_Death == "", "Unkown" , Cause_of_Death)) %>% # unknown, but deceased
 
+  dplyr::mutate(overall.survival.event = ifelse(is.na(overall.survival) | Cause_of_Death == "Other",0,1),
+              overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival))
+  
 
 
 # missing metadata for those 3 patients lacking a matching pair
@@ -464,6 +602,69 @@ metadata.glass.per.patient <- metadata.glass.per.patient %>%
   dplyr::mutate(excluded = ifelse(pair.status == "excluded",T,F))
 
 
+
+tmp <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Surgery data_GLASS RNAseq.csv')
+tmp <- rbind(
+  tmp %>% dplyr::select(Date_Surgery_S1, Sample_Name_S1, GS_ID_S1) %>%
+    dplyr::rename(Date_Surgery = Date_Surgery_S1, Sample_Name = Sample_Name_S1, genomescan.sid = GS_ID_S1),
+  tmp %>% dplyr::select(Date_Surgery_S2, Sample_Name_S2, GS_ID_S2) %>% 
+    dplyr::rename(Date_Surgery = Date_Surgery_S2, Sample_Name = Sample_Name_S2, genomescan.sid = GS_ID_S2),
+  tmp %>% dplyr::select(Date_Surgery_S3, Sample_Name_S3, GS_ID_S3) %>% 
+    dplyr::rename(Date_Surgery = Date_Surgery_S3, Sample_Name = Sample_Name_S3, genomescan.sid = GS_ID_S3),
+  tmp %>% dplyr::select(Date_Surgery_S4, Sample_Name_S4, GS_ID_S4) %>% 
+    dplyr::rename(Date_Surgery = Date_Surgery_S4, Sample_Name = Sample_Name_S4, genomescan.sid = GS_ID_S4)
+  ) %>% 
+  dplyr::filter(!is.na(Sample_Name) & !is.na(genomescan.sid)) %>% 
+  dplyr::mutate(Date_Surgery = as.Date(Date_Surgery , format = "%Y-%m-%d")) %>% 
+  dplyr::mutate(Sample_Name = NULL)
+
+metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+  dplyr::left_join(tmp %>% dplyr::rename(Date_Surgery.I = Date_Surgery), by=c('genomescan.sid.I' = 'genomescan.sid')) %>% 
+  dplyr::left_join(tmp %>% dplyr::rename(Date_Surgery.R = Date_Surgery), by=c('genomescan.sid.R' = 'genomescan.sid')) %>% 
+  dplyr::mutate(survival.I = difftime(Date_of_Death , Date_Surgery.I, units = 'days')) %>%
+  dplyr::mutate(survival.R = difftime(Date_of_Death , Date_Surgery.R, units = 'days')) 
+
+#  104059-002-121  no date inital
+#  104059-002-015  no date recurrent
+#  104059-003-014  no date recurrent
+
+rm(tmp)
+
+
+
+# remove privacy sensitive information
+metadata.glass.per.patient <- metadata.glass.per.patient %>% dplyr::mutate(
+  Date_Last_Followup = NULL,
+  Date_of_Birth = NULL,
+  Date_of_Death = NULL,
+  Date_of_Diagnosis = NULL
+)
+
+
+
+
+# # zal wel RF score zijn
+# a = read.csv('/home/r361003/mnt/neuro-genomic-1-ro/glass/Methylation/Heidelberg/Heidelberg_unzip/203175700013_R01C01_Run_43241/predictBrain_v2.1/203175700013_R01C01_scores.csv')
+# sum(a$X203175700013_R01C01)
+# 
+# # lijkt op soort van probability uit een gefitte density, nooit nul?
+# b = read.csv('/home/r361003/mnt/neuro-genomic-1-ro/glass/Methylation/Heidelberg/Heidelberg_unzip/203175700013_R01C01_Run_43241/predictBrain_v2.1/203175700013_R01C01_scores_cal.csv')
+# sum(b$X203175700013_R01C01)
+
+
+# plot(metadata.glass.per.resection$lts.up2, log(metadata.glass.per.resection$A_IDH_HG_cal/metadata.glass.per.resection$A_IDH_cal),xlab="Signature 2 expression",ylab="Heidelberg Classifier log(IDH_LGG_HG score / IDH_LGG score)")
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_HG_cal)
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_cal)
+# 
+# 
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_HG - metadata.glass.per.resection$A_IDH)
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_HG)
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH)
+# 
+# 
+# plot(metadata.glass.per.resection$lts.down, log(metadata.glass.per.resection$A_IDH_HG_cal/metadata.glass.per.resection$A_IDH_cal),xlab="RNA Signature 4 (down) expression",ylab="Heidelberg Classifier log(IDH_LGG_HG score / IDH_LGG score)")
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_HG_cal)
+# plot(metadata.glass.per.resection$lts.up2, metadata.glass.per.resection$A_IDH_cal)
 
 
 
