@@ -495,7 +495,7 @@ tmp <- tmp.1 %>%
 stopifnot(sum(is.na(tmp$Heidelberg.segment.file)) <= 1) # one file missing so far, that's known
 
 
-rm(tmp.1,tmp.2,tmp.3,tmp.4,tmp.5)
+rm(tmp.1,tmp.2,tmp.3,tmp.4,tmp.5, parse_predictbrain_csv)
 
 
 #dim(tmp)
@@ -514,6 +514,134 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'))
 
 rm(tmp)
+
+
+## attach WHO classification ----
+
+# deze file komt uit de Methylation folder - en is afwezig in Clinical
+# de files voor Chemo en Radio in deze folders zijn bijv anders
+
+tmp <- read.csv('data/glass/Methylation/Metadata/WHOclassification_03052022.csv') %>% 
+  dplyr::mutate(
+    Surgery_ID = NULL,
+    Surgery_date = NULL,
+    Sample_Resection = NULL,
+    Sample_Type = NULL,
+    Recurrent_Type = NULL,
+    GLASS_ID = NULL
+  ) %>% 
+  dplyr::filter(!is.na(WHO_Classification2021))
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'),suffix = c("", ""))
+
+
+rm(tmp)
+
+
+## attach Chemo+radio therapy  ----
+
+# volgens Iris zijn behandelings in deze file goed geprocessed:
+
+# alkalating.agent = PCV, CCNU | TMZ
+
+tmp <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Chemotherapy data_GLASS RNAseq.csv') %>% 
+  dplyr::select(-contains("Date_")) %>% 
+  dplyr::select(-contains("KPS_")) %>% 
+  dplyr::select(-contains("_Stopped_")) %>% 
+  dplyr::select(-contains("WHO_")) %>% 
+  dplyr::select(-contains("Multiple_")) %>% 
+  dplyr::mutate(Pre_Initial_cat = paste0(Treatment_Window_Pre_Initial , ": ", Chemotherapy_Type_Pre_Initial)) %>% 
+  dplyr::mutate(Treatment_Window_Pre_Initial = NULL) %>% 
+  dplyr::mutate(Chemotherapy_Type_Pre_Initial = NULL) %>% 
+  dplyr::mutate(Post_Initial.1_cat = paste0(Treatment_Window_Post_Initial.1 , ": ", Chemotherapy_Type_Post_Initial.1)) %>% 
+  dplyr::mutate(Treatment_Window_Post_Initial.1 = NULL) %>% 
+  dplyr::mutate(Chemotherapy_Type_Post_Initial.1 = NULL) %>% 
+  dplyr::mutate(Post_Initial.2_cat = paste0(Treatment_Window_Post_Initial.2 , ": ", Chemotherapy_Type_Post_Initial.2)) %>% 
+  dplyr::mutate(Treatment_Window_Post_Initial.2 = NULL) %>% 
+  dplyr::mutate(Chemotherapy_Type_Post_Initial.2 = NULL) %>% 
+  dplyr::mutate(Post_Recurrent1.1_cat = paste0(Treatment_Window_Post_Recurrent1.1 , ": ", Chemotherapy_Type_Post_Recurrent1.1)) %>% 
+  dplyr::mutate(Treatment_Window_Post_Recurrent1.1 = NULL) %>% 
+  dplyr::mutate(Chemotherapy_Type_Post_Recurrent1.1 = NULL) %>% 
+  dplyr::mutate(Post_Recurrent1.2_cat = paste0(Treatment_Window_Post_Recurrent1.2 , ": ", Chemotherapy_Type_Post_Recurrent1.2)) %>% 
+  dplyr::mutate(Treatment_Window_Post_Recurrent1.2 = NULL) %>% 
+  dplyr::mutate(Chemotherapy_Type_Post_Recurrent1.2 = NULL) %>% 
+  dplyr::mutate(Post_Recurrent1.3_cat = paste0(Treatment_Window_Post_Recurrent1.3 , ": ", Chemotherapy_Type_Post_Recurrent1.3)) %>% 
+  dplyr::mutate(Treatment_Window_Post_Recurrent1.3 = NULL) %>% 
+  dplyr::mutate(Chemotherapy_Type_Post_Recurrent1.3 = NULL) %>% 
+  dplyr::mutate(Post_Recurrent1.4_cat = paste0(Treatment_Window_Post_Recurrent1.4 , ": ", Chemotherapy_Type_Post_Recurrent1.4)) %>% 
+  dplyr::mutate(Treatment_Window_Post_Recurrent1.4 = NULL) %>% 
+  dplyr::mutate(Chemotherapy_Type_Post_Recurrent1.4 = NULL) %>% 
+  dplyr::mutate(Post_Recurrent2.1_cat = paste0(Treatment_Window_Post_Recurrent2.1 , ": ", Chemotherapy_Type_Post_Recurrent2.1)) %>% 
+  dplyr::mutate(Treatment_Window_Post_Recurrent2.1 = NULL) %>% 
+  dplyr::mutate(Chemotherapy_Type_Post_Recurrent2.1 = NULL) %>%
+  dplyr::mutate(Post_Recurrent2.2_cat = paste0(Treatment_Window_Post_Recurrent2.2 , ": ", Chemotherapy_Type_Post_Recurrent2.2)) %>% 
+  dplyr::mutate(Treatment_Window_Post_Recurrent2.2 = NULL) %>% 
+  dplyr::mutate(Chemotherapy_Type_Post_Recurrent2.2 = NULL) %>%
+  dplyr::mutate(Post_Recurrent2.3_cat = paste0(Treatment_Window_Post_Recurrent2.3 , ": ", Chemotherapy_Type_Post_Recurrent2.3)) %>% 
+  dplyr::mutate(Treatment_Window_Post_Recurrent2.3 = NULL) %>% 
+  dplyr::mutate(Chemotherapy_Type_Post_Recurrent2.3 = NULL) %>%
+  dplyr::mutate(Post_Recurrent3.1_cat = paste0(Treatment_Window_Post_Recurrent3.1 , ": ", Chemotherapy_Type_Post_Recurrent3.1)) %>% 
+  dplyr::mutate(Treatment_Window_Post_Recurrent3.1 = NULL) %>% 
+  dplyr::mutate(Chemotherapy_Type_Post_Recurrent3.1 = NULL) %>% 
+  tidyr::pivot_longer(!GLASS_ID) %>%
+  dplyr::filter(value != 'NA: NA') %>% 
+  dplyr::mutate(name = gsub("_cat","",name)) %>% 
+  dplyr::mutate(chemotherapy = gsub("^.+: ","", value)) %>% 
+  dplyr::mutate(conditional.surgery = gsub("^.+Surgery ([^:]+):.+$","\\1",value)) %>% 
+  dplyr::mutate(condition = gsub("^([^ ]+) .+$","\\1",value)) %>% 
+  dplyr::mutate(value=NULL) %>% 
+  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID')) %>% 
+  dplyr::filter(
+                (condition == "After" & Sample_Name > conditional.surgery) |
+                (condition == "Before" & Sample_Name >= conditional.surgery) 
+  ) %>% 
+  dplyr::mutate(conditional.surgery = NULL) %>% 
+  dplyr::mutate(condition = NULL) %>% 
+  dplyr::mutate(name = NULL) %>% 
+  dplyr::mutate(GLASS_ID = NULL) %>% 
+  dplyr::group_by(Sample_Name) %>% 
+  dplyr::summarise(chemotherapy = paste0(chemotherapy,collapse = ",") ) %>% 
+  as.data.frame
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'),suffix = c("", "")) 
+
+
+## attach Radio-therapy ----
+
+
+tmp <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Radiotherapy data_GLASS RNAseq.csv') %>% 
+  tibble %>% 
+  dplyr::select(-contains("Date_")) %>% 
+  dplyr::select(-contains("KPS_")) %>% 
+  dplyr::select(-contains("_Stopped_")) %>% 
+  dplyr::select(-contains("WHO_")) %>% 
+  dplyr::select(-contains("Multiple_")) %>% 
+  tidyr::pivot_longer(!GLASS_ID) %>% 
+  dplyr::filter(!is.na(value)) %>% 
+  dplyr::mutate(conditional.surgery = gsub("^.+Surgery ([^:]+)$","\\1",value)) %>% 
+  dplyr::mutate(condition = gsub("^([^ ]+) .+$","\\1",value)) %>% 
+  dplyr::mutate(value=NULL) %>% 
+  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID')) %>% 
+  dplyr::filter(
+    (condition == "After" & Sample_Name > conditional.surgery) | (condition == "Before" & Sample_Name >= conditional.surgery) 
+  ) %>% 
+  dplyr::mutate(radiotherapy = "radiotherapy") %>% 
+  dplyr::mutate(conditional.surgery = NULL) %>% 
+  dplyr::mutate(condition = NULL) %>% 
+  dplyr::mutate(name = NULL) %>% 
+  dplyr::mutate(GLASS_ID = NULL) %>% 
+  dplyr::group_by(Sample_Name) %>% 
+  dplyr::summarise(radiotherapy = paste0(radiotherapy, collapse = ",")) %>% 
+  as.data.frame
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'),suffix = c("", "")) 
+
 
 
 
