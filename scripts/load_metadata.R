@@ -610,6 +610,9 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'),suffix = c("", "")) 
 
 
+rm(tmp)
+
+
 ## attach Radio-therapy ----
 
 
@@ -643,6 +646,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'),suffix = c("", "")) 
 
 
+rm(tmp)
 
 
 # per patient ----
