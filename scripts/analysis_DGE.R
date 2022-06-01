@@ -110,6 +110,7 @@ if(file.exists("cache/res.paired.a.exon.Rds")) {
   # load from cache
   print("Loading 'cache/res.paired.a.exon.Rds' from cache")
   res.paired.a.exon <- readRDS("cache/res.paired.a.exon.Rds")
+  res.paired.a.exon.design <- readRDS("cache/res.paired.a.exon.design.Rds")
   
 } else {
   
@@ -129,6 +130,7 @@ if(file.exists("cache/res.paired.a.exon.Rds")) {
   
   
   stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+  saveRDS(tmp.data, "cache/res.paired.a.exon.design.Rds")
   
   
   
@@ -179,7 +181,7 @@ rm(res.paired.a.exon) # cleanup, is joined to gene metadata anyway
 
 
 
-# 2b. paired exon [only paired] ----
+# 2b. paired exon [only paired] - - -
 # 
 # 
 # tmp.metadata <- metadata.glass.per.patient %>% 
@@ -225,92 +227,16 @@ rm(res.paired.a.exon) # cleanup, is joined to gene metadata anyway
 # 
 
 
-
-# 3. unpaired gene ----
-
-
-if(file.exists("cache/res.unpaired.a.gene.Rds")) {
-  
-  print("Loading 'cache/res.unpaired.a.gene.Rds' from cache")
-  res.unpaired.a.gene <- readRDS("cache/res.unpaired.a.gene.Rds")
-  
-} else {
-
-  tmp.metadata <- metadata.glass.per.patient %>%
-    dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
-    tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
-    tidyr::drop_na(value) %>%
-    dplyr::mutate(name=NULL) %>%
-    dplyr::rename(genomescan.sid = value) %>%
-    dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
-    dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
-    dplyr::arrange(Sample_Type, genomescan.sid)
-  
-  
-  tmp.data <- expression.glass.gene %>%
-    dplyr::select(all_of( tmp.metadata$genomescan.sid ))
-  
-  
-  
-  stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
-  
-  
-  
-  dds.unpaired.a.gene <- DESeqDataSetFromMatrix(countData = tmp.data,
-                                                colData = tmp.metadata,
-                                                design= ~ Sample_Type)
-  
-  
-  
-  dds.unpaired.a.gene <- DESeq(dds.unpaired.a.gene)
-  res.unpaired.a.gene <- results(dds.unpaired.a.gene) %>% 
-    as.data.frame(stringsAsFactors=F) %>% 
-    tibble::rownames_to_column('gene_uid') %>% 
-    dplyr::filter(!is.na(padj)) %>% 
-    dplyr::arrange(pvalue,padj) %>% 
-    dplyr::left_join(expression.glass.gene.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
-  
-  
-  saveRDS(res.unpaired.a.gene, "cache/res.unpaired.a.gene.Rds")
-  
-  
-}  
+## 2a [+co-variates regress] ----
 
 
-# n-sig
-res.unpaired.a.gene %>%
-  dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
-  dplyr::filter(padj < 0.01) %>% 
-  dim
-
-
-# append results
-expression.glass.gene.metadata <- expression.glass.gene.metadata %>% 
-  dplyr::left_join(
-    res.unpaired.a.gene %>% 
-      dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
-      tibble::column_to_rownames('gene_uid') %>% 
-      `colnames<-`(paste0(colnames(.),".unpaired.gene")) %>% 
-      tibble::rownames_to_column('gene_uid'),
-    by=c('gene_uid'='gene_uid'),suffix = c("", "")
-  ) 
-
-
-
-rm(res.unpaired.a.gene) # cleanup, is joined to gene metadata anyway
-
-
-
-# 4a. paired gene [incomplete as separate group] ----
-
-
-if(file.exists("cache/res.paired.a.gene.Rds")) {
+if(file.exists("cache/res.paired.a.covar.regression.Rds")) {
   
   # load from cache
-  print("Loading 'cache/res.paired.a.gene.Rds' from cache")
-  res.paired.a.gene <- readRDS("cache/res.paired.a.gene.Rds")
+  print("Loading 'cache/res.paired.a.covar.regression.Rds' from cache")
+  res.paired.a.covar.regression <- readRDS("cache/res.paired.a.covar.regression.Rds")
+  res.paired.a.covar.regression.design <- readRDS("cache/res.paired.a.covar.regression.design.Rds")
   
-
 } else {
   
   tmp.metadata <- metadata.glass.per.patient %>%
@@ -321,42 +247,48 @@ if(file.exists("cache/res.paired.a.gene.Rds")) {
     dplyr::rename(genomescan.sid = value) %>%
     dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
     dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
-    dplyr::arrange(Sample_Type, genomescan.sid)
+    dplyr::arrange(Sample_Type, genomescan.sid) %>%
+    dplyr::mutate(status.chemo = factor(ifelse(is.na(chemotherapy),"no.chemo","chemo"),levels=c("no.chemo","chemo"))) %>% 
+    dplyr::mutate(status.radio = factor(ifelse(is.na(radiotherapy),"no.radio","radio"),levels=c("no.radio","radio"))) %>% 
+    dplyr::mutate(status.grading = case_when(
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 2" ~ "Recurrent.Low.Grade",
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 3" ~ "Recurrent.Low.Grade",
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 4" ~ "Recurrent.High.Grade",
+      T ~ "?"
+    )) %>%
+    dplyr::filter(status.grading %in% c("Recurrent.Low.Grade", "Recurrent.High.Grade")) %>% 
+    dplyr::mutate(status.grading = factor(status.grading, levels=c("Recurrent.Low.Grade","Recurrent.High.Grade")))
   
   
-  tmp.data <- expression.glass.gene %>%
+  tmp.data <- expression.glass.exon %>%
     dplyr::select(all_of( tmp.metadata$genomescan.sid ))
   
   
   stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+  saveRDS(tmp.data, "cache/res.paired.a.covar.regression.design.Rds")
   
   
   
-  dds.paired.a.gene <- DESeqDataSetFromMatrix(countData = tmp.data,
-                                              colData = tmp.metadata,
-                                              design= ~ patient.correction.id + Sample_Type)
+  dds.paired.a.covar.regression <- DESeqDataSetFromMatrix(countData = tmp.data,
+                                                          colData = tmp.metadata,
+                                                          design= ~ patient.correction.id + status.chemo + status.radio + status.grading + Sample_Type)
   
   
   
-  dds.paired.a.gene <- DESeq(dds.paired.a.gene)
-  res.paired.a.gene <- results(dds.paired.a.gene) %>% 
+  dds.paired.a.covar.regression <- DESeq(dds.paired.a.covar.regression)
+  res.paired.a.covar.regression <- coef(dds.paired.a.covar.regression) %>% 
     as.data.frame() %>% 
-    dplyr::filter(!is.na(padj)) %>% 
-    dplyr::arrange(pvalue,padj) %>% 
-    tibble::rownames_to_column('gene_uid') %>% 
-    dplyr::left_join(expression.glass.gene.metadata %>% 
-                       dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
+    dplyr::select(c("status.chemo_chemo_vs_no.chemo", "status.radio_radio_vs_no.radio", "status.grading_Recurrent.High.Grade_vs_Recurrent.Low.Grade", "Sample_Type_recurrent_vs_initial")) %>% 
+    tibble::rownames_to_column('gene_uid') 
+    #dplyr::left_join(expression.glass.exon.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
   
   
-  saveRDS(res.paired.a.gene, "cache/res.paired.a.gene.Rds")
-  
-  
-  
+  saveRDS(res.paired.a.covar.regression, "cache/res.paired.a.covar.regression.Rds")
 }
 
 
 # n sign
-res.paired.a.gene %>%
+res.paired.a.covar.regression %>%
   dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
   dplyr::filter(padj < 0.01) %>% 
   dim
@@ -364,12 +296,12 @@ res.paired.a.gene %>%
 
 
 # append results
-expression.glass.gene.metadata <- expression.glass.gene.metadata %>% 
+expression.glass.covar.regression.metadata <- expression.glass.covar.regression.metadata %>% 
   dplyr::left_join(
-    res.paired.a.gene %>% 
+    res.paired.a.covar.regression %>% 
       dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
       tibble::column_to_rownames('gene_uid') %>% 
-      `colnames<-`(paste0(colnames(.),".partially.paired.gene")) %>% 
+      `colnames<-`(paste0(colnames(.),".partially.paired.covar.regression")) %>% 
       tibble::rownames_to_column('gene_uid'),
     by=c('gene_uid'='gene_uid'),suffix = c("", "")
   ) 
@@ -377,7 +309,539 @@ expression.glass.gene.metadata <- expression.glass.gene.metadata %>%
 
 
 
-rm(res.paired.a.gene) # cleanup, is joined to gene metadata anyway
+rm(res.paired.a.covar.regression) # cleanup, is joined to gene metadata anyway
+
+
+
+
+
+# 3. unpaired while-gene-body - - - -
+
+# 
+# if(file.exists("cache/res.unpaired.a.gene.Rds")) {
+#   
+#   print("Loading 'cache/res.unpaired.a.gene.Rds' from cache")
+#   res.unpaired.a.gene <- readRDS("cache/res.unpaired.a.gene.Rds")
+#   
+# } else {
+# 
+#   tmp.metadata <- metadata.glass.per.patient %>%
+#     dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
+#     tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
+#     tidyr::drop_na(value) %>%
+#     dplyr::mutate(name=NULL) %>%
+#     dplyr::rename(genomescan.sid = value) %>%
+#     dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+#     dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
+#     dplyr::arrange(Sample_Type, genomescan.sid)
+#   
+#   
+#   tmp.data <- expression.glass.gene %>%
+#     dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+#   
+#   
+#   
+#   stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+#   
+#   
+#   
+#   dds.unpaired.a.gene <- DESeqDataSetFromMatrix(countData = tmp.data,
+#                                                 colData = tmp.metadata,
+#                                                 design= ~ Sample_Type)
+#   
+#   
+#   
+#   dds.unpaired.a.gene <- DESeq(dds.unpaired.a.gene)
+#   res.unpaired.a.gene <- results(dds.unpaired.a.gene) %>% 
+#     as.data.frame(stringsAsFactors=F) %>% 
+#     tibble::rownames_to_column('gene_uid') %>% 
+#     dplyr::filter(!is.na(padj)) %>% 
+#     dplyr::arrange(pvalue,padj) %>% 
+#     dplyr::left_join(expression.glass.gene.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_loc),by=c('gene_uid'='gene_uid'))
+#   
+#   
+#   saveRDS(res.unpaired.a.gene, "cache/res.unpaired.a.gene.Rds")
+#   
+#   
+# }  
+# 
+# 
+# # n-sig
+# res.unpaired.a.gene %>%
+#   dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
+#   dplyr::filter(padj < 0.01) %>% 
+#   dim
+# 
+# 
+# # append results
+# expression.glass.gene.metadata <- expression.glass.gene.metadata %>% 
+#   dplyr::left_join(
+#     res.unpaired.a.gene %>% 
+#       dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
+#       tibble::column_to_rownames('gene_uid') %>% 
+#       `colnames<-`(paste0(colnames(.),".unpaired.gene")) %>% 
+#       tibble::rownames_to_column('gene_uid'),
+#     by=c('gene_uid'='gene_uid'),suffix = c("", "")
+#   ) 
+# 
+# 
+# 
+# rm(res.unpaired.a.gene) # cleanup, is joined to gene metadata anyway
+# 
+
+
+# 4a. paired whole-gene-body [incomplete as separate group] - - - -
+# 
+# 
+# if(file.exists("cache/res.paired.a.gene.Rds")) {
+#   
+#   # load from cache
+#   print("Loading 'cache/res.paired.a.gene.Rds' from cache")
+#   res.paired.a.gene <- readRDS("cache/res.paired.a.gene.Rds")
+#   
+# 
+# } else {
+#   
+#   tmp.metadata <- metadata.glass.per.patient %>%
+#     dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
+#     tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
+#     tidyr::drop_na(value) %>%
+#     dplyr::mutate(name=NULL) %>%
+#     dplyr::rename(genomescan.sid = value) %>%
+#     dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+#     dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
+#     dplyr::arrange(Sample_Type, genomescan.sid)
+#   
+#   
+#   tmp.data <- expression.glass.gene %>%
+#     dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+#   
+#   
+#   stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+#   
+#   
+#   
+#   dds.paired.a.gene <- DESeqDataSetFromMatrix(countData = tmp.data,
+#                                               colData = tmp.metadata,
+#                                               design= ~ patient.correction.id + Sample_Type)
+#   
+#   
+#   
+#   dds.paired.a.gene <- DESeq(dds.paired.a.gene)
+#   res.paired.a.gene <- results(dds.paired.a.gene) %>% 
+#     as.data.frame() %>% 
+#     dplyr::filter(!is.na(padj)) %>% 
+#     dplyr::arrange(pvalue,padj) %>% 
+#     tibble::rownames_to_column('gene_uid') %>% 
+#     dplyr::left_join(expression.glass.gene.metadata %>% 
+#                        dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
+#   
+#   
+#   saveRDS(res.paired.a.gene, "cache/res.paired.a.gene.Rds")
+#   
+#   
+#   
+# }
+# 
+# 
+# # n sign
+# res.paired.a.gene %>%
+#   dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
+#   dplyr::filter(padj < 0.01) %>% 
+#   dim
+# 
+# 
+# 
+# # append results
+# expression.glass.gene.metadata <- expression.glass.gene.metadata %>% 
+#   dplyr::left_join(
+#     res.paired.a.gene %>% 
+#       dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
+#       tibble::column_to_rownames('gene_uid') %>% 
+#       `colnames<-`(paste0(colnames(.),".partially.paired.gene")) %>% 
+#       tibble::rownames_to_column('gene_uid'),
+#     by=c('gene_uid'='gene_uid'),suffix = c("", "")
+#   ) 
+# 
+# 
+# 
+# 
+# rm(res.paired.a.gene) # cleanup, is joined to gene metadata anyway
+
+
+# 4. DGE exon Treatment/chemo ----
+
+# chemo: ADGRD2 en lncRNAs
+
+if(file.exists("cache/res.treatment.chemo.Rds")) {
+  # load from cache
+  
+  print("Loading 'cache/res.treatment.chemo.Rds' from cache")
+  res.treamtent.exon <- readRDS("cache/res.treatment.chemo.Rds")
+  res.treatment.chemo.design <- readRDS("cache/res.treatment.chemo.design.Rds")
+  
+} else {
+  
+  tmp.metadata <- metadata.glass.per.patient %>%
+    dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
+    tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
+    tidyr::drop_na(value) %>%
+    dplyr::mutate(name=NULL) %>%
+    dplyr::rename(genomescan.sid = value) %>%
+    dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+    dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
+    #dplyr::arrange(Sample_Type, genomescan.sid) %>% 
+    dplyr::filter(Sample_Type != "initial") %>% 
+    dplyr::mutate(status.chemo = factor(ifelse(is.na(chemotherapy),"no.chemo","chemo"),levels=c("no.chemo","chemo"))) %>% 
+    dplyr::mutate(status.radio = factor(ifelse(is.na(radiotherapy),"no.radio","radio"),levels=c("no.radio","radio"))) %>% 
+    dplyr::mutate(status.grading = case_when(
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 2" ~ "Recurrent.Low.Grade",
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 3" ~ "Recurrent.Low.Grade",
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 4" ~ "Recurrent.High.Grade",
+      T ~ "?"
+    )) %>%
+    dplyr::filter(status.grading %in% c("Recurrent.Low.Grade", "Recurrent.High.Grade")) %>% 
+    dplyr::mutate(status.grading = factor(status.grading, levels=c("Recurrent.Low.Grade","Recurrent.High.Grade")))
+  
+  
+  tmp.data <- expression.glass.exon %>%
+    dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+  
+  
+  stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+  saveRDS(tmp.data, "cache/res.treatment.chemo.design.Rds")
+  
+  
+  dds.treatment.chemo <- DESeqDataSetFromMatrix(countData = tmp.data,
+                                                colData = tmp.metadata,
+                                                #design= ~ status.chemo)
+                                                #design= ~status.grading + status.radio)
+                                                design= ~status.grading + status.chemo)
+  
+  
+  
+  dds.treatment.chemo <- DESeq(dds.treatment.chemo)
+  res.treatment.chemo <- results(dds.treatment.chemo) %>% 
+    as.data.frame() %>% 
+    dplyr::filter(!is.na(padj)) %>% 
+    dplyr::arrange(pvalue,padj) %>% 
+    tibble::rownames_to_column('gene_uid') %>% 
+    dplyr::left_join(expression.glass.exon.metadata %>% 
+                       dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
+  
+  
+  EnhancedVolcano(res.treatment.chemo,
+                  lab = res.treatment.chemo$gene_name,
+                  x = 'log2FoldChange',
+                  y = 'padj',
+                  pCutoff = 0.01)
+  
+  
+  
+  saveRDS(res.treatment.chemo, "cache/res.treatment.chemo.Rds")
+}
+
+
+# n sign
+res.treatment.chemo %>%
+  dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
+  dplyr::filter(padj < 0.01) %>% 
+  dim
+
+
+
+# append results
+expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
+  dplyr::left_join(
+    res.treatment.chemo %>% 
+      dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
+      tibble::column_to_rownames('gene_uid') %>% 
+      `colnames<-`(paste0(colnames(.),".treatment.chemo")) %>% 
+      tibble::rownames_to_column('gene_uid'),
+    by=c('gene_uid'='gene_uid'),suffix = c("", "")
+  ) 
+
+
+
+
+rm(res.treatment.chemo) # cleanup, is joined to gene metadata anyway
+
+
+# 5. DGE exon Treatment/radio ----
+
+# radio: POSTN, H19, COL3A1, ANGPT2
+
+if(file.exists("cache/res.treatment.radio.Rds")) {
+  # load from cache
+  
+  print("Loading 'cache/res.treatment.radio.Rds' from cache")
+  res.treamtent.exon <- readRDS("cache/res.treatment.radio.Rds")
+  res.treatment.radio.design <- readRDS("cache/res.treatment.radio.design.Rds")
+  
+} else {
+  
+  tmp.metadata <- metadata.glass.per.patient %>%
+    dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
+    tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
+    tidyr::drop_na(value) %>%
+    dplyr::mutate(name=NULL) %>%
+    dplyr::rename(genomescan.sid = value) %>%
+    dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+    dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
+    #dplyr::arrange(Sample_Type, genomescan.sid) %>% 
+    dplyr::filter(Sample_Type != "initial") %>% 
+    dplyr::mutate(status.radio = factor(ifelse(is.na(radiotherapy),"no.radio","radio"),levels=c("no.radio","radio"))) %>% 
+    dplyr::mutate(status.radio = factor(ifelse(is.na(radiotherapy),"no.radio","radio"),levels=c("no.radio","radio"))) %>% 
+    dplyr::mutate(status.grading = case_when(
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 2" ~ "Recurrent.Low.Grade",
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 3" ~ "Recurrent.Low.Grade",
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 4" ~ "Recurrent.High.Grade",
+      T ~ "?"
+    )) %>%
+    dplyr::filter(status.grading %in% c("Recurrent.Low.Grade", "Recurrent.High.Grade")) %>% 
+    dplyr::mutate(status.grading = factor(status.grading, levels=c("Recurrent.Low.Grade","Recurrent.High.Grade")))
+  
+  
+  tmp.data <- expression.glass.exon %>%
+    dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+  
+  
+  stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+  saveRDS(tmp.data, "cache/res.treatment.radio.design.Rds")
+  
+  
+  dds.treatment.radio <- DESeqDataSetFromMatrix(countData = tmp.data,
+                                                colData = tmp.metadata,
+                                                #design= ~ status.radio)
+                                                #design= ~status.grading + status.radio)
+                                                design= ~status.grading + status.radio)
+  
+  
+  
+  dds.treatment.radio <- DESeq(dds.treatment.radio)
+  res.treatment.radio <- results(dds.treatment.radio) %>% 
+    as.data.frame() %>% 
+    dplyr::filter(!is.na(padj)) %>% 
+    dplyr::arrange(pvalue,padj) %>% 
+    tibble::rownames_to_column('gene_uid') %>% 
+    dplyr::left_join(expression.glass.exon.metadata %>% 
+                       dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
+  
+  
+  EnhancedVolcano(res.treatment.radio,
+                  lab = res.treatment.radio$gene_name,
+                  x = 'log2FoldChange',
+                  y = 'padj',
+                  pCutoff = 0.01)
+  
+  
+  
+  saveRDS(res.treatment.radio, "cache/res.treatment.radio.Rds")
+}
+
+
+# n sign
+res.treatment.radio %>%
+  dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
+  dplyr::filter(padj < 0.01) %>% 
+  dim
+
+
+
+# append results
+expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
+  dplyr::left_join(
+    res.treatment.radio %>% 
+      dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
+      tibble::column_to_rownames('gene_uid') %>% 
+      `colnames<-`(paste0(colnames(.),".treatment.radio")) %>% 
+      tibble::rownames_to_column('gene_uid'),
+    by=c('gene_uid'='gene_uid'),suffix = c("", "")
+  ) 
+
+
+
+
+# 6. DGE exon-counts (G2+G3) ~ (G4) ----
+
+
+if(file.exists("cache/res.grading.exon.Rds")) {
+  # load from cache
+  
+  print("Loading 'cache/res.grading.exon.Rds' from cache")
+  res.treamtent.exon <- readRDS("cache/res.grading.exon.Rds")
+  res.grading.exon.design <- readRDS("cache/res.grading.exon.design.Rds")
+  
+} else {
+  
+  set.seed(1+3+3+6)
+  tmp.metadata <- metadata.glass.per.patient %>%
+    dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
+    tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
+    tidyr::drop_na(value) %>%
+    dplyr::mutate(name=NULL) %>%
+    dplyr::rename(genomescan.sid = value) %>%
+    dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+    dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
+    dplyr::filter(Sample_Type != "initial") %>% 
+    dplyr::mutate(status.chemo = factor(ifelse(is.na(chemotherapy),"no.chemo","chemo"),levels=c("no.chemo","chemo"))) %>% 
+    dplyr::mutate(status.radio = factor(ifelse(is.na(radiotherapy),"no.radio","radio"),levels=c("no.radio","radio"))) %>% 
+    dplyr::mutate(status.grading = case_when(
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 2" ~ "Recurrent.Low.Grade",
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 3" ~ "Recurrent.Low.Grade",
+      WHO_Classification2021 == "Astrocytoma, IDH-mutant, WHO grade 4" ~ "Recurrent.High.Grade",
+      T ~ "?"
+    )) %>%
+    dplyr::filter(status.grading %in% c("Recurrent.Low.Grade", "Recurrent.High.Grade")) %>% 
+    dplyr::mutate(status.grading = factor(status.grading, levels=c("Recurrent.Low.Grade","Recurrent.High.Grade"))) %>% 
+    dplyr::mutate(status.grading.shuffled = sample(as.character(status.grading))) %>% 
+    dplyr::mutate(status.grading.shuffled = factor(status.grading.shuffled, levels=c("Recurrent.Low.Grade","Recurrent.High.Grade")))
+    
+  
+  tmp.data <- expression.glass.exon %>%
+    dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+  
+  
+  stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+  saveRDS(tmp.data, "cache/res.grading.exon.design.Rds")
+  
+  
+  
+  dds.grading.exon <- DESeqDataSetFromMatrix(countData = tmp.data,
+                                             colData = tmp.metadata,
+                                             design= ~status.chemo + status.radio + status.grading) # no correction needed for patient.correction.id
+
+  dds.grading.exon <- DESeq(dds.grading.exon)
+  res.grading.exon <- results(dds.grading.exon) %>% 
+    as.data.frame() %>% 
+    dplyr::filter(!is.na(padj)) %>% 
+    dplyr::arrange(pvalue,padj) %>% 
+    tibble::rownames_to_column('gene_uid') %>% 
+    dplyr::left_join(expression.glass.exon.metadata %>% 
+                       dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
+  
+  
+  EnhancedVolcano(res.grading.exon,
+                  lab = res.grading.exon$gene_name,
+                  x = 'log2FoldChange',
+                  y = 'padj',
+                  pCutoff = 0.01)
+  
+  
+  
+  dds.grading.shuffled.exon <- DESeqDataSetFromMatrix(countData = tmp.data,
+                                             colData = tmp.metadata,
+                                             design= ~status.grading.shuffled) # no correction needed for patient.correction.id
+  
+  dds.grading.shuffled.exon <- DESeq(dds.grading.shuffled.exon)
+  coef.grading.shuffled.exon <- coef(dds.grading.exon)[1:3,]
+  
+  res.grading.shuffled.exon <- results(dds.grading.shuffled.exon) %>% 
+    as.data.frame() %>% 
+    dplyr::filter(!is.na(padj)) %>% 
+    dplyr::arrange(pvalue,padj) %>% 
+    tibble::rownames_to_column('gene_uid') %>% 
+    dplyr::left_join(expression.glass.exon.metadata %>% 
+                       dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
+  
+  
+
+  plt <- res.grading.exon %>% 
+    dplyr::select(gene_uid, stat) %>% 
+    dplyr::rename(stat.signal = stat) %>% 
+    dplyr::left_join(
+      res.grading.shuffled.exon %>% 
+        dplyr::select(gene_uid, stat) %>% 
+        dplyr::rename(stat.shuffled = stat),
+      by = c('gene_uid'='gene_uid')
+    ) %>% 
+    dplyr::filter(!is.na(stat.signal) & !is.na(stat.shuffled))
+  
+  cor(plt$stat.signal, plt$stat.shuffled, method = "spearman") # cor = 0.007
+  
+  saveRDS(res.grading.exon, "cache/res.grading.exon.Rds")
+  saveRDS(res.grading.shuffled.exon, "cache/res.grading.shuffled.exon.Rds")
+  
+}
+
+
+
+# n sign
+res.grading.exon %>%
+  dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
+  dplyr::filter(padj < 0.01) %>% 
+  dim
+
+
+
+
+# append results
+expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
+  dplyr::left_join(
+    res.grading.exon %>% 
+      dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
+      tibble::column_to_rownames('gene_uid') %>% 
+      `colnames<-`(paste0(colnames(.),".partially.paired.exon")) %>% 
+      tibble::rownames_to_column('gene_uid'),
+    by=c('gene_uid'='gene_uid'),suffix = c("", "")
+  ) 
+
+
+
+
+rm(res.grading.exon) # cleanup, is joined to gene metadata anyway
+
+
+# cor DE [time , grading , therapy] ----
+
+
+tmp.1 <- res.paired.a.exon %>% 
+  dplyr::select(gene_uid, stat) %>% 
+  dplyr::rename(stat.time = stat)
+
+tmp.2 <- res.treatment.chemo %>% 
+  dplyr::select(gene_uid, stat) %>% 
+  dplyr::rename(stat.chemo = stat)
+
+tmp.3 <- res.treatment.radio %>% 
+  dplyr::select(gene_uid, stat) %>% 
+  dplyr::rename(stat.radio = stat)
+
+tmp.4 <- res.grading.exon %>% 
+  dplyr::select(gene_uid, stat) %>% 
+  dplyr::rename(stat.grading = stat)
+
+
+tmp <- tmp.1 %>% 
+  dplyr::left_join(tmp.2, by=c('gene_uid' = 'gene_uid')) %>% 
+  dplyr::left_join(tmp.3, by=c('gene_uid' = 'gene_uid')) %>% 
+  dplyr::left_join(tmp.4, by=c('gene_uid' = 'gene_uid')) %>% 
+  dplyr::filter(!is.na(stat.time)) %>% 
+  dplyr::filter(!is.na(stat.chemo)) %>% 
+  dplyr::filter(!is.na(stat.radio)) %>% 
+  dplyr::filter(!is.na(stat.grading)) %>% 
+  dplyr::mutate(sel = ifelse(stat.time > 4.5 & stat.grading > 5.5,"y","n")) %>% 
+  dplyr::mutate(gene_symbol = gsub("^.+_","",gene_uid)) %>% 
+  dplyr::filter(sel == "y")
+
+
+corrplot::corrplot(cor(tmp %>% dplyr::mutate(sel = NULL) %>%  tibble::column_to_rownames('gene_uid') %>% as.matrix , method="pearson"))
+
+
+cor(tmp %>% tibble::column_to_rownames('gene_uid') %>% as.matrix , method="pearson")
+
+
+
+ggplot(tmp, aes(x=stat.time, stat.radio)) + 
+  geom_point()
+
+ggplot(tmp, aes(x=stat.time, stat.grading, col=sel, label = gene_uid)) + 
+  geom_point() +
+  ggrepel::geom_text_repel(data = subset(tmp, sel == "y"))
+  #xlim(-6,12) +
+  #ylim(-6,12)
+
+
 
 
 # small plot on concordange gene/exon ----
