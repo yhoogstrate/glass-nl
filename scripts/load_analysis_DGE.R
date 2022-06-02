@@ -46,7 +46,8 @@ expression.glass.exon.metadata <- expression.glass.exon.metadata %>%
     res.paired.a.covar.regression %>% 
       dplyr::rename(coef.chemotherapy = status.chemo_chemo_vs_no.chemo) %>% 
       dplyr::rename(coef.radiotherapy = status.radio_radio_vs_no.radio) %>% 
-      dplyr::rename(coef.radiotherapy = status.radio_radio_vs_no.radio) 
+      dplyr::rename(coef.grading = status.grading_Recurrent.High.Grade_vs_Recurrent.Low.Grade) %>% 
+      dplyr::rename(coef.resection = Sample_Type_recurrent_vs_initial)
       
     , by=c('gene_uid'='gene_uid'),suffix = c("", "")
   )
@@ -55,5 +56,5 @@ expression.glass.exon.metadata <- expression.glass.exon.metadata %>%
 
 # expression.glass.exon.metadata$log2FoldChange.partially.paired.exon
 rm(res.paired.a.exon)
-
+rm(res.paired.a.covar.regression)
 

@@ -46,6 +46,13 @@ if(!exists('cycling.cell.markers')) {
 }
 
 
+if(!exists('h')) {
+  warning('h was not loaded, but is now')
+  
+  h <- readRDS('cache/h.Rds')
+}
+
+
 
 # recursiveCorPlot [histone genes + cell types + cycling] ----
 
@@ -202,6 +209,9 @@ ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
 
 
 "CD248" %in% rownames(cp)
+
+
+
 
 
 # recursiveCorPlot [histones + cycling + cell type markers] ----
@@ -388,7 +398,7 @@ stopifnot(sign.hist %in% rownames(plt.metadata)) # should all be in
 
 
 
-recursiveCorPlot(plt, plt.metadata, 7 ,13)
+recursiveCorPlot(plt, plt.metadata, 7 * 0.4, 13* 0.4)
 
 
 
@@ -397,6 +407,42 @@ ggsave("/tmp/glass-supervised.png",height=20 * 1.3,width=30 * 1.3)
 
 
 
+
+plt <- sign %>% 
+  dplyr::left_join(
+    data.frame(gene_symbol = h$labels[rev(h$order)])  %>% 
+      dplyr::mutate(order = 1:n())
+    ,
+    by=c('gene_name'='gene_symbol')
+  ) %>% 
+  dplyr::select(gene_name, coef.chemotherapy, coef.radiotherapy, coef.grading, coef.resection, order) %>% 
+  tidyr::pivot_longer(cols=c( coef.chemotherapy, coef.radiotherapy, coef.grading, coef.resection)) %>% 
+  dplyr::mutate(name = gsub("coef.chemotherapy", "Chemotherapy N - Y", name )) %>% 
+  dplyr::mutate(name = gsub("coef.radiotherapy", "Radiotherapy N - Y", name )) %>% 
+  dplyr::mutate(name = gsub("coef.grading", "Grade 2,3 - Grade 4", name )) %>% 
+  dplyr::mutate(name = gsub("coef.resection", "Primary - Recurrent", name )) %>% 
+  dplyr::mutate(name = factor(name, levels=c(
+    "Chemotherapy N - Y" ,
+    "Radiotherapy N - Y",
+    "Grade 2,3 - Grade 4",
+    "Primary - Recurrent"
+  )))
+
+plt <- rbind(
+  plt
+  ,
+  plt %>% dplyr::mutate(value=0)
+)
+
+
+ggplot(plt, aes(x=order,y = value, group=order)) +
+  facet_grid(rows = vars(name)) +
+  geom_line() +
+  ylim(-2.8,2.8) + 
+  theme_bw() +
+  labs(y="DESeq2 multi-variate regression coefficient", x=NULL) +
+  theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank()) +
+  theme(axis.text.x=element_blank())
 
 
 
