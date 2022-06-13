@@ -819,10 +819,10 @@ tmp <- tmp.1 %>%
   dplyr::filter(!is.na(stat.time)) %>% 
   dplyr::filter(!is.na(stat.chemo)) %>% 
   dplyr::filter(!is.na(stat.radio)) %>% 
-  dplyr::filter(!is.na(stat.grading)) %>% 
-  dplyr::mutate(sel = ifelse(stat.time > 4.5 & stat.grading > 5.5,"y","n")) %>% 
-  dplyr::mutate(gene_symbol = gsub("^.+_","",gene_uid)) %>% 
-  dplyr::filter(sel == "y")
+  dplyr::filter(!is.na(stat.grading)) 
+  #dplyr::mutate(sel = ifelse(stat.time > 4.5 & stat.grading > 5.5,"y","n")) %>% 
+  #dplyr::mutate(gene_symbol = gsub("^.+_","",gene_uid)) %>% 
+  #dplyr::filter(sel == "y")
 
 
 corrplot::corrplot(cor(tmp %>% dplyr::mutate(sel = NULL) %>%  tibble::column_to_rownames('gene_uid') %>% as.matrix , method="pearson"))

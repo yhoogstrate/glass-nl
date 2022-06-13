@@ -6,3 +6,4 @@ data/*.gtf
 .directory
 *.RData
 /tmp/*.bed
+*.Rds
