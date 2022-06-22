@@ -379,7 +379,7 @@ mutation.data <- rbind(mutation.data.to %>% dplyr::mutate(type = "TumorOnly"),
   dplyr::filter(FILTER != 'germline')
 
 
-# 5. find top hit genes ----
+## a. find top hit genes ----
 
 
 mutation.data %>% 
@@ -406,8 +406,9 @@ mutation.data %>%
 
 
 
+### CDC27 ----
 
-mutation.data %>% 
+cdc27 <- mutation.data %>% 
   dplyr::mutate(pid = gsub("^([0-9]+).+$","\\1",sample_name)) %>% 
   dplyr::filter(is.na(PON_COUNT) | PON_COUNT < 1) %>% 
   dplyr::filter(Gencode_19_variantClassification != 'SILENT') %>% 
@@ -420,14 +421,51 @@ mutation.data %>%
   dplyr::filter(Gencode_19_variantClassification != "COULD_NOT_DETERMINE" ) %>% 
   dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_OUT_FRAME" ) %>% 
   dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_IN_FRAME" ) %>% 
-  dplyr::filter(Gencode_19_hugoSymbol   == 'CDC27' )
+  dplyr::filter(Gencode_19_hugoSymbol == 'CDC27')
 
 
-mutation.data.to %>%
-  dplyr::filter(Gencode_19_hugoSymbol == "ANKRD20A8P" & Gencode_19_start == "95488787")  %>% 
-  View
+cdc27 %>% 
+  dplyr::group_by(Gencode_19_start) %>% 
+  dplyr::tally(sort=T)
 
 
+cdc27 %>% 
+  dplyr::filter(Gencode_19_start == "45234707") %>% 
+  dplyr::select(name, sample_name, Gencode_19_chromosome, Gencode_19_start, PON_COUNT, type, sample_name)
+
+
+
+### FRG1 ----
+
+
+frg1 <- mutation.data %>% 
+  dplyr::mutate(pid = gsub("^([0-9]+).+$","\\1",sample_name)) %>% 
+  dplyr::filter(is.na(PON_COUNT) | PON_COUNT < 1) %>% 
+  dplyr::filter(Gencode_19_variantClassification != 'SILENT') %>% 
+  dplyr::filter(Gencode_19_variantClassification != 'INTRON') %>% 
+  dplyr::filter(Gencode_19_variantClassification != 'RNA') %>% 
+  dplyr::filter(Gencode_19_variantClassification != "FIVE_PRIME_FLANK") %>% 
+  dplyr::filter(Gencode_19_variantClassification != "THREE_PRIME_UTR") %>% 
+  dplyr::filter(Gencode_19_variantClassification != "FIVE_PRIME_UTR" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "LINCRNA" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "COULD_NOT_DETERMINE" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_OUT_FRAME" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_IN_FRAME" ) %>% 
+  dplyr::filter(Gencode_19_hugoSymbol == 'FRG1')
+
+
+frg1 %>% 
+  dplyr::group_by(Gencode_19_start) %>% 
+  dplyr::tally(sort=T)
+
+
+frg1 %>% 
+  dplyr::filter(Gencode_19_start == "190876263") %>% 
+  dplyr::select(name, sample_name, Gencode_19_chromosome, Gencode_19_start ,type, PON_COUNT)
+
+
+
+### :: ----
 
 mutation.data.to %>%
   dplyr::filter(Gencode_19_hugoSymbol == "IDH1")  %>% 
@@ -454,4 +492,67 @@ unique(mutation.data$Gencode_19_variantClassification)
 #[13] "FRAME_SHIFT_DEL"         "NONSTOP"                 "IN_FRAME_DEL"            "LINCRNA"                
 #[17] "COULD_NOT_DETERMINE"     "START_CODON_SNP"         "DE_NOVO_START_OUT_FRAME" "DE_NOVO_START_IN_FRAME" 
 #[21] "START_CODON_DEL"         "START_CODON_INS"  
+
+
+
+
+
+# I. load CNVs ----
+
+
+# segments, seems most meaningful for further stats
+#mixedrank = function(x) order(gtools::mixedorder(x)) # https://stackoverflow.com/questions/32378108/using-gtoolsmixedsort-or-alternatives-with-dplyrarrange
+
+
+cnv <- read.table('data/glass/WES/copynumber_profiles/calls_segments.txt',header=T) %>%
+  tibble::remove_rownames() %>% 
+  dplyr::rename(cnv.segments.id = breakpoint) %>% 
+  dplyr::rename(cnv.segments.chrom = chrom) %>% 
+  dplyr::rename(cnv.segments.start = start) %>% 
+  dplyr::rename(cnv.segments.end = end) %>% 
+  dplyr::mutate(cnv.segments.length = cnv.segments.end - cnv.segments.start) %>% 
+  dplyr::arrange(order(gtools::mixedorder(cnv.segments.chrom)), cnv.segments.start, cnv.segments.end)  # rank = order(order())
+
+
+cnv.metadata <- cnv %>% 
+  dplyr::select(cnv.segments.id, cnv.segments.chrom, cnv.segments.start, cnv.segments.end, cnv.segments.length) %>% 
+  tibble::column_to_rownames('cnv.segments.id')
+
+
+# @todo why is 32.7% of all segments NA - which is ?
+cnv <- cnv %>% 
+  dplyr::mutate(cnv.segments.chrom = NULL ) %>% # first remove all metadata to get a value'ed matrix
+  dplyr::mutate(cnv.segments.start = NULL ) %>% 
+  dplyr::mutate(cnv.segments.end = NULL ) %>% 
+  dplyr::mutate(cnv.segments.length = NULL )  %>% 
+  tibble::column_to_rownames('cnv.segments.id') %>% 
+  dplyr::mutate(nNA = rowSums(is.na(.))) %>% # count NA's
+  dplyr::filter(nNA == 0) %>% # remove NA's
+  dplyr::mutate(nNA = NULL) %>%  # remove dummy
+  t() %>% # transpose to fix sample names
+  as.data.frame() %>% 
+  tibble::rownames_to_column('sid') %>% 
+  dplyr::mutate(sid = gsub("^X","",sid)) %>% 
+  dplyr::mutate(sid = gsub("_I[0-9]+$","",sid)) %>% 
+  tibble::column_to_rownames('sid') %>% 
+  t() %>%  # transpose back
+  as.data.frame
+
+
+# take same segments subset (no NA's) for the metadata
+cnv.metadata <- dplyr::left_join(
+    cnv %>%
+      tibble::rownames_to_column('cnv.segments.id') %>% 
+      dplyr::select(cnv.segments.id), 
+    cnv.metadata  %>%
+      tibble::rownames_to_column('cnv.segments.id') ,
+    by=c('cnv.segments.id'='cnv.segments.id')) %>% 
+  tibble::column_to_rownames('cnv.segments.id')
+    
+
+# x-check (!)
+stopifnot(rownames(cnv) == rownames(cnv.metadata))
+
+
+
 
