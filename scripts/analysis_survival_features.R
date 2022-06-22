@@ -206,7 +206,7 @@ p3 <- ggplot(plt.expanded2, aes(x=reorder(GLASS_ID, order), y=name, fill=value))
   theme(text = element_text(family = 'Helvetica'), axis.text.x = element_text(angle = 90, hjust = 0.25))
 
 
-p1 / p2 / p3 + plot_layout(heights = c(1, 3, 3)) # quite a bit
+p1 / p2 / p3 + patchwork::plot_layout(heights = c(1, 3, 3)) # quite a bit
 
 
 

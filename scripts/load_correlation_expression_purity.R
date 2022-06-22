@@ -5,7 +5,7 @@
 
 # load data ----
 
-if(!exists('expression.glass.vst')) {
+if(!exists('expression.glass.exon.vst')) {
   source('scripts/load_rna-counts.R')
 }
 
@@ -22,7 +22,7 @@ tmp.metadata <- metadata.glass.per.resection %>%
   dplyr::filter(!is.na(dna.shallow.ACE.purity)) %>% 
   dplyr::select(genomescan.sid, dna.shallow.ACE.purity)
 
-tmp.data <- expression.glass.vst %>% 
+tmp.data <- expression.glass.exon.vst %>% 
   dplyr::select(tmp.metadata$genomescan.sid)
 
 
@@ -33,11 +33,11 @@ tmp.out <- data.frame(cor.t.dna.shallow.ACE.purity = apply(tmp.data,1, function(
   tibble::rownames_to_column('gene_uid')
 
 
-tmp.out %>% dplyr::arrange(cor.t.dna.shallow.ACE.purity) %>% head(n=10)
-tmp.out %>% dplyr::arrange(-cor.t.dna.shallow.ACE.purity) %>% head(n=10)
+# tmp.out %>% dplyr::arrange(cor.t.dna.shallow.ACE.purity) %>% head(n=10)
+# tmp.out %>% dplyr::arrange(-cor.t.dna.shallow.ACE.purity) %>% head(n=10)
 
 
-expression.glass.metadata <- expression.glass.metadata %>% 
+expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
   dplyr::left_join(tmp.out , by=c('gene_uid'='gene_uid'), keep=F,suffix = c("", "")) # force overwrite
 
 
@@ -52,7 +52,7 @@ tmp.metadata <- metadata.glass.per.resection %>%
   dplyr::filter(!is.na(dna.shallow.ACE.purity.below.1)) %>% 
   dplyr::select(genomescan.sid, dna.shallow.ACE.purity.below.1)
 
-tmp.data <- expression.glass.vst %>% 
+tmp.data <- expression.glass.exon.vst %>% 
   dplyr::select(tmp.metadata$genomescan.sid)
 
 
@@ -63,17 +63,17 @@ tmp.out <- data.frame(cor.t.dna.shallow.ACE.purity.below.1 = apply(tmp.data,1, f
   tibble::rownames_to_column('gene_uid')
 
 
-expression.glass.metadata <- expression.glass.metadata %>% 
+expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
   dplyr::left_join(tmp.out , by=c('gene_uid'='gene_uid'), keep=F,suffix = c("", "")) # force overwrite
 
 
-expression.glass.metadata %>% dplyr::arrange(cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10)
-expression.glass.metadata %>% dplyr::arrange(-cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10)
-
-
-expression.glass.metadata %>% dplyr::arrange(cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10) %>% dplyr::pull(gene_name)
-expression.glass.metadata %>% dplyr::arrange(-cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10) %>% dplyr::pull(gene_name)
-
+# expression.glass.exon.metadata %>% dplyr::arrange(cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10)
+# expression.glass.exon.metadata %>% dplyr::arrange(-cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10)
+# 
+# 
+# expression.glass.exon.metadata %>% dplyr::arrange(cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10) %>% dplyr::pull(gene_name)
+# expression.glass.exon.metadata %>% dplyr::arrange(-cor.t.dna.shallow.ACE.purity.below.1) %>% head(n=10) %>% dplyr::pull(gene_name)
+# 
 
 
 rm(tmp.metadata, tmp.data, tmp.out)
@@ -87,7 +87,7 @@ tmp.metadata <- metadata.glass.per.resection %>%
   dplyr::select(genomescan.sid, dna.purity.manual.Erik)
 
 
-tmp.data <- expression.glass.vst %>% 
+tmp.data <- expression.glass.exon.vst %>% 
   dplyr::select(tmp.metadata$genomescan.sid)
 
 
@@ -99,16 +99,16 @@ tmp.out <- data.frame(cor.t.dna.purity.manual.Erik = apply(tmp.data,1, function(
 
 
 
-expression.glass.metadata <- expression.glass.metadata %>% 
+expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
   dplyr::left_join(tmp.out , by=c('gene_uid'='gene_uid'), keep=F,suffix = c("", "")) # force overwrite
 
 
-expression.glass.metadata %>% dplyr::arrange(cor.t.dna.purity.manual.Erik) %>% head(n=10)
-expression.glass.metadata %>% dplyr::arrange(-cor.t.dna.purity.manual.Erik) %>% head(n=10)
-
-
-expression.glass.metadata %>% dplyr::arrange(cor.t.dna.purity.manual.Erik) %>% head(n=10) %>% dplyr::pull(gene_name)
-expression.glass.metadata %>% dplyr::arrange(-cor.t.dna.purity.manual.Erik) %>% head(n=10) %>% dplyr::pull(gene_name)
+# expression.glass.exon.metadata %>% dplyr::arrange(cor.t.dna.purity.manual.Erik) %>% head(n=10)
+# expression.glass.exon.metadata %>% dplyr::arrange(-cor.t.dna.purity.manual.Erik) %>% head(n=10)
+# 
+# 
+# expression.glass.exon.metadata %>% dplyr::arrange(cor.t.dna.purity.manual.Erik) %>% head(n=10) %>% dplyr::pull(gene_name)
+# expression.glass.exon.metadata %>% dplyr::arrange(-cor.t.dna.purity.manual.Erik) %>% head(n=10) %>% dplyr::pull(gene_name)
 
 
 rm(tmp.metadata, tmp.data, tmp.out)
@@ -117,12 +117,13 @@ rm(tmp.metadata, tmp.data, tmp.out)
 
 # calc corr for VAF method ----
 
+
 tmp.metadata <- metadata.glass.per.resection %>%
   dplyr::filter(excluded == F) %>% 
   dplyr::filter(!is.na(dna.wes.VAF_IDH))
 
 
-tmp.data <- expression.glass.vst %>% 
+tmp.data <- expression.glass.exon.vst %>% 
   dplyr::select(tmp.metadata$genomescan.sid)
 
 
@@ -134,11 +135,11 @@ tmp.out <- data.frame(cor.t.dna.wes.VAF_IDH = apply(tmp.data,1, function(vec) {r
 
 
 
-tmp.out %>% dplyr::arrange(cor.t.dna.wes.VAF_IDH) %>% head(n=10)
-tmp.out %>% dplyr::arrange(-cor.t.dna.wes.VAF_IDH) %>% head(n=20)
+# tmp.out %>% dplyr::arrange(cor.t.dna.wes.VAF_IDH) %>% head(n=10)
+# tmp.out %>% dplyr::arrange(-cor.t.dna.wes.VAF_IDH) %>% head(n=20)
 
 
-expression.glass.metadata <- expression.glass.metadata %>% 
+expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
   dplyr::left_join(tmp.out , by=c('gene_uid'='gene_uid'), keep=F,suffix = c("", "")) # force overwrite
 
 
@@ -155,7 +156,7 @@ tmp.metadata <- metadata.glass.per.resection %>%
   dplyr::filter(!is.na(methylation.purity.absolute))
 
 
-tmp.data <- expression.glass.vst %>% 
+tmp.data <- expression.glass.exon.vst %>% 
   dplyr::select(tmp.metadata$genomescan.sid)
 
 
@@ -167,11 +168,11 @@ tmp.out <- data.frame(cor.t.methylation.purity.absolute = apply(tmp.data,1, func
 
 
 
-tmp.out %>% dplyr::arrange(cor.t.methylation.purity.absolute) %>% head(n=10)
-tmp.out %>% dplyr::arrange(-cor.t.methylation.purity.absolute) %>% head(n=20)
+# tmp.out %>% dplyr::arrange(cor.t.methylation.purity.absolute) %>% head(n=10)
+# tmp.out %>% dplyr::arrange(-cor.t.methylation.purity.absolute) %>% head(n=20)
 
 
-expression.glass.metadata <- expression.glass.metadata %>% 
+expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
   dplyr::left_join(tmp.out , by=c('gene_uid'='gene_uid'), keep=F,suffix = c("", "")) # force overwrite
 
 

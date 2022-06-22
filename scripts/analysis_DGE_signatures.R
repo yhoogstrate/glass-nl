@@ -85,7 +85,7 @@ if(median(c) < 0) {
 
 
 pc.down.1 <- prcomp(t(down.1))
-cor(t(down.1), as.data.frame(pc.down.1$x)$PC1)
+c <- cor(t(down.1), as.data.frame(pc.down.1$x)$PC1)
 if(median(c) < 0) {
   pc.down.1$x[,1] <- pc.down.1$x[,1] * -1
 }

@@ -177,7 +177,17 @@ ggplot(plt, aes(x=dna.shallow.ACE.purity,y=dna.wes.VAF_IDH * 2, label=Sample_Nam
 
 
 
+rm(plt)
+
 ## ACE x WES/VAF ----
+
+
+
+plt <- dnaseq.purities %>%
+  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+  dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
+  dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
+
 
 
 ggplot(plt, aes(x=dna.shallow.ACE.purity,y=dna.wes.VAF_IDH * 2, label=Sample_Name,col=status)) +
@@ -188,7 +198,16 @@ ggplot(plt, aes(x=dna.shallow.ACE.purity,y=dna.wes.VAF_IDH * 2, label=Sample_Nam
   youri_gg_theme 
 
 
+rm(plt)
+
+
 ## ACE x Meth/RF[abs] ----
+
+
+plt <- dnaseq.purities %>%
+  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+  dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
+  dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
 
 
 ggplot(plt, aes(x=dna.shallow.ACE.purity,y=methylation.purity.absolute, label=Sample_Name,col=status)) +
@@ -198,9 +217,16 @@ ggplot(plt, aes(x=dna.shallow.ACE.purity,y=methylation.purity.absolute, label=Sa
   scale_color_manual(values=c('unconfident'='red','regular'='black')) +
   youri_gg_theme 
 
+rm(plt)
 
 
 ### log(ACE) x Meth/RF[abs] ----
+
+
+plt <- dnaseq.purities %>%
+  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+  dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
+  dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
 
 
 ggplot(plt, aes(x=log(dna.shallow.ACE.purity),y=methylation.purity.absolute, label=Sample_Name,col=status)) +
@@ -210,8 +236,15 @@ ggplot(plt, aes(x=log(dna.shallow.ACE.purity),y=methylation.purity.absolute, lab
   scale_color_manual(values=c('unconfident'='red','regular'='black')) +
   youri_gg_theme 
 
+rm(plt)
 
 ## Manual Fit x Meth/RF[abs] ----
+
+
+plt <- dnaseq.purities %>%
+  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+  dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
+  dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
 
 
 ggplot(plt, aes(x=dna.purity.manual.Erik,y=methylation.purity.absolute, label=Sample_Name,col=status.manual.fit)) +
@@ -220,8 +253,17 @@ ggplot(plt, aes(x=dna.purity.manual.Erik,y=methylation.purity.absolute, label=Sa
   scale_y_continuous(limits = c(0.25, 0.75))  +
   youri_gg_theme
 
+rm(plt)
+
 
 ## WES/VAF x Meth/RF[abs] ----
+
+
+
+plt <- dnaseq.purities %>%
+  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+  dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
+  dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
 
 
 ggplot(plt, aes(x=dna.wes.VAF_IDH * 2,y=methylation.purity.absolute, label=Sample_Name)) +
@@ -230,6 +272,7 @@ ggplot(plt, aes(x=dna.wes.VAF_IDH * 2,y=methylation.purity.absolute, label=Sampl
   scale_y_continuous(limits = c(0.25, 0.75))  +
   youri_gg_theme 
 
+rm(plt)
 
 
 
@@ -254,6 +297,13 @@ ggplot(plt, aes(x=dna.wes.VAF_IDH * 2,y=methylation.purity.absolute, label=Sampl
 
 
 ## beeswarm ----
+
+
+
+plt <- dnaseq.purities %>%
+  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+  dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
+  dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
 
 
 ggplot(plt %>%  dplyr::mutate(resection = gsub("^.+_(.+)$","\\1",Sample_Name)), aes(x=resection, y=dna.wes.VAF_IDH)) +
@@ -286,7 +336,19 @@ ggplot(glass.cellularities, aes(x=CNV.purity.shallowseq,y=VAF_IDH * 2, label=nam
   ggrepel:: geom_text_repel(size=3, col="gray80")
 
 
+rm(plt)
+
+
 # 1/0.5 * 0.33 * 3
+
+
+
+
+plt <- dnaseq.purities %>%
+  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+  dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
+  dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
+
 
 glass.cellularities <- glass.cellularities %>% 
   dplyr::mutate(exp.cn.idh.mut = 1 / glass.cellularities$CNV.purity.shallowseq * glass.cellularities$VAF_IDH * glass.cellularities$Ploidy /2 ) %>% 
