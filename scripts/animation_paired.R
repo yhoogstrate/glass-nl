@@ -1,7 +1,8 @@
 #!/usr/bin/env
 
 library(ggplot2)
-devtools::install_github('erocoar/gghalves')
+library(pathwork)
+library(gghalves) #devtools::install_github('erocoar/gghalves')
 
 
 expr <- data.frame(expr = c(
@@ -16,7 +17,7 @@ expr <- data.frame(expr = c(
   dplyr::mutate(x = (as.numeric(as.factor(pat))-1) * 4 + as.numeric(cond == "recurrent"))
 
 
-expr2 <- rbind(expr, expr %>%  dplyr::mutate(expr=NULL))  
+# expr2 <- rbind(expr, expr %>%  dplyr::mutate(expr=NULL))  
 
 
 p1 <- ggplot(expr, aes(x=x, y=expr, col=pat,shape=cond)) +
@@ -33,7 +34,7 @@ p2 <- ggplot(expr, aes(x=cond, y=expr, fill=cond)) +
 
 p1 + p2
 
-ggsave("/tmp/vis1.png",width=12,height=4)
+# ggsave("/tmp/vis1.png",width=12,height=4)
 
 
 
@@ -57,7 +58,7 @@ p2 <- ggplot(expr.norm, aes(x=cond, y=expr, fill=cond)) +
 
 p1 + p2
 
-ggsave("/tmp/vis2.png",width=12,height=4)
+#ggsave("/tmp/vis2.png",width=12,height=4)
 
 
 

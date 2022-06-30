@@ -497,7 +497,7 @@ unique(mutation.data$Gencode_19_variantClassification)
 
 
 
-# I. load CNVs ----
+# I. load CNVs [type-1] ----
 
 
 # segments, seems most meaningful for further stats
@@ -554,5 +554,21 @@ cnv.metadata <- dplyr::left_join(
 stopifnot(rownames(cnv) == rownames(cnv.metadata))
 
 
+
+# II. load CNVs [type-2] ----
+
+tmp <- read.table('data/glass/WES/copynumber_profiles/100kbp-called_VAFPurity.igv',header=T, sep = "\t") %>% 
+  dplyr::mutate(chromosome = paste0('chr', chromosome)) %>% 
+  `colnames<-`(gsub("^X","",colnames(.))) %>% 
+  `colnames<-`(gsub("I_[0-9]$","",colnames(.))) %>% 
+  tibble::remove_rownames()
+
+cnv2 <- tmp %>% 
+  tibble::column_to_rownames('feature') %>% 
+  dplyr::select(-c('chromosome', 'start','end'))
+
+cnv2.metadata <- tmp %>%
+  dplyr::select(feature, chromosome, start, end) %>% 
+  dplyr::rename(segment.id = feature)
 
 
