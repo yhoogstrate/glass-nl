@@ -1,6 +1,17 @@
 #!/usr/bin/env R
 
-# Clusters patients at RNA level, superviser /w DE genes
+
+#' Clusters patients at RNA level, superviser /w DE genes
+#' 
+
+
+# load libs ----
+
+library(tidyverse)
+library(pheatmap)
+library(RColorBrewer)
+library(viridis)
+
 
 # load data  ----
 
@@ -71,16 +82,20 @@ plt.y <- data.frame(gene_uid = rownames(plt)) %>%
       )) %>% 
       dplyr::select(gene_uid, cluster),
     by=c('gene_uid'='gene_uid')
-  )  %>%  tibble::column_to_rownames('gene_uid')  %>% 
-  dplyr::mutate(srt = runif(n())) %>% 
-  dplyr::arrange(srt) %>% 
-  dplyr::mutate(srt = NULL)
+  ) %>%  tibble::column_to_rownames('gene_uid')
+
+
+
+colnames(plt) == rownames(plt.x)
+rownames(plt) == rownames(plt.y)
+
 
 
 plt.y.h <- dge.partially.paired.h
 plt.y.h$labels <- plt.y.h$labels.uid
 
 
+# non linear color palette: https://slowkow.com/notes/pheatmap-tutorial/
 
 quantile_breaks <- function(xs, n = 10) {
  breaks <- quantile(xs, probs = seq(0, 1, length.out = n))
@@ -88,11 +103,6 @@ quantile_breaks <- function(xs, n = 10) {
 }
 
 mat_breaks <- quantile_breaks(as.matrix(t(scale(t(plt), center=T, scale=T))), n = 21)
-
-# 
-# pheatmap::pheatmap(plt, annotation_col = m, clustering_distance_rows = 'correlation'
-#                    ,clustering_distance_cols = 'correlation'
-#                    )
 
 
 
@@ -105,8 +115,21 @@ pheatmap::pheatmap(t(scale(t(plt), center=T, scale=T)),
                    
                    color = inferno(length(mat_breaks) - 1),
                    breaks = mat_breaks,
-                   annotation_names_row = F # gene names are to much detail
-                   )
+                   labels_row = rep("",nrow(plt)) # gene names are to much detail
+)
+
+
+
+ComplexHeatmap::pheatmap(t(scale(t(plt), center=T, scale=T)),
+                          annotation_col = plt.x, 
+                          annotation_row = plt.y,
+                          cluster_cols = F,
+                          cluster_rows = plt.y.h,
+                          
+                          color = inferno(length(mat_breaks) - 1),
+                          breaks = mat_breaks,
+                          labels_row = rep("",nrow(plt)) # gene names are to much detail
+)
 
 
 
