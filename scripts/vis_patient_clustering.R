@@ -57,7 +57,9 @@ colnames(plt) <- data.frame(genomescan.sid = colnames(plt)) %>%
 plt.x <- metadata %>%
   #tibble::column_to_rownames('genomescan.sid') %>% 
   tibble::column_to_rownames('Sample_Name') %>% 
-  dplyr::select(methylation.sub.diagnosis,mean.DNA.methylation.signature , Sample_Type, CDKN2AB) %>% 
+  dplyr::select( lts.up1, mean.DNA.methylation.signature ,methylation.sub.diagnosis, Sample_Type, CDKN2AB) %>% 
+  
+  dplyr::rename(RNA.cell.cycling.signature = lts.up1) %>% 
   
   dplyr::mutate(Sample_Type = as.character(Sample_Type)) %>% 
   dplyr::mutate(Sample_Type = ifelse(Sample_Type == "X", NA, Sample_Type)) %>% 
