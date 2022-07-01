@@ -4,6 +4,15 @@
 
 # load data  ----
 
+if(!exists("metadata.glass.per.resection")) {
+  source('scripts/load_metadata.R')
+}
+
+if('mean.DNA.methylation.signature' %in% colnames(metadata.glass.per.resection) == F) {
+  print("Loading methylation analysis")
+  source('scripts/load_analysis_DM.R')
+}
+
 if(!exists('dge.partially.paired.clusters')) { # obtain DE genes
   source('scripts/load_hclust.R')
 }
@@ -60,8 +69,7 @@ plt.y <- data.frame(gene_uid = rownames(plt)) %>%
 
 
 plt.y.h <- dge.partially.paired.h
-
-plt.y.h$labels %in% 
+plt.y.h$labels <- plt.y.h$labels.uid
 
 
 
@@ -81,9 +89,21 @@ pheatmap::pheatmap(t(scale(t(plt), center=T, scale=T)),
                    annotation_col = plt.x, 
                    annotation_row = plt.y,
                    cluster_cols = F,
-                   cluster_rows = 
+                   cluster_rows = plt.y.h
                    
                    #color = inferno(length(mat_breaks) - 1)
                    )
 
 #p$tree_col
+
+
+plt = data.frame(gid = plt.y.h$label.uid[plt.y.h$order]) %>% 
+  dplyr::mutate(x= 1:n()) %>% 
+  dplyr::left_join(plt.y %>% tibble::rownames_to_column('gid'), by=c('gid'='gid'))
+
+ggplot(plt, aes(x=reorder(gid, x), y=cluster)) +
+  geom_point()
+
+
+
+
