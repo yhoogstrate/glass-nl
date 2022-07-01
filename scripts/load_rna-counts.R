@@ -22,6 +22,17 @@ expression.glass.gtf <- read.delim('data/glass/RNAseq/gencode.v34.primary_assemb
   dplyr::mutate(gene_uid = paste0(ENSID , "_", gene_name))
 
 
+# expression.glass.gtf %>%
+#   dplyr::filter(gene_name == "FCGBP")
+# 1x
+
+# expression.glass.gtf %>%
+#   dplyr::filter(grepl("ENSG00000275395",ENSID ))
+# 1x
+
+
+
+
 # check for XIST
 # sum(expression.glass.gtf$gene_name == "XIST")
 
@@ -64,6 +75,8 @@ expression.glass.exon.metadata <- expression.glass.exon %>%
   dplyr::mutate(gene_loc = paste0(gene_chr, ":", round(gene_chr_center_loc / 1000000),"M")) 
 
 
+nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon)
+
 
 # expression.glass.exon.metadata %>% 
 #   dplyr::filter(grepl("XIST",gene_name)) %>% 
@@ -96,7 +109,7 @@ sel <- expression.glass.exon %>%
   dplyr::pull('keep')
 
 
-
+nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon)
 stopifnot(rownames(expression.glass.exon) == expression.glass.exon.metadata$gene_uid)
   
   
@@ -117,6 +130,28 @@ stopifnot(rownames(expression.glass.exon) == expression.glass.exon.metadata$gene
 #   tibble::rownames_to_column('gid') %>% 
 #   dplyr::filter(grepl("XIST",gid)) %>% 
 #   dim
+
+
+## add hg19 liftover ----
+
+
+tmp <- read.table('data/2022-05-27_glass-nl_dge_results_paired_hglft_hg19_genome_120f5_f2660.bed') %>% 
+  dplyr::mutate(V5 = NULL) %>% 
+  dplyr::rename(chr.hg19 = V1) %>% 
+  dplyr::rename(start.hg19 = V2) %>% 
+  dplyr::rename(end.hg19 = V3) %>% 
+  dplyr::mutate(length = end.hg19 - start.hg19) %>% 
+  dplyr::group_by(V4) %>% 
+  dplyr::filter(length == max(length)) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::mutate(length = NULL)
+
+
+stopifnot(duplicated(tmp$V4) == F)
+
+
+expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
+  dplyr::left_join(tmp,by=c('gene_id'='V4'),suffix = c("", ""))
 
 
 

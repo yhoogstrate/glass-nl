@@ -24,6 +24,8 @@ if("padj.partially.paired.exon" %in% colnames(expression.glass.exon.metadata) ==
 
 
 
-if(!exists('cycling.cell.markers')) {
-  warning('cycling cell marker genes were not loaded')
-   %>% %>% 
+#if(!exists('cycling.cell.markers')) {
+#  warning('cycling cell marker genes were not loaded')
+#   %>% %>% 
+
+

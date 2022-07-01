@@ -20,17 +20,6 @@ if(!exists("metadata.glass.per.resection")) {
 }
 
 
-expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
-  dplyr::left_join(
-    read.table('data/2022-05-27_glass-nl_dge_results_paired_hglft_hg19_genome_120f5_f2660.bed') %>% 
-      dplyr::mutate(V5 = NULL) %>% 
-      dplyr::rename(chr.hg19 = V1) %>% 
-      dplyr::rename(start.hg19 = V2) %>% 
-      dplyr::rename(end.hg19 = V3)
-    ,by=c('gene_id'='V4'),suffix = c("", "")
-  )
-
-
 
 if("padj.partially.paired.exon" %in% colnames(expression.glass.exon.metadata) == F) {
   warning('paired exon-count DGE results were not loaded')

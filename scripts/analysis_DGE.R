@@ -161,18 +161,26 @@ res.paired.a.exon %>%
   dim
 
 
+nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon)
+stopifnot(rownames(expression.glass.exon) == expression.glass.exon.metadata$gene_uid)
 
-# append results
-expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
-  dplyr::left_join(
-    res.paired.a.exon %>% 
-      dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
-      tibble::column_to_rownames('gene_uid') %>% 
-      `colnames<-`(paste0(colnames(.),".partially.paired.exon")) %>% 
-      tibble::rownames_to_column('gene_uid'),
-    by=c('gene_uid'='gene_uid'),suffix = c("", "")
-  ) 
 
+# needs to be into loader:
+# 
+# expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
+#   dplyr::left_join(
+#     res.paired.a.exon %>% 
+#       dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
+#       tibble::column_to_rownames('gene_uid') %>% 
+#       `colnames<-`(paste0(colnames(.),".partially.paired.exon")) %>% 
+#       tibble::rownames_to_column('gene_uid'),
+#     by=c('gene_uid'='gene_uid'),suffix = c("", "")
+#   ) 
+# 
+# 
+# 
+# nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon)
+# stopifnot(rownames(expression.glass.exon) == expression.glass.exon.metadata$gene_uid)
 
 
 

@@ -119,5 +119,22 @@ cycling.cell.markers <- cycling.cell.markers %>%
   tibble::column_to_rownames('gene_name')
 
 
+stopifnot(duplicated(cycling.cell.markers$gene_uid) == F)
+
+
+nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon)
+stopifnot(rownames(expression.glass.exon) == expression.glass.exon.metadata$gene_uid)
+
+expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
+  dplyr::left_join(cycling.cell.markers , by=c('gene_uid'='gene_uid'), keep=F,suffix = c("", "")) # force overwrite
+
+nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon)
+stopifnot(rownames(expression.glass.exon) == expression.glass.exon.metadata$gene_uid)
+
+
+
+rm(cycling.cell.markers)
+
+
 
 
