@@ -33,10 +33,19 @@ plt <- expression.glass.exon.vst %>%
   dplyr::filter(gene_uid %in% dge.partially.paired.clusters$gene_uid) %>% 
   tibble::column_to_rownames('gene_uid')
 
+colnames(plt) <- data.frame(genomescan.sid = colnames(plt)) %>% 
+  dplyr::left_join(
+    metadata.glass.per.resection %>% 
+      dplyr::select(genomescan.sid, Sample_Name),
+    by=c('genomescan.sid'='genomescan.sid')
+  ) %>% 
+  dplyr::pull(Sample_Name)
+
 
 # metadata for patients
 plt.x <- metadata %>%
-  tibble::column_to_rownames('genomescan.sid') %>% 
+  #tibble::column_to_rownames('genomescan.sid') %>% 
+  tibble::column_to_rownames('Sample_Name') %>% 
   dplyr::select(methylation.sub.diagnosis,mean.DNA.methylation.signature , Sample_Type, CDKN2AB) %>% 
   
   dplyr::mutate(Sample_Type = as.character(Sample_Type)) %>% 
@@ -73,36 +82,31 @@ plt.y.h$labels <- plt.y.h$labels.uid
 
 
 
-# quantile_breaks <- function(xs, n = 10) {
-#   breaks <- quantile(xs, probs = seq(0, 1, length.out = n))
-#   breaks[!duplicated(breaks)]
-# }
-# 
-# mat_breaks <- quantile_breaks(as.matrix(plt), n = 11)
+quantile_breaks <- function(xs, n = 10) {
+ breaks <- quantile(xs, probs = seq(0, 1, length.out = n))
+ breaks[!duplicated(breaks)]
+}
+
+mat_breaks <- quantile_breaks(as.matrix(t(scale(t(plt), center=T, scale=T))), n = 21)
 
 # 
 # pheatmap::pheatmap(plt, annotation_col = m, clustering_distance_rows = 'correlation'
 #                    ,clustering_distance_cols = 'correlation'
 #                    )
 
+
+
+
 pheatmap::pheatmap(t(scale(t(plt), center=T, scale=T)),
                    annotation_col = plt.x, 
                    annotation_row = plt.y,
                    cluster_cols = F,
-                   cluster_rows = plt.y.h
+                   cluster_rows = plt.y.h,
                    
-                   #color = inferno(length(mat_breaks) - 1)
+                   color = inferno(length(mat_breaks) - 1),
+                   breaks = mat_breaks,
+                   annotation_names_row = F # gene names are to much detail
                    )
-
-#p$tree_col
-
-
-plt = data.frame(gid = plt.y.h$label.uid[plt.y.h$order]) %>% 
-  dplyr::mutate(x= 1:n()) %>% 
-  dplyr::left_join(plt.y %>% tibble::rownames_to_column('gid'), by=c('gid'='gid'))
-
-ggplot(plt, aes(x=reorder(gid, x), y=cluster)) +
-  geom_point()
 
 
 
