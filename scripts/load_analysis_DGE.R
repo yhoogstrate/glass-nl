@@ -31,6 +31,8 @@ res.paired.a.exon %>%
   dim
 
 
+nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon)
+stopifnot(rownames(expression.glass.exon) == expression.glass.exon.metadata$gene_uid)
 
 # append results
 expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
@@ -53,6 +55,8 @@ expression.glass.exon.metadata <- expression.glass.exon.metadata %>%
   )
 
 
+nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon)
+stopifnot(rownames(expression.glass.exon) == expression.glass.exon.metadata$gene_uid)
 
 # expression.glass.exon.metadata$log2FoldChange.partially.paired.exon
 rm(res.paired.a.exon)
