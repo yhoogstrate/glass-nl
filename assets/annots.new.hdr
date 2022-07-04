@@ -1,8 +1,6 @@
-##INFO=<ID=TAG,Number=.,Type=String,Description="Blacklist TAG">
-
-ID=PON_LoFreq_2_0_025,Number    PON_n207_LoFreq_Hyperexome_WES_min2_pos_0.025minAF.bed
-ID=PON_LoFreq_2_0_05,PON_n207_LoFreq_Hyperexome_WES_min2_pos_0.05minAF.bed
-ID=PON_,PON_n207_LoFreq_Hyperexome_WES_min3_pos_0.025minAF.bed
-PON_n207_LoFreq_Hyperexome_WES_min3_pos_0.05minAF.bed
+##INFO=<ID=PON_LoFreq_2_0_025,Number=.,Type=String,Description="Blackisted in PON_n207_LoFreq_Hyperexome_WES_min2_pos_0.025minAF.bed">
+##INFO=<ID=PON_LoFreq_2_0_05,Number=.,Type=String,Description="Blackisted in PON_n207_LoFreq_Hyperexome_WES_min2_pos_0.05minAF.bed">
+##INFO=<ID=PON_LoFreq_3_0_025,Number=.,Type=String,Description="Blackisted in PON_n207_LoFreq_Hyperexome_WES_min3_pos_0.025minAF.bed">
+##INFO=<ID=PON_LoFreq_3_0_05,Number=.,Type=String,Description="Blackisted in PON_n207_LoFreq_Hyperexome_WES_min3_pos_0.05minAF.bed">
 
 
