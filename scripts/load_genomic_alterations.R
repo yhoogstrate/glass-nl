@@ -192,7 +192,7 @@ parse.vcf <- function(fn) {
   tmp <- VariantAnnotation::readVcf(fn, "hg19")
   
   tmp.info <- tmp %>% 
-    info() %>% 
+    VariantAnnotation::info() %>% 
     as.data.frame %>% 
     dplyr::mutate(`FUNCOTATION` = unlist(`FUNCOTATION`)) %>% 
     dplyr::mutate(FUNCOTATION = gsub('^\\[','',FUNCOTATION)) %>% 
@@ -208,10 +208,11 @@ parse.vcf <- function(fn) {
       'Gencode_19_proteinChange','CGC_Name','CGC_Cancer_Somatic_Mut','CGC_Cancer_Germline_Mut',
       'CGC_Tumour_Types__(Somatic_Mutations)','CGC_Mutation_Type','ClinVar_VCF_CLNSIG','ClinVar_VCF_MC','dbSNP_ID','MBQ',
       'MFRL','MMQ','MPOS','NALOD','NLOD','PON','PON_COUNT','POPAF','TLOD','gnomAD_AF','mutations_filename'
-    ))
+    )) %>% 
+    dplyr::mutate(PON_LoFreq_2_0_025 = NA, PON_LoFreq_2_0_05 = NA, PON_LoFreq_3_0_025 = NA, PON_LoFreq_3_0_05 = NA)
   
   tmp.geno <- tmp %>% 
-    geno()
+    VariantAnnotation::geno()
   
   tmp.geno.ad1 <- tmp.geno$AD[,1] %>%  purrr::map_chr(c(1))
   tmp.geno.ad2 <- tmp.geno$AD[,1] %>%  purrr::map_chr(c(2))
@@ -236,11 +237,11 @@ mutation.data.mn.header <- data.frame(filename = Sys.glob("data/glass/WES/Matche
   dplyr::mutate(sample_name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",filename))) %>% 
   dplyr::rename(MatchedNormal.Annotated.fun = filename)
 
-mutation.data.mn <- mutation.data.header %>% 
+mutation.data.mn <- mutation.data.mn.header %>% 
   dplyr::pull(`MatchedNormal.Annotated.fun`) %>% 
   pbapply::pblapply(parse.vcf) %>% 
   dplyr::bind_rows() %>% 
-  dplyr::left_join(mutation.data.header, by=c('mutations_filename'='MatchedNormal.Annotated.fun'))
+  dplyr::left_join(mutation.data.mn.header, by=c('mutations_filename'='MatchedNormal.Annotated.fun'))
 
 
 
@@ -268,10 +269,6 @@ mutation.data.mn %>%
 
 
 # 3. TumorOnly ----
-
-b = a
-b[is.na(as.logical(sapply(b, is.na)))] <- NA
-unlist(b)
 
 
 parse.vcf.2  <- function(fn) {
@@ -327,7 +324,7 @@ parse.vcf.2  <- function(fn) {
 
 #mutation.data.to.header <- data.frame(filename = Sys.glob("data/glass/WES/TumorOnly/intersect/*_fun.vcf.gz")) %>% 
 mutation.data.to.header <- data.frame(filename = Sys.glob("data/glass/WES/TumorOnly/intersect_with_additional_LoFreq_PON/*_fun_LoFreqPONs.vcf.gz")) %>% 
-dplyr::mutate(sample_name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",filename))) %>% 
+  dplyr::mutate(sample_name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",filename))) %>% 
   dplyr::rename(TumorOnly.intersect.fun = filename)
 
 
@@ -348,7 +345,7 @@ mutation.data.to %>%
 
 
 
-mutation.data.to %>%
+mutatmutation.data.to %>%
   dplyr::filter(Gencode_19_hugoSymbol == "ZNF131") %>%
   dplyr::select(name, FILTER, dbSNP_ID, sample_name, VAF, Gencode_19_chromosome, Gencode_19_start, Gencode_19_end)
 
@@ -414,6 +411,7 @@ mutation.data %>%
   dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_IN_FRAME" ) %>% 
   #dplyr::filter(!is.na(AA) | !is.na(Gencode_19_proteinChange)) %>% 
   #dplyr::filter(!is.na(AA)) %>% 
+  #dplyr::filter(is.na(PON_LoFreq_3_0_05)) %>% 
   dplyr::select(sample_name, Gencode_19_hugoSymbol) %>% 
   dplyr::distinct(sample_name, Gencode_19_hugoSymbol) %>% 
   count(`Gencode_19_hugoSymbol`) %>%
@@ -448,7 +446,7 @@ cdc27 %>%
 
 cdc27 %>% 
   dplyr::filter(Gencode_19_start == "45234707") %>% 
-  dplyr::select(name, sample_name, Gencode_19_chromosome, Gencode_19_start, PON_COUNT, type, sample_name)
+  dplyr::select(name, sample_name, Gencode_19_chromosome, Gencode_19_start, PON_COUNT, type, sample_name, PON_LoFreq_3_0_05)
 
 
 
@@ -478,7 +476,30 @@ frg1 %>%
 
 frg1 %>% 
   dplyr::filter(Gencode_19_start == "190876263") %>% 
-  dplyr::select(name, sample_name, Gencode_19_chromosome, Gencode_19_start ,type, PON_COUNT)
+  dplyr::select(name, sample_name, Gencode_19_chromosome, Gencode_19_start ,type, PON_COUNT, PON_LoFreq_3_0_05)
+
+
+### IDH(1/2) ----
+
+
+idh <- mutation.data %>% 
+  dplyr::mutate(pid = gsub("^([0-9]+).+$","\\1",sample_name)) %>% 
+  dplyr::filter(is.na(PON_COUNT) | PON_COUNT < 1) %>% 
+  dplyr::filter(Gencode_19_variantClassification != 'SILENT') %>% 
+  dplyr::filter(Gencode_19_variantClassification != 'INTRON') %>% 
+  dplyr::filter(Gencode_19_variantClassification != 'RNA') %>% 
+  dplyr::filter(Gencode_19_variantClassification != "FIVE_PRIME_FLANK") %>% 
+  dplyr::filter(Gencode_19_variantClassification != "THREE_PRIME_UTR") %>% 
+  dplyr::filter(Gencode_19_variantClassification != "FIVE_PRIME_UTR" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "LINCRNA" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "COULD_NOT_DETERMINE" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_OUT_FRAME" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_IN_FRAME" ) %>% 
+  dplyr::filter(grepl("^IDH",Gencode_19_hugoSymbol))
+
+
+idh %>% 
+  dplyr::select(name, sample_name, Gencode_19_chromosome, Gencode_19_start ,type, PON_COUNT, PON_LoFreq_3_0_05)
 
 
 
