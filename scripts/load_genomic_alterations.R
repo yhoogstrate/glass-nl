@@ -13,6 +13,12 @@
 #' Helaas bevatten de TumorOnly samples nog te veel varianten.
 
 
+# load libs ----
+
+
+library(tidyverse)
+
+
 # 0. file overzicht ----
 
 a = data.frame(filename = Sys.glob("data/glass/WES/Tumor_only/intersect/*intersect.vcf")) %>% 
@@ -263,13 +269,18 @@ mutation.data.mn %>%
 
 # 3. TumorOnly ----
 
+b = a
+b[is.na(as.logical(sapply(b, is.na)))] <- NA
+unlist(b)
+
 
 parse.vcf.2  <- function(fn) {
   #fn <- 'data/glass/WES/TumorOnly/intersect/002-R1-I3_intersect_fun.vcf.gz'
+  fn <- 'data/glass/WES/TumorOnly/intersect_with_additional_LoFreq_PON/219-R3-I1_intersect_fun_LoFreqPONs.vcf.gz'
   tmp <- VariantAnnotation::readVcf(fn, "hg19")
   
   tmp.info <- tmp %>% 
-    info() %>% 
+    VariantAnnotation::info() %>% 
     as.data.frame %>% 
     dplyr::mutate(`FUNCOTATION` = unlist(`FUNCOTATION`)) %>% 
     dplyr::mutate(FUNCOTATION = gsub('^\\[','',FUNCOTATION)) %>% 
@@ -278,17 +289,22 @@ parse.vcf.2  <- function(fn) {
     tidyr::separate(FUNCOTATION, sep="\\|", into = c("Gencode_19_hugoSymbol","Gencode_19_ncbiBuild","Gencode_19_chromosome","Gencode_19_start","Gencode_19_end","Gencode_19_variantClassification","Gencode_19_secondaryVariantClassification","Gencode_19_variantType","Gencode_19_refAllele","Gencode_19_tumorSeqAllele1","Gencode_19_tumorSeqAllele2","Gencode_19_genomeChange","Gencode_19_annotationTranscript","Gencode_19_transcriptStrand","Gencode_19_transcriptExon","Gencode_19_transcriptPos","Gencode_19_cDnaChange","Gencode_19_codonChange","Gencode_19_proteinChange","Gencode_19_gcContent","Gencode_19_referenceContext","Gencode_19_otherTranscripts","CGC_Name","CGC_GeneID","CGC_Chr","CGC_Chr_Band","CGC_Cancer_Somatic_Mut","CGC_Cancer_Germline_Mut","CGC_Tumour_Types__(Somatic_Mutations)","CGC_Tumour_Types_(Germline_Mutations)","CGC_Cancer_Syndrome","CGC_Tissue_Type","CGC_Cancer_Molecular_Genetics","CGC_Mutation_Type","CGC_Translocation_Partner","CGC_Other_Germline_Mut","CGC_Other_Syndrome/Disease","ClinVar_VCF_AF_ESP","ClinVar_VCF_AF_EXAC","ClinVar_VCF_AF_TGP","ClinVar_VCF_ALLELEID","ClinVar_VCF_CLNDISDB","ClinVar_VCF_CLNDISDBINCL","ClinVar_VCF_CLNDN","ClinVar_VCF_CLNDNINCL","ClinVar_VCF_CLNHGVS","ClinVar_VCF_CLNREVSTAT","ClinVar_VCF_CLNSIG","ClinVar_VCF_CLNSIGCONF","ClinVar_VCF_CLNSIGINCL","ClinVar_VCF_CLNVC","ClinVar_VCF_CLNVCSO","ClinVar_VCF_CLNVI","ClinVar_VCF_DBVARID","ClinVar_VCF_GENEINFO","ClinVar_VCF_MC","ClinVar_VCF_ORIGIN","ClinVar_VCF_RS","ClinVar_VCF_SSR","ClinVar_VCF_ID","ClinVar_VCF_FILTER","Cosmic_overlapping_mutations","HGNC_HGNC_ID","HGNC_Approved_Name","HGNC_Status","HGNC_Locus_Type","HGNC_Locus_Group","HGNC_Previous_Symbols","HGNC_Previous_Name","HGNC_Synonyms","HGNC_Name_Synonyms","HGNC_Chromosome","HGNC_Date_Modified","HGNC_Date_Symbol_Changed","HGNC_Date_Name_Changed","HGNC_Accession_Numbers","HGNC_Enzyme_IDs","HGNC_Entrez_Gene_ID","HGNC_Ensembl_Gene_ID","HGNC_Pubmed_IDs","HGNC_RefSeq_IDs","HGNC_Gene_Family_ID","HGNC_Gene_Family_Name","HGNC_CCDS_IDs","HGNC_Vega_ID","HGNC_Entrez_Gene_ID(supplied_by_NCBI)","HGNC_OMIM_ID(supplied_by_OMIM)","HGNC_RefSeq(supplied_by_NCBI)","HGNC_UniProt_ID(supplied_by_UniProt)","HGNC_Ensembl_ID(supplied_by_Ensembl)","HGNC_UCSC_ID(supplied_by_UCSC)","dbSNP_ASP","dbSNP_ASS","dbSNP_CAF","dbSNP_CDA","dbSNP_CFL","dbSNP_COMMON","dbSNP_DSS","dbSNP_G5","dbSNP_G5A","dbSNP_GENEINFO","dbSNP_GNO","dbSNP_HD","dbSNP_INT","dbSNP_KGPhase1","dbSNP_KGPhase3","dbSNP_LSD","dbSNP_MTP","dbSNP_MUT","dbSNP_NOC","dbSNP_NOV","dbSNP_NSF","dbSNP_NSM","dbSNP_NSN","dbSNP_OM","dbSNP_OTH","dbSNP_PM","dbSNP_PMC","dbSNP_R3","dbSNP_R5","dbSNP_REF","dbSNP_RS","dbSNP_RSPOS","dbSNP_RV","dbSNP_S3D","dbSNP_SAO","dbSNP_SLO","dbSNP_SSR","dbSNP_SYN","dbSNP_TOPMED","dbSNP_TPA","dbSNP_U3","dbSNP_U5","dbSNP_VC","dbSNP_VLD","dbSNP_VP","dbSNP_WGT","dbSNP_WTD","dbSNP_dbSNPBuildID","dbSNP_ID","dbSNP_FILTER")) %>% 
     dplyr::mutate(FUNCOTATION = NULL) %>% 
     dplyr::mutate(mutations_filename = fn) %>% 
+    dplyr::mutate(PON_LoFreq_2_0_025 = unlist(ifelse(as.character(PON_LoFreq_2_0_025) == "character(0)", NA, PON_LoFreq_2_0_025))) %>% 
+    dplyr::mutate(PON_LoFreq_2_0_05 = unlist(ifelse(as.character(PON_LoFreq_2_0_05) == "character(0)", NA, PON_LoFreq_2_0_05))) %>% 
+    dplyr::mutate(PON_LoFreq_3_0_025 = unlist(ifelse(as.character(PON_LoFreq_3_0_025) == "character(0)", NA, PON_LoFreq_2_0_025))) %>% 
+    dplyr::mutate(PON_LoFreq_3_0_05 = unlist(ifelse(as.character(PON_LoFreq_3_0_05) == "character(0)", NA, PON_LoFreq_2_0_05))) %>% 
     tibble::rownames_to_column('name') %>% 
     dplyr::select(c('name',
                     'AA','AC','AS_SB_TABLE','CDS','CNT','DB','DP','ECNT','GENE','Gencode_19_hugoSymbol','Gencode_19_chromosome',
                     'Gencode_19_start','Gencode_19_end','Gencode_19_variantClassification','Gencode_19_secondaryVariantClassification',
                     'Gencode_19_proteinChange','CGC_Name','CGC_Cancer_Somatic_Mut','CGC_Cancer_Germline_Mut',
                     'CGC_Tumour_Types__(Somatic_Mutations)','CGC_Mutation_Type','ClinVar_VCF_CLNSIG','ClinVar_VCF_MC','dbSNP_ID','MBQ',
-                    'MFRL','MMQ','MPOS','NALOD','NLOD','PON','PON_COUNT','POPAF','TLOD','gnomAD_AF','mutations_filename'
+                    'MFRL','MMQ','MPOS','NALOD','NLOD','PON','PON_COUNT','POPAF','TLOD','gnomAD_AF','mutations_filename',
+                    'PON_LoFreq_2_0_025', 'PON_LoFreq_2_0_05', 'PON_LoFreq_3_0_025', 'PON_LoFreq_3_0_05'
     ))
   
   tmp.geno <- tmp %>% 
-    geno()
+    VariantAnnotation::geno()
   
   tmp.geno.ad1 <- tmp.geno$AD[,1] %>%  purrr::map_chr(c(1))
   tmp.geno.ad2 <- tmp.geno$AD[,1] %>%  purrr::map_chr(c(2))
@@ -309,8 +325,9 @@ parse.vcf.2  <- function(fn) {
 }
 
 
-mutation.data.to.header <- data.frame(filename = Sys.glob("data/glass/WES/TumorOnly/intersect/*_fun.vcf.gz")) %>% 
-  dplyr::mutate(sample_name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",filename))) %>% 
+#mutation.data.to.header <- data.frame(filename = Sys.glob("data/glass/WES/TumorOnly/intersect/*_fun.vcf.gz")) %>% 
+mutation.data.to.header <- data.frame(filename = Sys.glob("data/glass/WES/TumorOnly/intersect_with_additional_LoFreq_PON/*_fun_LoFreqPONs.vcf.gz")) %>% 
+dplyr::mutate(sample_name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",filename))) %>% 
   dplyr::rename(TumorOnly.intersect.fun = filename)
 
 
