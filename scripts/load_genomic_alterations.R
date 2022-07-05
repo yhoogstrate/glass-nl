@@ -154,7 +154,45 @@ gr[seqnames(gr) == "chr2" &
      end(gr) < 209119806 ] # & strand(gr) == "."
 
 
-# 1. normals blood ----
+# 1. outersects ----
+
+# excluded because of some reason
+
+parse.outersect <- function(fn) {
+  #fn <- 'data/glass/WES/MatchedNormal/variant/intersect/113_R2_I2_outersect.vcf'
+  data <- read.delim(fn, header=F) %>% 
+    dplyr::rename(chr = V1,
+                  start = V2,
+                  s1 = V3,
+                  s2 = V4) %>% 
+    dplyr::mutate(V5 = NULL) %>% 
+    dplyr::mutate(mutations_filename = fn)
+  
+  return(data)
+}
+
+mutation.outersect.header <- data.frame(outersect = Sys.glob("data/glass/WES/MatchedNormal/variant/intersect/*outersect.vcf")) %>% 
+  dplyr::mutate(sample_name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",outersect))) 
+
+
+mutation.outersect <- mutation.outersect.header %>% 
+  dplyr::pull(`outersect`) %>% 
+  pbapply::pblapply(parse.outersect) %>%
+  dplyr::bind_rows() %>% 
+  dplyr::left_join(mutation.outersect.header, by=c('mutations_filename'='outersect')) %>% 
+  dplyr::mutate(mutation.id = paste0(chr, ":",start,"=",s1 ,"/",s2)) %>% 
+  dplyr::group_by(mutation.id) %>% 
+  dplyr::tally(sort=T) %>% 
+  dplyr::rename(outsect.n = n)
+
+
+
+
+
+
+
+
+# 2. normals blood ----
 
 # check en integrate met CDC27 - zijn allemaal 'NormalOnly'
 # outersect files!?
@@ -162,22 +200,22 @@ gr[seqnames(gr) == "chr2" &
 
 
 
-# 2. MatchedNormal ----
+# 3. MatchedNormal ----
 
 
-idh1f = function(x) grepl("IDH1", x, fixed=TRUE)
-
-filt.idh = FilterRules(list(idh1 = idh1f))
-
-
-tmp <- data.frame(filename = Sys.glob("data/glass/WES/MatchedNormal/*/Annotated/*_fun.vcf.gz")) %>% 
-  dplyr::mutate(sample_name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",filename))) %>% 
-  dplyr::rename(MatchedNormal.Annotated.fun = filename)
-#t1 <- rownames(info(header(VariantAnnotation::readVcf(l[1,1], "hg19")))) 
-t1 <- VariantAnnotation::readVcf(tmp[1,1], "hg19")
-t2 <- VariantAnnotation::readVcf(tmp[2,1], "hg19")
-t3 <- VariantAnnotation::readVcf(tmp[3,1], "hg19")
-t4 <- VariantAnnotation::readVcf(tmp[4,1], "hg19")
+# idh1f = function(x) grepl("IDH1", x, fixed=TRUE)
+# 
+# filt.idh = FilterRules(list(idh1 = idh1f))
+# 
+# 
+# tmp <- data.frame(filename = Sys.glob("data/glass/WES/MatchedNormal/*/Annotated/*_fun.vcf.gz")) %>% 
+#   dplyr::mutate(sample_name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",filename))) %>% 
+#   dplyr::rename(MatchedNormal.Annotated.fun = filename)
+# #t1 <- rownames(info(header(VariantAnnotation::readVcf(l[1,1], "hg19")))) 
+# t1 <- VariantAnnotation::readVcf(tmp[1,1], "hg19")
+# t2 <- VariantAnnotation::readVcf(tmp[2,1], "hg19")
+# t3 <- VariantAnnotation::readVcf(tmp[3,1], "hg19")
+# t4 <- VariantAnnotation::readVcf(tmp[4,1], "hg19")
 
 # Geen IDH[1/2],ATRX,TP53
 # grep -v '^#' data/glass/WES/MatchedNormal/variant/Annotated/*_PON.vcf | grep -i -E 'IDH|ATRX|TP53'
@@ -189,7 +227,13 @@ t4 <- VariantAnnotation::readVcf(tmp[4,1], "hg19")
 
 
 parse.vcf <- function(fn) {
+  #fn = "data/glass/WES/MatchedNormal/variant/Annotated/113_R2_I2_intersect_fun.vcf.gz"
   tmp <- VariantAnnotation::readVcf(fn, "hg19")
+  
+  tmp.ref <- data.frame(
+    ref = as.character(tmp@fixed$REF),
+    alt = as.character(unlist(tmp@fixed$ALT))
+  )
   
   tmp.info <- tmp %>% 
     VariantAnnotation::info() %>% 
@@ -226,7 +270,7 @@ parse.vcf <- function(fn) {
     dplyr::mutate(VAF = DP.var / DP.geno)
 
 
-  tmp.info <- cbind(tmp.info, tmp.geno.df) %>% 
+  tmp.info <- cbind(tmp.ref, tmp.info, tmp.geno.df) %>% 
     dplyr::mutate(POPAF = as.numeric(POPAF))
 
   return(tmp.info)
@@ -268,13 +312,18 @@ mutation.data.mn %>%
 
 
 
-# 3. TumorOnly ----
+# 4. TumorOnly ----
 
 
 parse.vcf.2  <- function(fn) {
   #fn <- 'data/glass/WES/TumorOnly/intersect/002-R1-I3_intersect_fun.vcf.gz'
   #fn <- 'data/glass/WES/TumorOnly/intersect_with_additional_LoFreq_PON/219-R3-I1_intersect_fun_LoFreqPONs.vcf.gz'
   tmp <- VariantAnnotation::readVcf(fn, "hg19")
+  
+  tmp.ref <- data.frame(
+    ref = as.character(tmp@fixed$REF),
+    alt = as.character(unlist(tmp@fixed$ALT))
+  )
   
   tmp.info <- tmp %>% 
     VariantAnnotation::info() %>% 
@@ -315,7 +364,7 @@ parse.vcf.2  <- function(fn) {
     dplyr::mutate(VAF = DP.var / DP.geno)
   
   
-  tmp.info <- cbind(tmp.info, tmp.geno.df)  %>% 
+  tmp.info <- cbind(tmp.ref, tmp.info, tmp.geno.df)  %>% 
     dplyr::mutate(POPAF = as.numeric(POPAF))
   
   return(tmp.info)
@@ -385,7 +434,7 @@ mutation.data.to %>%
   dplyr::filter(FILTER != "germline")
 
 
-# 4. merge ----
+# 5. merge ----
 
 
 stopifnot(colnames(mutation.data.to) == colnames(mutation.data.mn))
@@ -394,7 +443,8 @@ stopifnot(colnames(mutation.data.to) == colnames(mutation.data.mn))
 mutation.data <- rbind(mutation.data.to %>% dplyr::mutate(type = "TumorOnly"),
                        mutation.data.mn %>% dplyr::mutate(type = "MatchingNormal")
                        ) %>% 
-  dplyr::filter(FILTER != 'germline')
+  dplyr::filter(FILTER != 'germline') %>% 
+  dplyr::mutate(mutation.id = paste0(Gencode_19_chromosome,":",Gencode_19_start,"="))
 
 
 ## a. find top hit genes ----
@@ -514,6 +564,32 @@ pik3ca %>%
 pik3ca %>% 
 #  dplyr::filter(Gencode_19_start == "22023422") %>% 
   dplyr::select(name, sample_name, Gencode_19_chromosome, Gencode_19_start ,type, PON_COUNT, PON_LoFreq_2_0_025, PON_LoFreq_3_0_05)
+
+
+### MUC12 ----
+
+
+muc12 <- mutation.data %>% 
+  dplyr::mutate(pid = gsub("^([0-9]+).+$","\\1",sample_name)) %>% 
+  dplyr::filter(is.na(PON_COUNT) | PON_COUNT < 1) %>% 
+  dplyr::filter(Gencode_19_variantClassification != 'SILENT') %>% 
+  dplyr::filter(Gencode_19_variantClassification != 'INTRON') %>% 
+  dplyr::filter(Gencode_19_variantClassification != 'RNA') %>% 
+  dplyr::filter(Gencode_19_variantClassification != "FIVE_PRIME_FLANK") %>% 
+  dplyr::filter(Gencode_19_variantClassification != "THREE_PRIME_UTR") %>% 
+  dplyr::filter(Gencode_19_variantClassification != "FIVE_PRIME_UTR" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "LINCRNA" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "COULD_NOT_DETERMINE" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_OUT_FRAME" ) %>% 
+  dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_IN_FRAME" ) %>% 
+  dplyr::filter(Gencode_19_hugoSymbol == 'MUC12')
+
+
+muc12 %>% 
+  dplyr::group_by(Gencode_19_start) %>% 
+  dplyr::tally(sort=T)
+
+
 
 
 ### IDH(1/2) ----
