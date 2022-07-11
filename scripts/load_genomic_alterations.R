@@ -180,14 +180,17 @@ mutation.outersect <- mutation.outersect.header %>%
   pbapply::pblapply(parse.outersect) %>%
   dplyr::bind_rows() %>% 
   dplyr::left_join(mutation.outersect.header, by=c('mutations_filename'='outersect')) %>% 
-  dplyr::mutate(mutation.id = paste0(chr, ":",start,"=",s1 ,"/",s2)) %>% 
+  dplyr::mutate(mutation.id = paste0(chr, ":",start,"_",s1 ,"/",s2)) %>% 
   dplyr::group_by(mutation.id) %>% 
   dplyr::tally(sort=T) %>% 
   dplyr::rename(outsect.n = n)
 
 
+stopifnot(duplicated(mutation.outersect$mutation.id) == F) # ensure uniqueness
 
 
+# this one was found 6 times while present in filtered other ones
+# chr7:100642594_A/C         6
 
 
 
@@ -203,34 +206,13 @@ mutation.outersect <- mutation.outersect.header %>%
 # 3. MatchedNormal ----
 
 
-# idh1f = function(x) grepl("IDH1", x, fixed=TRUE)
-# 
-# filt.idh = FilterRules(list(idh1 = idh1f))
-# 
-# 
-# tmp <- data.frame(filename = Sys.glob("data/glass/WES/MatchedNormal/*/Annotated/*_fun.vcf.gz")) %>% 
-#   dplyr::mutate(sample_name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",filename))) %>% 
-#   dplyr::rename(MatchedNormal.Annotated.fun = filename)
-# #t1 <- rownames(info(header(VariantAnnotation::readVcf(l[1,1], "hg19")))) 
-# t1 <- VariantAnnotation::readVcf(tmp[1,1], "hg19")
-# t2 <- VariantAnnotation::readVcf(tmp[2,1], "hg19")
-# t3 <- VariantAnnotation::readVcf(tmp[3,1], "hg19")
-# t4 <- VariantAnnotation::readVcf(tmp[4,1], "hg19")
-
-# Geen IDH[1/2],ATRX,TP53
-# grep -v '^#' data/glass/WES/MatchedNormal/variant/Annotated/*_PON.vcf | grep -i -E 'IDH|ATRX|TP53'
-
-# wel IDH1/2
-# grep -v '^#' data/glass/WES/MatchedNormal/variant/Annotated/*_fun.vcf | grep -i -E 'IDH|ATRX|TP53'
-
-
-
-
 parse.vcf <- function(fn) {
   #fn = "data/glass/WES/MatchedNormal/variant/Annotated/113_R2_I2_intersect_fun.vcf.gz"
   tmp <- VariantAnnotation::readVcf(fn, "hg19")
   
   tmp.ref <- data.frame(
+    chr = as.character(tmp@rowRanges@seqnames),
+    start = tmp@rowRanges@ranges@start,
     ref = as.character(tmp@fixed$REF),
     alt = as.character(unlist(tmp@fixed$ALT))
   )
@@ -321,6 +303,8 @@ parse.vcf.2  <- function(fn) {
   tmp <- VariantAnnotation::readVcf(fn, "hg19")
   
   tmp.ref <- data.frame(
+    chr = as.character(tmp@rowRanges@seqnames),
+    start = tmp@rowRanges@ranges@start,
     ref = as.character(tmp@fixed$REF),
     alt = as.character(unlist(tmp@fixed$ALT))
   )
@@ -372,9 +356,9 @@ parse.vcf.2  <- function(fn) {
 
 
 #mutation.data.to.header <- data.frame(filename = Sys.glob("data/glass/WES/TumorOnly/intersect/*_fun.vcf.gz")) %>% 
-mutation.data.to.header <- data.frame(filename = Sys.glob("data/glass/WES/TumorOnly/intersect_with_additional_LoFreq_PON/*_fun_LoFreqPONs.vcf.gz")) %>% 
+mutation.data.to.header <- data.frame(filename = Sys.glob("data/glass/WES/vcf_tumor-only//intersect_with_additional_LoFreq_PON/*_fun_LoFreqPONs.vcf.gz")) %>% 
   dplyr::mutate(sample_name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",filename))) %>% 
-  dplyr::filter(sample_name %in% mutation.data.mn.header$sample_name == F) %>% # exclude those present in both
+  ##dplyr::filter(sample_name %in% mutation.data.mn.header$sample_name == F) %>% # exclude those present in both
   dplyr::rename(TumorOnly.intersect.fun = filename)
 
 stopifnot(mutation.data.to.header$sample_name %in% mutation.data.mn.header$sample_name == F)
@@ -444,7 +428,9 @@ mutation.data <- rbind(mutation.data.to %>% dplyr::mutate(type = "TumorOnly"),
                        mutation.data.mn %>% dplyr::mutate(type = "MatchingNormal")
                        ) %>% 
   dplyr::filter(FILTER != 'germline') %>% 
-  dplyr::mutate(mutation.id = paste0(Gencode_19_chromosome,":",Gencode_19_start,"="))
+  dplyr::mutate(mutation.id = paste0(chr,":",start,"_",ref,"/",alt)) %>% 
+  dplyr::left_join(mutation.outersect, by=c('mutation.id' = 'mutation.id'))
+
 
 
 ## a. find top hit genes ----
@@ -463,14 +449,14 @@ mutation.data %>%
   dplyr::filter(Gencode_19_variantClassification != "COULD_NOT_DETERMINE" ) %>% 
   dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_OUT_FRAME" ) %>% 
   dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_IN_FRAME" ) %>% 
-  #dplyr::filter(!is.na(AA) | !is.na(Gencode_19_proteinChange)) %>% 
-  #dplyr::filter(!is.na(AA)) %>% 
   dplyr::filter(is.na(PON_LoFreq_2_0_025)) %>%  # PON_LoFreq_3_0_05
+  #dplyr::filter(is.na(outsect.n) | outsect.n <= 5) %>% 
   dplyr::select(sample_name, Gencode_19_hugoSymbol) %>% 
   dplyr::distinct(sample_name, Gencode_19_hugoSymbol) %>% 
   count(`Gencode_19_hugoSymbol`) %>%
   dplyr::arrange(-n) %>%
   head(n=55)
+
 
 
 
@@ -568,6 +554,8 @@ pik3ca %>%
 
 ### MUC12 ----
 
+muc12.old <- muc12
+
 
 muc12 <- mutation.data %>% 
   dplyr::mutate(pid = gsub("^([0-9]+).+$","\\1",sample_name)) %>% 
@@ -582,11 +570,16 @@ muc12 <- mutation.data %>%
   dplyr::filter(Gencode_19_variantClassification != "COULD_NOT_DETERMINE" ) %>% 
   dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_OUT_FRAME" ) %>% 
   dplyr::filter(Gencode_19_variantClassification != "DE_NOVO_START_IN_FRAME" ) %>% 
-  dplyr::filter(Gencode_19_hugoSymbol == 'MUC12')
+  dplyr::filter(Gencode_19_hugoSymbol == 'MUC12') %>% 
+  dplyr::filter(is.na(PON_LoFreq_2_0_025))  # PON_LoFreq_3_0_05
 
+
+
+a = muc12 %>% dplyr::mutate(fn = basename(mutations_filename )) %>%  dplyr::select(chr, start, ref, alt, fn) %>% dplyr::mutate(id = paste0(fn , "_", start, "_", alt))
+b = muc12.old %>% dplyr::mutate(fn = basename(mutations_filename )) %>%  dplyr::select(chr, start, ref, alt, fn) %>% dplyr::mutate(id = paste0(fn , "_", start, "_", alt))
 
 muc12 %>% 
-  dplyr::group_by(Gencode_19_start) %>% 
+  dplyr::group_by(start) %>% 
   dplyr::tally(sort=T)
 
 
@@ -710,8 +703,9 @@ stopifnot(rownames(cnv) == rownames(cnv.metadata))
 
 tmp <- read.table('data/glass/WES/copynumber_profiles/100kbp-called_VAFPurity.igv',header=T, sep = "\t") %>% 
   dplyr::mutate(chromosome = paste0('chr', chromosome)) %>% 
+  dplyr::mutate(feature = paste0('chr', feature)) %>% 
   `colnames<-`(gsub("^X","",colnames(.))) %>% 
-  `colnames<-`(gsub("I_[0-9]$","",colnames(.))) %>% 
+  `colnames<-`(gsub("_I[0-9]$","",colnames(.))) %>% 
   tibble::remove_rownames()
 
 cnv2 <- tmp %>% 
@@ -721,5 +715,14 @@ cnv2 <- tmp %>%
 cnv2.metadata <- tmp %>%
   dplyr::select(feature, chromosome, start, end) %>% 
   dplyr::rename(segment.id = feature)
+
+
+stopifnot(rownames(cnv2) == cnv2.metadata$segment.id)
+
+
+rm(tmp)
+
+
+
 
 
