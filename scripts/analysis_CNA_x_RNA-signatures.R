@@ -468,8 +468,10 @@ for(x in colnames(data2.discrete.loss)) {
     names(tmp)[1] <- 'expression'
     names(tmp)[2] <- 'segment'
     
-    g1 <- tmp %>% dplyr::filter(segment == "gain" & !is.na(expression)) %>%  dplyr::pull(expression)
-    g2 <- tmp %>% dplyr::filter(segment == "no-gain" & !is.na(expression)) %>%  dplyr::pull(expression)
+    g1 <- tmp %>% dplyr::filter(segment == "loss" & !is.na(expression)) %>%  dplyr::pull(expression)
+    g2 <- tmp %>% dplyr::filter(segment == "no-loss" & !is.na(expression)) %>%  dplyr::pull(expression)
+    
+    #print(g1)
     
     if(length(g1) > 1 & length(g2) > 1) {
       w <- t.test(g1, g2)
@@ -480,6 +482,8 @@ for(x in colnames(data2.discrete.loss)) {
   }
 }
 
+
+saveRDS(stats2, file="cache/stats2.Rds")
 
 
 
@@ -498,7 +502,9 @@ plt <- stats2 %>%
   dplyr::mutate(y.gain.lts.up1 = -log10(lts.up1.gain.ttest)) %>% 
   dplyr::mutate(y.loss.lts.up1 = -log10(lts.up1.loss.ttest)) %>% 
   dplyr::mutate(y.gain.IDH_HG_IDH_ratio = -log10(IDH_HG_IDH_ratio.gain.ttest)) %>% 
-  dplyr::mutate(y.loss.IDH_HG_IDH_ratio = -log10(IDH_HG_IDH_ratio.loss.ttest))
+  dplyr::mutate(y.loss.IDH_HG_IDH_ratio = -log10(IDH_HG_IDH_ratio.loss.ttest)) %>% 
+  dplyr::mutate(y.gain.mean.DNA.methylation.signature = -log10(mean.DNA.methylation.signature.gain.ttest)) %>% 
+  dplyr::mutate(y.loss.mean.DNA.methylation.signature = -log10(mean.DNA.methylation.signature.loss.ttest))
 
 # https://www.nature.com/articles/s41379-021-00778-x.pdf
 # https://www.nature.com/articles/s41379-021-00778-x.pdf
@@ -507,14 +513,20 @@ plt.exp <- rbind(plt %>% dplyr::mutate(y =  y.gain.lts.up1, y.loss = NULL, y.gai
                  plt %>% dplyr::mutate(y = -y.loss.lts.up1, y.loss=NULL, y.gain=NULL , group = "loss", facet="lts.up1") ,
                  
                  plt %>% dplyr::mutate(y =  y.gain.IDH_HG_IDH_ratio, y.loss = NULL, y.gain=NULL, group="gain",facet="A_IDH / A_IDH_HG ratio") ,
-                 plt %>% dplyr::mutate(y = -y.loss.IDH_HG_IDH_ratio, y.loss=NULL, y.gain=NULL , group = "loss",facet="A_IDH / A_IDH_HG ratio")
+                 plt %>% dplyr::mutate(y = -y.loss.IDH_HG_IDH_ratio, y.loss=NULL, y.gain=NULL , group = "loss",facet="A_IDH / A_IDH_HG ratio"),
+                 
+                 plt %>% dplyr::mutate(y =  y.gain.mean.DNA.methylation.signature, y.loss = NULL, y.gain=NULL, group="gain",facet="mean DNA methylation signature") ,
+                 plt %>% dplyr::mutate(y = -y.loss.mean.DNA.methylation.signature, y.loss=NULL, y.gain=NULL , group = "loss",facet="mean DNA methylation signature")
                  ) %>% 
   dplyr::mutate(end = as.numeric(gsub("^.+\\-","",cnv.segment.id))) %>% 
   dplyr::filter(!is.na(y)) %>% 
   dplyr::mutate(label = NA) %>% 
   
   
-  dplyr::mutate(label = ifelse(chr == "chr1" &  start < 146938446 & end > 146938575 & group=="gain", "NBPF12", label)) %>% 
+  #dplyr::mutate(label = ifelse(chr == "chr1" &  start < 144427183 & end > 144427222 & group=="gain", "NBPF15", label)) %>% 
+  #dplyr::mutate(label = ifelse(chr == "chr1" &  start < 146943172 & end > 146943518 & group=="gain", "NBPF12", label)) %>% 
+  dplyr::mutate(label = ifelse(chr == "chr1" &  start < 146586343 & end > 146586805 & group=="gain", "NBPF13P", label)) %>% 
+  dplyr::mutate(label = ifelse(chr == "chr1" &  start < 76320465 & end > 76320504 & group=="loss", "MSH4", label)) %>%
   
   dplyr::mutate(label = ifelse(chr == "chr3" &  start < 60494128 & end > 60499364 & group=="loss", "FHIT", label)) %>% 
   dplyr::mutate(label = ifelse(chr == "chr3" &  start < 46355679 & end > 46355718 & group=="loss", "CCR2, CCR3 & CCR5", label)) %>% 
@@ -532,7 +544,8 @@ plt.exp <- rbind(plt %>% dplyr::mutate(y =  y.gain.lts.up1, y.loss = NULL, y.gai
   #dplyr::mutate(label = ifelse(chr == "chr7" &  start < 92708634 & end > 92709042 & group=="gain", "CDK6", label)) %>%
   
   
-  dplyr::mutate(label = ifelse(chr == "chr8" &  start < 127738573 & end > 127738672 & group=="gain", "MYC", label)) %>%
+  dplyr::mutate(label = ifelse(chr == "chr8" &  start < 128752748 & end > 128752787 & group=="gain", "MYC", label)) %>%
+  #dplyr::mutate(label = ifelse(chr == "chr8" &  start < 129955736 & end > 129955775 & group=="gain", "LINC00976", label)) %>%
   
   dplyr::mutate(label = ifelse(chr == "chr9" &  start < 21965752 & end > 21997324 & group=="loss", "CDKN2A/B", label)) %>%
   dplyr::mutate(label = ifelse(chr == "chr9" &  start < 2137095 & end > 2138078 & group=="loss", "SMARCA2", label)) %>%
@@ -540,6 +553,7 @@ plt.exp <- rbind(plt %>% dplyr::mutate(y =  y.gain.lts.up1, y.loss = NULL, y.gai
   dplyr::mutate(label = ifelse(chr == "chr10" &  start < 87863980 & end > 87865285 & group=="loss", "PTEN", label))%>%
   dplyr::mutate(label = ifelse(chr == "chr10" &  start < 113033733 & end > 113076506 & group=="loss", "TCF7L2", label))%>%
   dplyr::mutate(label = ifelse(chr == "chr10" &  start < 27700002 & end > 27700001 & group=="gain", "RAB18/MKX", label))%>%
+  #dplyr::mutate(label = ifelse(chr == "chr10" &  start < 131271659 & end > 131277709 & group=="loss", "MGMT", label))%>%
   
   dplyr::mutate(label = ifelse(chr == "chr11" &  start < 27709783 & end > 27709822 & group=="loss", "chr11.p", label))%>%
   dplyr::mutate(label = ifelse(chr == "chr11" &  start < 69647835 & end > 69648185 & group=="loss", "CCND1", label))%>%
@@ -560,29 +574,42 @@ plt.exp <- rbind(plt %>% dplyr::mutate(y =  y.gain.lts.up1, y.loss = NULL, y.gai
   dplyr::mutate(label = ifelse(chr == "chr19" &  start < 42282635 & end > 42282674  & group=="loss", "CIC", label)) %>% 
   dplyr::mutate(label = ifelse(chr == "chr19" &  start < 29818075 & end > 29818127  & group=="gain", "CCNE1", label)) %>%
   #dplyr::mutate(label = ifelse(chr == "chr19" &  start < 44499806 & end > 44499845  & group=="loss" , "ZNF locus end", label))
-  dplyr::mutate(label = ifelse(chr == "chr19" &  start < 39502161 & end > 39502733  & group=="gain", "DLL3", label))
+  dplyr::mutate(label = ifelse(chr == "chr19" &  start < 39502161 & end > 39502733  & group=="gain", "DLL3", label)) %>% 
+  dplyr::mutate(y = ifelse(y > 8, 8 , y))
 
-unique(plt.exp$label)
+#unique(plt.exp$label)
 
-plt.exp <- plt.exp %>%  dplyr::filter(chr %in% c("chr1"))
+
+
+#plt.exp <- plt.exp %>%  dplyr::filter(chr %in% c("chr8"))
 
 ggplot(plt.exp, aes(x=x, y=y, col=chr, group=group, label=label)) +
   labs(y = "Association CNA locus with glioma progression",x=NULL) +
   geom_line(col="gray",alpha=0.75) + 
   geom_point(cex=0.84) + 
   theme_bw() + 
-  #ylim(-7.5,7.5) +
+  ylim(-8.5,8.5) +
   facet_grid(rows = vars(facet), scales = "free") +
   ggrepel::geom_text_repel(data = subset(plt.exp, y < 0 & !is.na(label)),cex=2.8,col="black",  direction = "y", nudge_y = -5, segment.size=0.25 )+
   ggrepel::geom_text_repel(data = subset(plt.exp, y > 0 & !is.na(label)),cex=2.8,col="black",  direction = "y", nudge_y = 5, segment.size=0.25 )
-  #geom_vline(xintercept =  chrs_hg19_s['chr1'] + 147265375)  
+  # geom_vline(xintercept =  chrs_hg19_s['chr8'] + 131228209)
   #geom_vline(xintercept =  chrs_hg19_s['chr10'] + 32000000)
 
 
 
-plt.exp %>%  dplyr::filter(chr == "chr1" & facet != "lts.up1") %>% arrange(-y,start) %>% head(n=28)
-plt.exp %>%  dplyr::filter(chr == "chr1" & facet != "lts.up1") %>% arrange(-y,start) %>% head(n=28)
-plt.exp %>%  dplyr::filter(chr == "chr1") %>% arrange(-y,start) %>% head(n=28)
+plt.exp %>%  dplyr::filter(chr == "chr1" & facet == "lts.up1") %>% arrange(-y,start) %>% head(n=28)
+plt.exp %>%  dplyr::filter(chr == "chr1" & facet == "mean DNA methylation signature") %>% arrange(-y,start) %>% head(n=28)
+plt.exp %>%  dplyr::filter(chr == "chr1" & facet == "A_IDH / A_IDH_HG ratio") %>% arrange(-y,start) %>% head(n=28)
+
+plt.exp %>%  dplyr::filter(chr == "chr1" & facet == "A_IDH / A_IDH_HG ratio") %>% arrange(y,start) %>% head(n=28)
+
+plt.exp %>%  dplyr::filter(chr == "chr15" & facet == "mean DNA methylation signature") %>% arrange(y,start) %>% head(n=28)
+
+
+plt.exp %>%  dplyr::filter(chr == "chr2" & facet == "A_IDH / A_IDH_HG ratio") %>% arrange(y,start) %>% head(n=28)
+plt.exp %>%  dplyr::filter(chr == "chr10" & facet == "A_IDH / A_IDH_HG ratio") %>% arrange(y,start) %>% head(n=28)
+plt.exp %>%  dplyr::filter(chr == "chr8" & facet == "A_IDH / A_IDH_HG ratio") %>% arrange(-y,start) %>% head(n=28)
+
 plt.exp %>%  dplyr::filter(chr == "chr3") %>% arrange(y,start) %>% head(n=28) # FHIT
 plt.exp %>%  dplyr::filter(chr == "chr3" & facet != "lts.up1") %>% arrange(y,start) %>% head(n=28) # FHIT
 plt.exp %>%  dplyr::filter(chr == "chr4" & start> 68000000) %>% arrange(-y,start) %>% head(n=28)

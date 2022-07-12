@@ -122,6 +122,11 @@ pheatmap::pheatmap(t(scale(t(plt), center=T, scale=T)),
 
 
 
+#'@todo add IDH1/2/R132H
+#'@todo add ATRX mut
+#'@todo add DAXX meth
+
+
 ComplexHeatmap::pheatmap(t(scale(t(plt), center=T, scale=T)),
                           annotation_col = plt.x, 
                           annotation_row = plt.y,
