@@ -134,9 +134,7 @@ tmp <- metadata.glass.per.fastq %>%
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
-  dplyr::left_join(
-    tmp, by=c('genomescan.sid'='genomescan.sid')
-  )
+  dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'), suffix = c("", ""))
 
 
 stopifnot(is.na(metadata.glass.per.resection$fastp.total_reads) == F) # ENSURE ALL SAMPLE HAVE THIS METADATA
@@ -176,7 +174,7 @@ tmp <- data.frame(star.log.final.out = Sys.glob("data/glass/RNAseq/alignments/al
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
-  dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'))
+  dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'), suffix=c("", ""))
 
 
 stopifnot(is.na(metadata.glass.per.resection$star.input.reads) == F)
@@ -223,9 +221,7 @@ tmp <- data.frame(idxstats = Sys.glob("output/tables/qc/idxstats/*.txt")) %>%
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
-  dplyr::left_join(
-    tmp, by=c('genomescan.sid'='genomescan.sid')
-  )
+  dplyr::left_join(    tmp, by=c('genomescan.sid'='genomescan.sid') , suffix=c("", "")  )
 
 
 stopifnot(is.na(metadata.glass.per.resection$idxstats.alternate.loci) == F)
@@ -260,7 +256,7 @@ tmp <- read.delim("data/glass/RNAseq/alignments/alignments-new/GLASS.LGG.EMC.RNA
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
-  dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'))
+  dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'), suffix=c("", ""))
 
 
 
@@ -346,7 +342,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 
 
 
-metadata.glass.per.resection %>%  dplyr::filter(is.na(status.resection.until.last.event))
+#metadata.glass.per.resection %>%  dplyr::filter(is.na(status.resection.until.last.event))
 
 
 rm(tmp)
@@ -367,7 +363,7 @@ stopifnot(duplicated(tmp.2$X) == F)
 
 
 tmp <- tmp.1 %>% 
-  dplyr::left_join(tmp.2, by=c('Image_ID'='X')) %>% 
+  dplyr::left_join(tmp.2, by=c('Image_ID'='X'),suffix=c('','')) %>% 
   #dplyr::mutate(Date_Surgery = as.Date(Date_Surgery , format = "%d/%m/%Y")) %>% # not needed for current analysis
   #dplyr::mutate(Date = as.Date(Date , format = "%Y-%m-%d")) %>% # not needed for current analysis
   dplyr::mutate(SUBJECT = NULL, Date_Image = NULL, Sample_ID = NULL, Date_Surgery = NULL, Status = NULL, Date = NULL ) %>% 

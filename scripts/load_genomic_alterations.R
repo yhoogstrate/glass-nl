@@ -681,36 +681,33 @@ tmp <- mutation.data %>%
   dplyr::mutate(pid = gsub("^([0-9]+).+$","\\1",Sample_Name)) %>% 
   dplyr::mutate(CGC_Name = NULL) %>% 
   dplyr::filter(Gencode_19_hugoSymbol %in% c('IDH1','IDH2')) %>% 
-  dplyr::select(Sample_Name, AA) %>% 
-  dplyr::rename(IDH.type = AA) %>% 
+  dplyr::mutate(IDH.mutation.WES = paste0(Gencode_19_hugoSymbol, " ",gsub("^p.","",AA))) %>% 
+  dplyr::select(Sample_Name, IDH.mutation.WES) %>% 
   dplyr::mutate(evidence = "VCF")
 
 
-# mutation.data %>% 
-#   dplyr::filter(Sample_Name %in% tmp$Sample_Name == F) %>% 
-#   dplyr::select(Sample_Name, type) %>% 
-#   dplyr::filter(!duplicated(Sample_Name))
+
+tmp.manual <- data.frame() %>%
+  rbind(data.frame('Sample_Name'='018-R1',IDH.mutation.WES=NA,evidence=NA)) %>% #' @todo x-check bam
+  rbind(data.frame('Sample_Name'='020-R3',IDH.mutation.WES=NA,evidence=NA)) %>% #' @todo x-check bam
+  rbind(data.frame('Sample_Name'='128-R2',IDH.mutation.WES='IDH1 R132S',evidence='matching R1')) %>%  #' @todo x-check bam
+  rbind(data.frame('Sample_Name'='129-R2',IDH.mutation.WES='IDH1 R132H',evidence='matching R1 and R3')) %>% #' @todo x-check bam
+  rbind(data.frame('Sample_Name'='135-R1',IDH.mutation.WES='IDH1 R132C',evidence='matching R2')) %>% #' @todo x-check bam
+  rbind(data.frame('Sample_Name'='141-R2',IDH.mutation.WES='IDH1 R132H',evidence='matching R1')) %>% #' @todo x-check bam
+  rbind(data.frame('Sample_Name'='157-R1',IDH.mutation.WES='IDH1 R132H',evidence='present in TumorOnly?')) %>%
+  rbind(data.frame('Sample_Name'='157-R2',IDH.mutation.WES='IDH1 R132H',evidence='present in TumorOnly?')) %>%
+  rbind(data.frame('Sample_Name'='158-R1',IDH.mutation.WES='IDH1 R132H',evidence='present in TumorOnly?')) %>%
+  rbind(data.frame('Sample_Name'='158-R2',IDH.mutation.WES='IDH1 R132H',evidence='present in TumorOnly?')) %>%
+  rbind(data.frame('Sample_Name'='160-R1',IDH.mutation.WES='IDH1 R132H',evidence='present in TumorOnly?')) %>%
+  rbind(data.frame('Sample_Name'='160-R2',IDH.mutation.WES='IDH1 R132H',evidence='present in TumorOnly?')) %>%
+  rbind(data.frame('Sample_Name'='163-R1',IDH.mutation.WES='IDH1 R132H',evidence='present in TumorOnly?')) %>%
+  rbind(data.frame('Sample_Name'='163-R2',IDH.mutation.WES='IDH1 R132H',evidence='present in TumorOnly?')) %>%
+  rbind(data.frame('Sample_Name'='163-R4',IDH.mutation.WES='IDH1 R132H',evidence='present in TumorOnly?'))
+
+tmp.manual <- data.frame()
 
 
-tmp.manual <- data.frame() %>% 
-  rbind(data.frame('Sample_Name'='018-R1',IDH.type=NA,evidence=NA)) %>% #' @todo x-check bam
-  rbind(data.frame('Sample_Name'='020-R3',IDH.type=NA,evidence=NA)) %>% #' @todo x-check bam
-  rbind(data.frame('Sample_Name'='128-R2',IDH.type='p.R132S',evidence='matching R1')) %>%  #' @todo x-check bam
-  rbind(data.frame('Sample_Name'='129-R2',IDH.type='p.R132H',evidence='matching R1 and R3')) %>% #' @todo x-check bam
-  rbind(data.frame('Sample_Name'='135-R1',IDH.type='p.R132C',evidence='matching R2')) %>% #' @todo x-check bam
-  rbind(data.frame('Sample_Name'='141-R2',IDH.type='p.R132H',evidence='matching R1')) %>% #' @todo x-check bam
-  rbind(data.frame('Sample_Name'='157-R1',IDH.type='p.R132H',evidence='present in TumorOnly?')) %>% 
-  rbind(data.frame('Sample_Name'='157-R2',IDH.type='p.R132H',evidence='present in TumorOnly?')) %>% 
-  rbind(data.frame('Sample_Name'='158-R1',IDH.type='p.R132H',evidence='present in TumorOnly?')) %>% 
-  rbind(data.frame('Sample_Name'='158-R2',IDH.type='p.R132H',evidence='present in TumorOnly?')) %>% 
-  rbind(data.frame('Sample_Name'='160-R1',IDH.type='p.R132H',evidence='present in TumorOnly?')) %>% 
-  rbind(data.frame('Sample_Name'='160-R2',IDH.type='p.R132H',evidence='present in TumorOnly?')) %>% 
-  rbind(data.frame('Sample_Name'='163-R1',IDH.type='p.R132H',evidence='present in TumorOnly?')) %>% 
-  rbind(data.frame('Sample_Name'='163-R2',IDH.type='p.R132H',evidence='present in TumorOnly?')) %>% 
-  rbind(data.frame('Sample_Name'='163-R4',IDH.type='p.R132H',evidence='present in TumorOnly?'))
-
-
-tmp <- rbind(tmp, tmp.manual) %>% 
+tmp <- rbind(tmp, tmp.manual) %>%
   dplyr::mutate(pid = gsub("\\-.+","",Sample_Name))
 
 
@@ -720,16 +717,29 @@ stopifnot(duplicated(tmp %>% dplyr::mutate(evidence = NULL, Sample_Name = NULL) 
 
 # match to pid only
 tmp <- tmp %>%
-  dplyr::filter(!is.na(IDH.type)) %>% 
+  dplyr::filter(!is.na(IDH.mutation.WES)) %>% 
   dplyr::mutate(evidence = NULL, Sample_Name = NULL) %>%
   dplyr::distinct()
 
 
 
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::mutate(pid = gsub("\\_.+","",Sample_Name)) %>% 
+  dplyr::left_join(tmp, by=c('pid' = 'pid'),suffix = c("", "")) %>% 
+  dplyr::mutate(pid = NULL) %>% 
+  dplyr::mutate(IDH.mutation = ifelse(is.na(IDH.mutation) & !is.na(IDH.mutation.WES), IDH.mutation.WES, IDH.mutation))
+
+
+
+# find discrepancies -- sample 048
 metadata.glass.per.resection %>% 
-  dplyr::mutate(pid = gsub("\\-.+","",Sample_Name)) %>% 
-  dplyr::left_join(tmp, by=c('pid' = 'pid')) %>% 
-  dplyr::mutate(pid = NULL)
+  dplyr::filter(IDH.mutation.WES != IDH.mutation) %>% 
+  dplyr::select(Sample_Name, IDH.mutation, IDH.mutation.WES)
+
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection %>% 
+  dplyr::mutate(IDH.mutation = ifelse(grepl("048",Sample_Name),"IDH1 R132G?/H", IDH.mutation))
 
 
 
