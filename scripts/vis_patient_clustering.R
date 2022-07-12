@@ -24,6 +24,13 @@ if('mean.DNA.methylation.signature' %in% colnames(metadata.glass.per.resection) 
   source('scripts/load_analysis_DM.R')
 }
 
+
+if('IDH.mutation.WES' %in% colnames(metadata.glass.per.resection) == F) {
+  print("Loading genomic alterations and up2date IDH calls")
+  source('scripts/load_genomic_alterations.R')
+}
+
+
 if(!exists('dge.partially.paired.clusters')) { # obtain DE genes
   source('scripts/load_hclust.R')
 }
@@ -37,6 +44,7 @@ metadata <- metadata.glass.per.resection %>%
 
 
 # 2.  ----
+
 
 plt <- expression.glass.exon.vst %>% 
   dplyr::select(metadata$genomescan.sid) %>% 
@@ -57,7 +65,7 @@ colnames(plt) <- data.frame(genomescan.sid = colnames(plt)) %>%
 plt.x <- metadata %>%
   #tibble::column_to_rownames('genomescan.sid') %>% 
   tibble::column_to_rownames('Sample_Name') %>% 
-  dplyr::select( lts.up1, mean.DNA.methylation.signature ,methylation.sub.diagnosis, Sample_Type, CDKN2AB) %>% 
+  dplyr::select(lts.up1, mean.DNA.methylation.signature ,methylation.sub.diagnosis, Sample_Type, CDKN2AB, IDH.mutation) %>% 
   
   dplyr::rename(RNA.cell.cycling.signature = lts.up1) %>% 
   

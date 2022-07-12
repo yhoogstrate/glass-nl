@@ -169,35 +169,35 @@ library(tidyverse)
 
 # excluded because of some reason
 
-parse.outersect <- function(fn) {
-  #fn <- 'data/glass/WES/MatchedNormal/variant/intersect/113_R2_I2_outersect.vcf'
-  data <- read.delim(fn, header=F) %>% 
-    dplyr::rename(chr = V1,
-                  start = V2,
-                  s1 = V3,
-                  s2 = V4) %>% 
-    dplyr::mutate(V5 = NULL) %>% 
-    dplyr::mutate(mutations_filename = fn)
-  
-  return(data)
-}
-
-mutation.outersect.header <- data.frame(outersect = Sys.glob("data/glass/WES/MatchedNormal/variant/intersect/*outersect.vcf")) %>% 
-  dplyr::mutate(Sample_Name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",outersect))) 
-
-
-mutation.outersect <- mutation.outersect.header %>% 
-  dplyr::pull(`outersect`) %>% 
-  pbapply::pblapply(parse.outersect) %>%
-  dplyr::bind_rows() %>% 
-  dplyr::left_join(mutation.outersect.header, by=c('mutations_filename'='outersect')) %>% 
-  dplyr::mutate(mutation.id = paste0(chr, ":",start,"_",s1 ,"/",s2)) %>% 
-  dplyr::group_by(mutation.id) %>% 
-  dplyr::tally(sort=T) %>% 
-  dplyr::rename(outsect.n = n)
-
-
-stopifnot(duplicated(mutation.outersect$mutation.id) == F) # ensure uniqueness
+# parse.outersect <- function(fn) {
+#   #fn <- 'data/glass/WES/MatchedNormal/variant/intersect/113_R2_I2_outersect.vcf'
+#   data <- read.delim(fn, header=F) %>% 
+#     dplyr::rename(chr = V1,
+#                   start = V2,
+#                   s1 = V3,
+#                   s2 = V4) %>% 
+#     dplyr::mutate(V5 = NULL) %>% 
+#     dplyr::mutate(mutations_filename = fn)
+#   
+#   return(data)
+# }
+# 
+# mutation.outersect.header <- data.frame(outersect = Sys.glob("data/glass/WES/MatchedNormal/variant/intersect/*outersect.vcf")) %>% 
+#   dplyr::mutate(Sample_Name = gsub("^.+/([0-9]+[-][^-]+).+$","\\1",gsub("_","-",outersect))) 
+# 
+# 
+# mutation.outersect <- mutation.outersect.header %>% 
+#   dplyr::pull(`outersect`) %>% 
+#   pbapply::pblapply(parse.outersect) %>%
+#   dplyr::bind_rows() %>% 
+#   dplyr::left_join(mutation.outersect.header, by=c('mutations_filename'='outersect')) %>% 
+#   dplyr::mutate(mutation.id = paste0(chr, ":",start,"_",s1 ,"/",s2)) %>% 
+#   dplyr::group_by(mutation.id) %>% 
+#   dplyr::tally(sort=T) %>% 
+#   dplyr::rename(outsect.n = n)
+# 
+# 
+# stopifnot(duplicated(mutation.outersect$mutation.id) == F) # ensure uniqueness
 
 
 # this one was found 6 times while present in filtered other ones
