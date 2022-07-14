@@ -8,6 +8,10 @@ library(utils)
 library(tidyverse)
 library(rjson)
 
+library(MASS)
+library(fitdistrplus)
+
+
 
 # per fastq file ----
 
@@ -462,9 +466,8 @@ tmp.5 <- data.frame(predictBrain.scores.file = Sys.glob("data/glass/Methylation/
   dplyr::mutate(stats = NULL, predictBrain.scores.file = NULL) %>% 
   tibble::column_to_rownames('Sample_ID') %>% 
   dplyr::mutate_all(as.numeric) %>% 
-  tibble::rownames_to_column('Sample_ID')
-
-
+  tibble::rownames_to_column('Sample_ID') |> 
+  dplyr::mutate(IDH_HG_IDH_ratio = log(A_IDH_HG_cal/A_IDH_cal))
 
 
 
@@ -510,6 +513,48 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'))
 
 rm(tmp)
+
+
+### transform IDH_HG_IDH_ratio from Weibull to normal ----
+
+
+fit.data  <- metadata.glass.per.resection |>  
+  dplyr::filter(!is.na(IDH_HG_IDH_ratio)) |>  
+  dplyr::pull(IDH_HG_IDH_ratio,name='Sample_Name')
+fit.data <- fit.data + abs(min(fit.data)) + 1
+
+fit.g = fitdistrplus::fitdist(fit.data , "gamma")
+fit.ln = fitdistrplus::fitdist(fit.data, "lnorm")
+fit.wb = fitdistrplus::fitdist(fit.data, "weibull")
+
+par(mfrow = c(2, 2))
+plot.legend <- c("gamma", "lognormal", "weibull")
+denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+
+dev.off()
+
+# seems gamma fit
+fit <- fit.g
+rm(fit.g,fit.ln,fit.wb)
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection |> 
+  dplyr::left_join(
+    data.frame(IDH_HG_IDH_ratio.norm = qnorm(pgamma(fit.data, shape = fit$estimate['shape'], rate = fit$estimate['rate'] ))) |> 
+      tibble::rownames_to_column('Sample_Name'),
+    by=c('Sample_Name'='Sample_Name'),suffix = c('',''))
+
+
+# Transformation, no re-ordering
+stopifnot(order(metadata.glass.per.resection$IDH_HG_IDH_ratio) == order(metadata.glass.per.resection$IDH_HG_IDH_ratio.norm))
+
+
+
+
+
 
 
 ## attach WHO classification ----

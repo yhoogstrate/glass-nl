@@ -40,7 +40,74 @@ if(!exists('dge.partially.paired.clusters')) { # obtain DE genes
 
 metadata <- metadata.glass.per.resection %>% 
   dplyr::filter(excluded == F) %>%
-  dplyr::arrange(-lts.up1)
+  dplyr::arrange(-lts.up1) # %>%
+  #dplyr::arrange(mean.DNA.methylation.signature)
+
+
+## add cnv metadata ----
+
+metadata.cnv <- cnv2 %>% 
+  tibble::rownames_to_column('segment.id') %>% 
+  dplyr::mutate(chr = gsub("^([^:]+).+$","\\1",segment.id)) %>% 
+  dplyr::mutate(start = as.numeric(gsub("^[^:]+:([^\\-]+)\\-.+$","\\1",segment.id))) %>% 
+  dplyr::mutate(end = as.numeric(gsub("^[^:]+:[^\\-]+\\-(.+)$","\\1",segment.id)))
+
+
+# MSH4 // loss // chr == "chr1" &  start < 76320465 & end > 76320504 // chr1:76300001-76400000
+metadata.cnv %>% 
+  dplyr::filter(chr == "chr1" &  start < 76320465 & end > 76320504) %>% 
+  dplyr::mutate(label = "MSH4 (loss)")
+
+
+# PDGFRA // gain // chr == "chr4" &  start < 55161200 & end > 55161239
+metadata.cnv %>% 
+  dplyr::filter(chr == "chr4" &  start < 55161200 & end > 55161239) %>% 
+  dplyr::mutate(label = "PDGFRA (gain)")
+
+
+# MASTL/RAB18/MXK // gain // chr == "chr10" &  start < 27830903 & end > 27831192
+metadata.cnv %>% 
+  dplyr::filter(chr == "chr10" &  start < 27830903 & end > 27831192) %>% 
+  dplyr::mutate(label = "")
+
+
+# CDK4 // gain // chr == "chr12" &  start < 58142912 & end > 58143373
+metadata.cnv %>% 
+  dplyr::filter(chr == "chr12" &  start < 58142912 & end > 58143373) %>% 
+  dplyr::mutate(label = "CDK4 (gain)")
+
+
+# CCNE1 // gain // chr == "chr19" &  start < 39502161 & end > 39502733
+metadata.cnv %>% 
+  dplyr::filter(chr == "chr19" & start < 30308415 & end > 30308454) %>% 
+  dplyr::mutate(label = "CCNE1 (gain)")
+
+# RB1 // loss // chr == "chr13" &  start <= 48474808 & end >= 48476242
+metadata.cnv %>% 
+  dplyr::filter(chr == "chr13" &  start <= 48474808 & end >= 48476242) %>% 
+  dplyr::mutate(label = "")
+
+# PTEN // loss // chr == "chr10" &  start < 87863980 & end > 87865285
+metadata.cnv %>% 
+  dplyr::filter(chr == "chr10" &  start < 87863980 & end > 87865285) %>% 
+  dplyr::mutate(label = "")
+
+# TCFL2 // loss // chr == "chr10" &  start < 113033733 & end > 113076506
+metadata.cnv %>% 
+  dplyr::filter(chr == "chr10" &  start < 113033733 & end > 113076506) %>% 
+  dplyr::mutate(label = "")
+
+# MYC // gain // chr == "chr8" &  start < 128752748 & end > 128752787
+metadata.cnv %>% 
+  dplyr::filter(chr == "chr8" &  start < 128752748 & end > 128752787) %>% 
+  dplyr::mutate(label = "")
+
+# SMARCA2 // loss // chr == "chr9" &  start < 2137095 & end > 2138078
+metadata.cnv %>% 
+  dplyr::filter(chr == "chr9" &  start < 2137095 & end > 2138078) %>% 
+  dplyr::mutate(label = "")
+
+## add tp53 / ATRX mut data ----
 
 
 # 2.  ----
@@ -96,8 +163,8 @@ plt.y <- data.frame(gene_uid = rownames(plt)) %>%
 
 
 
-colnames(plt) == rownames(plt.x)
-rownames(plt) == rownames(plt.y)
+stopifnot(colnames(plt) == rownames(plt.x))
+stopifnot(rownames(plt) == rownames(plt.y))
 
 
 

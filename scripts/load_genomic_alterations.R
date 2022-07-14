@@ -467,6 +467,32 @@ mutation.data <- rbind(mutation.data.to %>% dplyr::mutate(type = "TumorOnly"),
 
 ## a. find top hit genes ----
 
+# ref: https://www.nature.com/articles/s41379-021-00778-x.pdf
+
+# Table 3 Survival analysis of gene mutations.
+# Gene Frequency
+# (n = 53)
+# Percentage p value (OS) p value (PFS)
+# ATRX 34 0.642 0.524 0.681
+# TP53 30 0.566 0.020 0.331
+# KMT2D 18 0.340 0.337 0.217
+# FAT1 14 0.264 0.296 0.871
+# POLE 12 0.226 0.395 0.28
+# KMT2C 11 0.208 0.793 0.439
+# PIK3CA 11 0.208 0.274 0.774
+# PTCH1 11 0.208 0.108 0.222
+# PDGFRA 10 0.189 0.279 0.278
+# KMT2B 9 0.170 0.123 0.072
+# NOTCH1 9 0.170 0.787 0.867
+# ROS1 9 0.170 0.094 N/A
+# SPTA1 9 0.170 0.741 0.148
+# MSH6 8 0.151 0.637 0.899
+# SETD2 8 0.151 0.364 0.422
+# NF1 7 0.132 0.100 0.907
+# CIC 6 0.113 0.643 0.614
+# FGFR3 5 0.094 0.295 0.802
+# KEL 5 0.094 0.797 0.884
+
 
 mutation.data %>% 
   dplyr::mutate(pid = gsub("^([0-9]+).+$","\\1",Sample_Name)) %>% 
