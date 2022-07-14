@@ -408,6 +408,97 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 rm(tmp)
 
 
+### transform lts.up1 from gamma to normal ----
+
+
+fit.data  <- metadata.glass.per.resection |>  
+  dplyr::filter(!is.na(lts.up1)) |>  
+  dplyr::pull(lts.up1,name='Sample_Name')
+fit.data <- fit.data + abs(min(fit.data)) + 0.01
+
+fit.g = fitdistrplus::fitdist(fit.data , "gamma")
+fit.ln = fitdistrplus::fitdist(fit.data, "lnorm")
+fit.wb = fitdistrplus::fitdist(fit.data, "weibull")
+
+#print(fit.g)
+
+par(mfrow = c(2, 2))
+plot.legend <- c("gamma", "lognormal", "weibull")
+denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+
+dev.off()
+
+# seems gamma fit
+fit <- fit.g
+rm(fit.g,fit.ln,fit.wb)
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection |> 
+  dplyr::left_join(
+    data.frame(lts.up1.norm = qnorm(pgamma(fit.data, shape = fit$estimate['shape'], rate = fit$estimate['rate'] ))) |> 
+      tibble::rownames_to_column('Sample_Name'),
+    by=c('Sample_Name'='Sample_Name'),suffix = c('',''))
+
+
+# Transformation, no re-ordering
+stopifnot(order(metadata.glass.per.resection$lts.up1) == order(metadata.glass.per.resection$lts.up1.norm))
+
+plot(metadata.glass.per.resection$lts.up1 , metadata.glass.per.resection$lts.up1.norm)
+
+
+rm(fit, fit.data)
+
+
+### transform lts.up2 from gamma to normal ----
+
+
+fit.data  <- metadata.glass.per.resection |>  
+  dplyr::filter(!is.na(lts.up2)) |>  
+  dplyr::pull(lts.up2,name='Sample_Name')
+fit.data <- fit.data + abs(min(fit.data)) + 0.01
+
+fit.g = fitdistrplus::fitdist(fit.data , "gamma")
+fit.ln = fitdistrplus::fitdist(fit.data, "lnorm")
+fit.wb = fitdistrplus::fitdist(fit.data, "weibull")
+
+#print(fit.g)
+
+par(mfrow = c(2, 2))
+plot.legend <- c("gamma", "lognormal", "weibull")
+denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+
+dev.off()
+
+# seems gamma fit
+fit <- fit.g
+rm(fit.g,fit.ln,fit.wb)
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection |> 
+  dplyr::left_join(
+    data.frame(lts.up2.norm = qnorm(pgamma(fit.data, shape = fit$estimate['shape'], rate = fit$estimate['rate'] ))) |> 
+      tibble::rownames_to_column('Sample_Name'),
+    by=c('Sample_Name'='Sample_Name'),suffix = c('',''))
+
+
+# Transformation, no re-ordering
+stopifnot(order(metadata.glass.per.resection$lts.up2) == order(metadata.glass.per.resection$lts.up2.norm))
+
+plot(metadata.glass.per.resection$lts.up1 , metadata.glass.per.resection$lts.up1.norm)
+
+
+rm(fit, fit.data)
+
+
+
+
+
 ## attach methylation identifiers ----
 # sid mismatch: 204808700074_R07C01 - geen heidelberg folder van ge-upload
 

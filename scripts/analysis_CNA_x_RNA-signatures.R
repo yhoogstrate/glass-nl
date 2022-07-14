@@ -142,8 +142,11 @@ sel <- metadata.glass.per.resection %>%
 data2 <- metadata.glass.per.resection %>% 
   dplyr::filter(Sample_Name %in% sel) %>% 
   dplyr::select(Sample_Name, 
-                lts.up1, lts.up2, lts.up3, lts.down, lts.down.a, lts.down.b,
-                methylation.sub.diagnosis,mean.DNA.methylation.signature,
+                lts.up1, lts.up1.norm, 
+                lts.up2, lts.up2.norm, 
+                lts.up3, lts.down, lts.down.a, lts.down.b,
+                methylation.sub.diagnosis,
+                mean.DNA.methylation.signature,mean.DNA.methylation.signature.norm,
                 IDH_HG_IDH_ratio, IDH_HG_IDH_ratio.norm
   ) %>% 
   dplyr::left_join(
@@ -159,8 +162,11 @@ data2 <- metadata.glass.per.resection %>%
 data2.discrete.gain <- metadata.glass.per.resection %>% 
   dplyr::filter(Sample_Name %in% sel) %>% 
   dplyr::select(Sample_Name, 
-                lts.up1, lts.up2, lts.up3, lts.down, lts.down.a, lts.down.b,
-                methylation.sub.diagnosis,mean.DNA.methylation.signature,
+                lts.up1, lts.up1.norm, 
+                lts.up2, lts.up2.norm, 
+                lts.up3, lts.down, lts.down.a, lts.down.b,
+                methylation.sub.diagnosis,
+                mean.DNA.methylation.signature,mean.DNA.methylation.signature.norm,
                 IDH_HG_IDH_ratio, IDH_HG_IDH_ratio.norm
   ) %>% 
   dplyr::left_join(
@@ -179,8 +185,11 @@ data2.discrete.gain <- metadata.glass.per.resection %>%
 data2.discrete.loss <- metadata.glass.per.resection %>% 
   dplyr::filter(Sample_Name %in% sel) %>% 
   dplyr::select(Sample_Name, 
-                lts.up1, lts.up2, lts.up3, lts.down, lts.down.a, lts.down.b,
-                methylation.sub.diagnosis,mean.DNA.methylation.signature,
+                lts.up1, lts.up1.norm, 
+                lts.up2, lts.up2.norm, 
+                lts.up3, lts.down, lts.down.a, lts.down.b,
+                methylation.sub.diagnosis,
+                mean.DNA.methylation.signature,mean.DNA.methylation.signature.norm,
                 IDH_HG_IDH_ratio, IDH_HG_IDH_ratio.norm
   ) %>% 
   dplyr::left_join(
@@ -192,6 +201,7 @@ data2.discrete.loss <- metadata.glass.per.resection %>%
     , by=c('Sample_Name'='Sample_Name')
   ) %>% 
   tibble::column_to_rownames('Sample_Name')
+
 
 
 # check distributions of vars ----
@@ -382,7 +392,7 @@ for(x in colnames(data.discrete.loss)) {
 }
 
 
-# cnv2 ----
+# cnv2 [ttest/gain] ----
 
 
 stats2 <- data.frame(cnv.segment.id = colnames(data2)) %>% 
@@ -390,29 +400,29 @@ stats2 <- data.frame(cnv.segment.id = colnames(data2)) %>%
 
 
 
-## lts.up1 [ttest/gain] ----
+## lts.up1 ----
 
 i <- 0
 stats2$lts.up1.gain.ttest <- NA
 for(x in colnames(data2.discrete.gain)) {
   if(x %in% stats2$cnv.segment.id) {
     #if(i %% 33 == 1) {
-      print(i)
+    print(i)
     
-      tmp <- data2.discrete.gain %>%  dplyr::select(lts.up1, c(x))
-      stopifnot(names(tmp)[2] == x)
-      names(tmp)[1] <- 'expression'
-      names(tmp)[2] <- 'segment'
-      
-      g1 <- tmp %>% dplyr::filter(segment == "gain") %>%  dplyr::pull(expression)
-      g2 <- tmp %>% dplyr::filter(segment == "no-gain") %>%  dplyr::pull(expression)
-      
-      if(length(g1) > 1 & length(g2) > 1) {
-        w <- t.test(g1, g2)
-        stats2$lts.up1.gain.ttest[stats2$cnv.segment.id == x] <- w$p.value
-      }
+    tmp <- data2.discrete.gain %>%  dplyr::select(lts.up1, c(x))
+    stopifnot(names(tmp)[2] == x)
+    names(tmp)[1] <- 'expression'
+    names(tmp)[2] <- 'segment'
+    
+    g1 <- tmp %>% dplyr::filter(segment == "gain") %>%  dplyr::pull(expression)
+    g2 <- tmp %>% dplyr::filter(segment == "no-gain") %>%  dplyr::pull(expression)
+    
+    if(length(g1) > 1 & length(g2) > 1) {
+      w <- t.test(g1, g2)
+      stats2$lts.up1.gain.ttest[stats2$cnv.segment.id == x] <- w$p.value
+    }
     #}
-
+    
     i <- i + 1
   }
 }
@@ -424,20 +434,20 @@ for(x in colnames(data2.discrete.loss)) {
   if(x %in% stats2$cnv.segment.id) {
     #if(i %% 33 == 1) {
     #if(grepl("chr3", x)) {
-      print(i)
-      
-      tmp <- data2.discrete.loss %>%  dplyr::select(lts.up1, c(x))
-      stopifnot(names(tmp)[2] == x)
-      names(tmp)[1] <- 'expression'
-      names(tmp)[2] <- 'segment'
-      
-      g1 <- tmp %>% dplyr::filter(segment == "loss") %>%  dplyr::pull(expression)
-      g2 <- tmp %>% dplyr::filter(segment == "no-loss") %>%  dplyr::pull(expression)
-      
-      if(length(g1) > 1 & length(g2) > 1) {
-        w <- t.test(g1, g2)
-        stats2$lts.up1.loss.ttest[stats2$cnv.segment.id == x] <- w$p.value
-      }
+    print(i)
+    
+    tmp <- data2.discrete.loss %>%  dplyr::select(lts.up1, c(x))
+    stopifnot(names(tmp)[2] == x)
+    names(tmp)[1] <- 'expression'
+    names(tmp)[2] <- 'segment'
+    
+    g1 <- tmp %>% dplyr::filter(segment == "loss") %>%  dplyr::pull(expression)
+    g2 <- tmp %>% dplyr::filter(segment == "no-loss") %>%  dplyr::pull(expression)
+    
+    if(length(g1) > 1 & length(g2) > 1) {
+      w <- t.test(g1, g2)
+      stats2$lts.up1.loss.ttest[stats2$cnv.segment.id == x] <- w$p.value
+    }
     #}
     
     i <- i + 1
@@ -446,6 +456,67 @@ for(x in colnames(data2.discrete.loss)) {
 
 
 saveRDS(stats2, file="cache/stats2.Rds")
+
+
+## lts.up1 [norm] ----
+#' uses lts.up1 transformed to pseudo-normal
+
+
+i <- 0
+stats2$lts.up1.norm.gain.ttest <- NA
+for(x in colnames(data2.discrete.gain)) {
+  if(x %in% stats2$cnv.segment.id) {
+    #if(i %% 33 == 1) {
+    print(i)
+    
+    tmp <- data2.discrete.gain %>%  dplyr::select(lts.up1.norm, c(x))
+    stopifnot(names(tmp)[2] == x)
+    names(tmp)[1] <- 'expression'
+    names(tmp)[2] <- 'segment'
+    
+    g1 <- tmp %>% dplyr::filter(segment == "gain") %>%  dplyr::pull(expression)
+    g2 <- tmp %>% dplyr::filter(segment == "no-gain") %>%  dplyr::pull(expression)
+    
+    if(length(g1) > 1 & length(g2) > 1) {
+      w <- t.test(g1, g2)
+      stats2$lts.up1.norm.gain.ttest[stats2$cnv.segment.id == x] <- w$p.value
+    }
+    #}
+    
+    i <- i + 1
+  }
+}
+
+
+i <- 0
+stats2$lts.up1.norm.loss.ttest <- NA
+for(x in colnames(data2.discrete.loss)) {
+  if(x %in% stats2$cnv.segment.id) {
+    #if(i %% 33 == 1) {
+    #if(grepl("chr3", x)) {
+    print(i)
+    
+    tmp <- data2.discrete.loss %>%  dplyr::select(lts.up1.norm, c(x))
+    stopifnot(names(tmp)[2] == x)
+    names(tmp)[1] <- 'expression'
+    names(tmp)[2] <- 'segment'
+    
+    g1 <- tmp %>% dplyr::filter(segment == "loss") %>%  dplyr::pull(expression)
+    g2 <- tmp %>% dplyr::filter(segment == "no-loss") %>%  dplyr::pull(expression)
+    
+    if(length(g1) > 1 & length(g2) > 1) {
+      w <- t.test(g1, g2)
+      stats2$lts.up1.norm.loss.ttest[stats2$cnv.segment.id == x] <- w$p.value
+    }
+    #}
+    
+    i <- i + 1
+  }
+}
+
+
+saveRDS(stats2, file="cache/stats2.Rds")
+
 
 
 ## IDH_IDH_HG p ratio ----
