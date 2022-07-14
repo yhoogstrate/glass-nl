@@ -515,7 +515,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 rm(tmp)
 
 
-### transform IDH_HG_IDH_ratio from Weibull to normal ----
+### transform IDH_HG_IDH_ratio from gamma to normal ----
 
 
 fit.data  <- metadata.glass.per.resection |>  
@@ -551,7 +551,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection |>
 # Transformation, no re-ordering
 stopifnot(order(metadata.glass.per.resection$IDH_HG_IDH_ratio) == order(metadata.glass.per.resection$IDH_HG_IDH_ratio.norm))
 
-
+rm(fit, fit.data)
 
 
 

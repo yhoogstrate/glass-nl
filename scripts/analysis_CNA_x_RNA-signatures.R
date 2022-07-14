@@ -2,6 +2,12 @@
 
 # see if the CNAs can explain (some part of) the expression of the DGE signatures
 
+# load libs ----
+
+
+library(MASS)
+library(fitdistrplus)
+
 
 # load data ----
 
@@ -155,11 +161,8 @@ data2.discrete.gain <- metadata.glass.per.resection %>%
   dplyr::select(Sample_Name, 
                 lts.up1, lts.up2, lts.up3, lts.down, lts.down.a, lts.down.b,
                 methylation.sub.diagnosis,mean.DNA.methylation.signature,
-                A_IDH_HG_cal,A_IDH_cal,
+                IDH_HG_IDH_ratio, IDH_HG_IDH_ratio.norm
   ) %>% 
-  dplyr::mutate(IDH_HG_IDH_ratio = log(A_IDH_HG_cal/A_IDH_cal)) %>% 
-  dplyr::mutate(A_IDH_HG_cal = NULL) %>% 
-  dplyr::mutate(A_IDH_cal = NULL) %>%
   dplyr::left_join(
     cnv2 %>% 
       t() %>% 
@@ -178,11 +181,8 @@ data2.discrete.loss <- metadata.glass.per.resection %>%
   dplyr::select(Sample_Name, 
                 lts.up1, lts.up2, lts.up3, lts.down, lts.down.a, lts.down.b,
                 methylation.sub.diagnosis,mean.DNA.methylation.signature,
-                A_IDH_HG_cal,A_IDH_cal,
+                IDH_HG_IDH_ratio, IDH_HG_IDH_ratio.norm
   ) %>% 
-  dplyr::mutate(IDH_HG_IDH_ratio = log(A_IDH_HG_cal/A_IDH_cal)) %>% 
-  dplyr::mutate(A_IDH_HG_cal = NULL) %>% 
-  dplyr::mutate(A_IDH_cal = NULL) %>%
   dplyr::left_join(
     cnv2 %>% 
       t() %>% 
@@ -196,8 +196,6 @@ data2.discrete.loss <- metadata.glass.per.resection %>%
 
 # check distributions of vars ----
 
-library(MASS)
-library(fitdistrplus)
 
 
 tmp.meth <- metadata.glass.per.resection %>%
