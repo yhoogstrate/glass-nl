@@ -167,7 +167,9 @@ library(tidyverse)
 
 # 1. outersects ----
 
-# excluded because of some reason
+# excluded because it remains unclear what's in it
+# i thought these were only mutations that were discrepant between the two VAF
+# callers but later on this did not seem valid
 
 # parse.outersect <- function(fn) {
 #   #fn <- 'data/glass/WES/MatchedNormal/variant/intersect/113_R2_I2_outersect.vcf'
@@ -833,6 +835,7 @@ stopifnot(rownames(cnv) == rownames(cnv.metadata))
 
 # II. load CNVs [type-2] ----
 
+# dit was volgens mij gelateerd aan de methylerings array data
 tmp <- read.table('data/glass/WES/copynumber_profiles/100kbp-called_VAFPurity.igv',header=T, sep = "\t") %>% 
   dplyr::mutate(chromosome = paste0('chr', chromosome)) %>% 
   dplyr::mutate(feature = paste0('chr', feature)) %>% 
