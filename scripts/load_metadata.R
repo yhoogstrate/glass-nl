@@ -64,7 +64,7 @@ parse_fastp_json_files <- function(json_file) {
 metadata.glass.per.fastq <- data.frame(fastp.json = Sys.glob("data/glass/RNAseq/fastq-clean/*.json")) %>% 
   #head(n=25) %>% 
   dplyr::mutate(genomescan.sid = gsub("^.+/[^_]+_([^_]+)_.+$","\\1", fastp.json)) %>% 
-  dplyr::mutate(json.stats = lapply(fastp.json, parse_fastp_json_files)) %>% 
+  dplyr::mutate(json.stats = pbapply::pblapply(fastp.json, parse_fastp_json_files)) %>% 
   dplyr::mutate(tmp = map(json.stats, ~ data.frame(t(.)))) %>%  unnest(tmp) %>% dplyr::mutate(json.stats = NULL) %>% as.data.frame %>% 
   dplyr::mutate(fastp.avg.duplicates.per.read = as.numeric(fastp.avg.duplicates.per.read)) %>% 
   dplyr::mutate(fastp.percentage.a = as.numeric(fastp.percentage.a)) %>% 
@@ -167,7 +167,7 @@ parse_star_log_final_out <- function(star_log_final_out) {
 tmp <- data.frame(star.log.final.out = Sys.glob("data/glass/RNAseq/alignments/alignments-new/*/Log.final.out")) %>% 
   dplyr::mutate(genomescan.sid =  gsub("^.+new/([^/]+)/Log.+$","\\1", star.log.final.out)) %>%
   dplyr::arrange(genomescan.sid) %>% 
-  dplyr::mutate(stats = lapply(star.log.final.out, parse_star_log_final_out)) %>% 
+  dplyr::mutate(stats = pbapply::pblapply(star.log.final.out, parse_star_log_final_out)) %>% 
   mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
   tidyr::unnest(tmp) %>%
   dplyr::mutate(stats = NULL) %>%
@@ -206,7 +206,7 @@ parse_idxstats <- function(idxstats_file) {
 tmp <- data.frame(idxstats = Sys.glob("output/tables/qc/idxstats/*.txt")) %>% 
   dplyr::mutate(genomescan.sid =  gsub("^.+/([^/]+).samtools.idxstats.txt$","\\1", idxstats)   ) %>%
   dplyr::arrange(genomescan.sid) %>% 
-  dplyr::mutate(stats = lapply(idxstats, parse_idxstats)) %>% 
+  dplyr::mutate(stats = pbapply::pblapply(idxstats, parse_idxstats)) %>% 
   mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
   tidyr::unnest(tmp) %>%
   dplyr::mutate(stats = NULL) %>%
@@ -399,6 +399,9 @@ rm(tmp)
 
 ## attach longitudinal transcriptional signatures ----
 
+# up.1 = cell cycling
+# up.2 = COL/pericyte + CD248
+
 
 tmp <- readRDS('cache/transcriptional.signatures.Rds')
 
@@ -452,6 +455,19 @@ plot(metadata.glass.per.resection$lts.up1 , metadata.glass.per.resection$lts.up1
 rm(fit, fit.data)
 
 
+
+metadata.glass.per.resection <- metadata.glass.per.resection |> 
+  dplyr::mutate(lts.up1.norm = ifelse(lts.up1.norm < -3, NA, lts.up1.norm)) #' there is one excessive outlier, troubling our statistics; plot(sort(data$lts.up1.norm)) %>% 
+
+
+#' there is one excessive outlier, troubling our statistics;
+metadata.glass.per.resection <- metadata.glass.per.resection |> 
+  dplyr::mutate(lts.up1.norm = ifelse(lts.up1.norm < -3, NA, lts.up1.norm))  
+
+plot(sort(metadata.glass.per.resection$lts.up1.norm))
+
+
+
 ### transform lts.up2 from gamma to normal ----
 
 
@@ -496,6 +512,11 @@ plot(metadata.glass.per.resection$lts.up1 , metadata.glass.per.resection$lts.up1
 rm(fit, fit.data)
 
 
+#' there is one excessive outlier, troubling our statistics;
+metadata.glass.per.resection <- metadata.glass.per.resection |> 
+  dplyr::mutate(lts.up2.norm = ifelse(lts.up2.norm < -3, NA, lts.up2.norm))  
+
+plot(sort(metadata.glass.per.resection$lts.up2.norm))
 
 
 
@@ -540,7 +561,7 @@ parse_predictbrain_csv <- function(file, suffix) {
 
 tmp.4 <- data.frame(predictBrain.scores.file = Sys.glob("data/glass/Methylation/Heidelberg/Heidelberg_unzip/*/predictBrain_v2.1/*_scores.csv")) %>%
   dplyr::mutate(Sample_ID = gsub("^.+_v2.1/([^/]+)_scores.csv$","\\1", predictBrain.scores.file)) %>% 
-  dplyr::mutate(stats = lapply(predictBrain.scores.file, parse_predictbrain_csv, suffix='')) %>% 
+  dplyr::mutate(stats = pbapply::pblapply(predictBrain.scores.file, parse_predictbrain_csv, suffix='')) %>% 
   mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
   tidyr::unnest(tmp) %>% 
   dplyr::mutate(stats = NULL, predictBrain.scores.file = NULL) %>% 
@@ -551,7 +572,7 @@ tmp.4 <- data.frame(predictBrain.scores.file = Sys.glob("data/glass/Methylation/
 
 tmp.5 <- data.frame(predictBrain.scores.file = Sys.glob("data/glass/Methylation/Heidelberg/Heidelberg_unzip/*/predictBrain_v2.1/*_scores_cal.csv")) %>%
   dplyr::mutate(Sample_ID = gsub("^.+_v2.1/([^/]+)_scores_cal.csv$","\\1", predictBrain.scores.file)) %>% 
-  dplyr::mutate(stats = lapply(predictBrain.scores.file, parse_predictbrain_csv, suffix='_cal')) %>% 
+  dplyr::mutate(stats = pbapply::pblapply(predictBrain.scores.file, parse_predictbrain_csv, suffix='_cal')) %>% 
   mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
   tidyr::unnest(tmp) %>% 
   dplyr::mutate(stats = NULL, predictBrain.scores.file = NULL) %>% 
@@ -629,7 +650,7 @@ dev.off()
 
 # seems gamma fit
 fit <- fit.g
-rm(fit.g,fit.ln,fit.wb)
+rm(fit.g,fit.ln,fit.wb,plt.legend)
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection |> 
