@@ -56,16 +56,15 @@ parse_fastp_json_files <- function(json_file) {
   out$g <- NULL
   out$n <- NULL
   
-  return(out)
+  return(as.data.frame(out)) # as.data.frame for simple unnesting :)
 }
 
 
 
 metadata.glass.per.fastq <- data.frame(fastp.json = Sys.glob("data/glass/RNAseq/fastq-clean/*.json")) %>% 
-  #head(n=25) %>% 
   dplyr::mutate(genomescan.sid = gsub("^.+/[^_]+_([^_]+)_.+$","\\1", fastp.json)) %>% 
   dplyr::mutate(json.stats = pbapply::pblapply(fastp.json, parse_fastp_json_files)) %>% 
-  dplyr::mutate(tmp = map(json.stats, ~ data.frame(t(.)))) %>%  unnest(tmp) %>% dplyr::mutate(json.stats = NULL) %>% as.data.frame %>% 
+  tidyr::unnest(json.stats) %>%
   dplyr::mutate(fastp.avg.duplicates.per.read = as.numeric(fastp.avg.duplicates.per.read)) %>% 
   dplyr::mutate(fastp.percentage.a = as.numeric(fastp.percentage.a)) %>% 
   dplyr::mutate(fastp.percentage.c = as.numeric(fastp.percentage.c)) %>% 
@@ -158,21 +157,17 @@ parse_star_log_final_out <- function(star_log_final_out) {
     'star.pct.uniquely.mapped.reads' = tmp %>% dplyr::filter(grepl('Uniquely mapped reads %',V1)) %>% dplyr::mutate(V2= gsub('%','',V2)) %>% dplyr::pull(V2) %>%  as.numeric
   )
 
-  return(out)
+  return(as.data.frame(out))
 }
 
 
 
 
-tmp <- data.frame(star.log.final.out = Sys.glob("data/glass/RNAseq/alignments/alignments-new/*/Log.final.out")) %>% 
-  dplyr::mutate(genomescan.sid =  gsub("^.+new/([^/]+)/Log.+$","\\1", star.log.final.out)) %>%
-  dplyr::arrange(genomescan.sid) %>% 
-  dplyr::mutate(stats = pbapply::pblapply(star.log.final.out, parse_star_log_final_out)) %>% 
-  mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
-  tidyr::unnest(tmp) %>%
-  dplyr::mutate(stats = NULL) %>%
-  as.data.frame %>% 
-  dplyr::mutate_if(colnames(.) %in% c('star.log.final.out', 'genomescan.sid') == F , as.numeric) %>% 
+tmp <- data.frame(star.log.final.out = Sys.glob("data/glass/RNAseq/alignments/alignments-new/*/Log.final.out")) |>  
+  dplyr::mutate(genomescan.sid =  gsub("^.+new/([^/]+)/Log.+$","\\1", star.log.final.out)) |> 
+  dplyr::arrange(genomescan.sid) |> 
+  dplyr::mutate(stats = pbapply::pblapply(star.log.final.out, parse_star_log_final_out)) |> 
+  tidyr::unnest(stats) |> 
   dplyr::mutate(star.log.final.out = NULL)
 
 
@@ -199,7 +194,7 @@ parse_idxstats <- function(idxstats_file) {
   names(out) <- tmp$V1
   out <- as.list(out)
   
-  return(out)
+  return(as.data.frame(out))
 }
 
 
@@ -207,9 +202,9 @@ tmp <- data.frame(idxstats = Sys.glob("output/tables/qc/idxstats/*.txt")) %>%
   dplyr::mutate(genomescan.sid =  gsub("^.+/([^/]+).samtools.idxstats.txt$","\\1", idxstats)   ) %>%
   dplyr::arrange(genomescan.sid) %>% 
   dplyr::mutate(stats = pbapply::pblapply(idxstats, parse_idxstats)) %>% 
-  mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
-  tidyr::unnest(tmp) %>%
-  dplyr::mutate(stats = NULL) %>%
+  #mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
+  tidyr::unnest(stats) %>%
+  #dplyr::mutate(stats = NULL) %>%
   as.data.frame %>% 
   dplyr::mutate_if(colnames(.) %in% c('idxstats', 'genomescan.sid') == F , as.numeric) %>% 
   dplyr::mutate(idxstats = NULL, `X.` = NULL)  %>% 
@@ -556,15 +551,15 @@ parse_predictbrain_csv <- function(file, suffix) {
   
   names(out) <- paste0(names(out), suffix)
   
-  return(out)
+  return(as.data.frame(out))
 }
 
 tmp.4 <- data.frame(predictBrain.scores.file = Sys.glob("data/glass/Methylation/Heidelberg/Heidelberg_unzip/*/predictBrain_v2.1/*_scores.csv")) %>%
   dplyr::mutate(Sample_ID = gsub("^.+_v2.1/([^/]+)_scores.csv$","\\1", predictBrain.scores.file)) %>% 
   dplyr::mutate(stats = pbapply::pblapply(predictBrain.scores.file, parse_predictbrain_csv, suffix='')) %>% 
-  mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
-  tidyr::unnest(tmp) %>% 
-  dplyr::mutate(stats = NULL, predictBrain.scores.file = NULL) %>% 
+  #mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
+  tidyr::unnest(stats) %>% 
+  dplyr::mutate(predictBrain.scores.file = NULL) %>% 
   tibble::column_to_rownames('Sample_ID') %>% 
   dplyr::mutate_all(as.numeric) %>% 
   tibble::rownames_to_column('Sample_ID')
@@ -573,9 +568,9 @@ tmp.4 <- data.frame(predictBrain.scores.file = Sys.glob("data/glass/Methylation/
 tmp.5 <- data.frame(predictBrain.scores.file = Sys.glob("data/glass/Methylation/Heidelberg/Heidelberg_unzip/*/predictBrain_v2.1/*_scores_cal.csv")) %>%
   dplyr::mutate(Sample_ID = gsub("^.+_v2.1/([^/]+)_scores_cal.csv$","\\1", predictBrain.scores.file)) %>% 
   dplyr::mutate(stats = pbapply::pblapply(predictBrain.scores.file, parse_predictbrain_csv, suffix='_cal')) %>% 
-  mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
-  tidyr::unnest(tmp) %>% 
-  dplyr::mutate(stats = NULL, predictBrain.scores.file = NULL) %>% 
+  #mutate(tmp = map(stats, ~ data.frame(t(.)))) %>%
+  tidyr::unnest(stats) %>% 
+  dplyr::mutate(predictBrain.scores.file = NULL) %>% 
   tibble::column_to_rownames('Sample_ID') %>% 
   dplyr::mutate_all(as.numeric) %>% 
   tibble::rownames_to_column('Sample_ID') |> 
