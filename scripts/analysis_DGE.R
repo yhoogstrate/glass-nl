@@ -131,18 +131,18 @@ if(file.exists("cache/res.paired.a.exon.Rds")) {
   
   
   stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
-  saveRDS(tmp.data, "cache/res.paired.a.exon.design.Rds")
+  #saveRDS(tmp.data, "cache/res.paired.a.exon.design.Rds")
   
   
   
-  dds.paired.a.exon <- DESeqDataSetFromMatrix(countData = tmp.data,
+  dds.paired.a.exon <- DESeq2::DESeqDataSetFromMatrix(countData = tmp.data,
                                 colData = tmp.metadata,
                                 design= ~ patient.correction.id + Sample_Type)
   
   
   
-  dds.paired.a.exon <- DESeq(dds.paired.a.exon)
-  res.paired.a.exon <- results(dds.paired.a.exon) %>% 
+  dds.paired.a.exon <- DESeq2::DESeq(dds.paired.a.exon)
+  res.paired.a.exon <- DESeq2::results(dds.paired.a.exon) %>% 
     as.data.frame() %>% 
     dplyr::filter(!is.na(padj)) %>% 
     dplyr::arrange(pvalue,padj) %>% 
@@ -236,7 +236,7 @@ rm(res.paired.a.exon) # cleanup, is joined to gene metadata anyway
 # 
 
 
-## 2a [+co-variates regress] ----
+## 2a [+co-variates regress WHO2021] ----
 
 
 if(file.exists("cache/res.paired.a.covar.regression.Rds")) {
@@ -320,6 +320,90 @@ expression.glass.covar.regression.metadata <- expression.glass.covar.regression.
 
 rm(res.paired.a.covar.regression) # cleanup, is joined to gene metadata anyway
 
+
+## 2b [+co-variates regress Heidelberg-Meth] ----
+
+
+if(file.exists("cache/res.paired.b.covar.regression.Rds")) {
+  
+  # load from cache
+  print("Loading 'cache/res.paired.b.covar.regression.Rds' from cache")
+  res.paired.b.covar.regression <- readRDS("cache/res.paired.b.covar.regression.Rds")
+  res.paired.b.covar.regression.design <- readRDS("cache/res.paired.b.covar.regression.design.Rds")
+  
+} else {
+  
+  tmp.metadata <- metadata.glass.per.patient %>%
+    dplyr::select(genomescan.sid.I, genomescan.sid.R) %>%
+    tidyr::pivot_longer(cols=c('genomescan.sid.I', 'genomescan.sid.R')) %>%
+    tidyr::drop_na(value) %>%
+    dplyr::mutate(name=NULL) %>%
+    dplyr::rename(genomescan.sid = value) %>%
+    dplyr::left_join(metadata.glass.per.resection, by=c('genomescan.sid'='genomescan.sid')) %>%
+    dplyr::left_join(metadata.glass.per.patient %>% dplyr::select(GLASS_ID, patient.correction.id), by=c('GLASS_ID'='GLASS_ID')) %>% 
+    dplyr::arrange(Sample_Type, genomescan.sid) %>%
+    dplyr::mutate(status.chemo = factor(ifelse(is.na(chemotherapy),"no.chemo","chemo"),levels=c("no.chemo","chemo"))) %>% 
+    dplyr::mutate(status.radio = factor(ifelse(is.na(radiotherapy),"no.radio","radio"),levels=c("no.radio","radio"))) %>% 
+    dplyr::mutate(status.grading = case_when(
+      methylation.sub.diagnosis == "A_IDH" ~ "Recurrent.Low.Grade",
+      methylation.sub.diagnosis == "A_IDH_HG" ~ "Recurrent.High.Grade",
+      T ~ "?"
+    )) %>%
+    dplyr::filter(status.grading %in% c("Recurrent.Low.Grade", "Recurrent.High.Grade")) %>% 
+    dplyr::mutate(status.grading = factor(status.grading, levels=c("Recurrent.Low.Grade","Recurrent.High.Grade")))
+  
+  
+  tmp.data <- expression.glass.exon %>%
+    dplyr::select(all_of( tmp.metadata$genomescan.sid ))
+  
+  
+  stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
+  saveRDS(tmp.metadata, "cache/res.paired.b.covar.regression.design.Rds")
+  saveRDS(tmp.data, "cache/res.paired.b.covar.regression.data.Rds")
+  
+  
+  
+  dds.paired.b.covar.regression <- DESeq2::DESeqDataSetFromMatrix(countData = tmp.data,
+                                                          colData = tmp.metadata,
+                                                          design= ~ patient.correction.id + status.chemo + status.radio + status.grading + Sample_Type)
+  
+  
+  
+  dds.paired.b.covar.regression <- DESeq2::DESeq(dds.paired.b.covar.regression)
+  res.paired.b.covar.regression <- coef(dds.paired.b.covar.regression) %>% 
+    as.data.frame() %>% 
+    dplyr::select(c("status.chemo_chemo_vs_no.chemo", "status.radio_radio_vs_no.radio", "status.grading_Recurrent.High.Grade_vs_Recurrent.Low.Grade", "Sample_Type_recurrent_vs_initial")) %>% 
+    tibble::rownames_to_column('gene_uid') 
+  #dplyr::left_join(expression.glass.exon.metadata %>% dplyr::select(gene_uid, gene_name, gene_type, gene_strand, gene_chr, gene_chr_center_loc, gene_loc),by=c('gene_uid'='gene_uid'))
+  
+  
+  saveRDS(res.paired.b.covar.regression, "cache/res.paired.b.covar.regression.Rds")
+}
+
+
+# n sign
+res.paired.b.covar.regression %>%
+  dplyr::filter(abs(log2FoldChange) > 0.75) %>% 
+  dplyr::filter(padj < 0.01) %>% 
+  dim
+
+
+
+# append results
+expression.glass.covar.regression.metadata <- expression.glass.covar.regression.metadata %>% 
+  dplyr::left_join(
+    res.paired.b.covar.regression %>% 
+      dplyr::select(gene_uid, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>% 
+      tibble::column_to_rownames('gene_uid') %>% 
+      `colnames<-`(paste0(colnames(.),".partially.paired.covar.regression")) %>% 
+      tibble::rownames_to_column('gene_uid'),
+    by=c('gene_uid'='gene_uid'),suffix = c("", "")
+  ) 
+
+
+
+
+rm(res.paired.b.covar.regression) # cleanup, is joined to gene metadata anyway
 
 
 

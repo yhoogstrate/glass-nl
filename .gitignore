@@ -7,3 +7,4 @@ data/*.gtf
 *.RData
 /tmp/*.bed
 *.Rds
+*.pdf

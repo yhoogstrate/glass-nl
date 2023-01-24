@@ -395,309 +395,419 @@ for(x in colnames(data.discrete.loss)) {
 # cnv2 [ttest/gain] ----
 
 
+fun.ttest <- function(labels, values) {
+  sel <- !is.na(values)
+  
+  labels <- labels[sel]
+  values <- values[sel]
+  
+  cond1 <- values[labels %in% c("no-gain","no-loss")]
+  cond2 <- values[labels %in% c("gain","loss")]
+  
+  if(length(cond1) >= 2 & length(cond2) >= 2) {
+    return(t.test(cond1, cond2,var.equal=T)$p.value)
+  } else {
+    return(NA)
+  }
+}
+
+
+
 stats2 <- data.frame(cnv.segment.id = colnames(data2)) %>% 
   dplyr::filter(grepl("^chr", cnv.segment.id))
 
 
 
 ## lts.up1 ----
+### gain ----
 
-i <- 0
-stats2$lts.up1.gain.ttest <- NA
-for(x in colnames(data2.discrete.gain)) {
-  if(x %in% stats2$cnv.segment.id) {
-    #if(i %% 33 == 1) {
-    print(i)
-    
-    tmp <- data2.discrete.gain %>%  dplyr::select(lts.up1, c(x))
-    stopifnot(names(tmp)[2] == x)
-    names(tmp)[1] <- 'expression'
-    names(tmp)[2] <- 'segment'
-    
-    g1 <- tmp %>% dplyr::filter(segment == "gain") %>%  dplyr::pull(expression)
-    g2 <- tmp %>% dplyr::filter(segment == "no-gain") %>%  dplyr::pull(expression)
-    
-    if(length(g1) > 1 & length(g2) > 1) {
-      w <- t.test(g1, g2)
-      stats2$lts.up1.gain.ttest[stats2$cnv.segment.id == x] <- w$p.value
-    }
-    #}
-    
-    i <- i + 1
-  }
-}
+tmp <- data2.discrete.gain |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.gain$lts.up1) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(lts.up1.gain.ttest = pvals)
 
 
-i <- 0
-stats2$lts.up1.loss.ttest <- NA
-for(x in colnames(data2.discrete.loss)) {
-  if(x %in% stats2$cnv.segment.id) {
-    #if(i %% 33 == 1) {
-    #if(grepl("chr3", x)) {
-    print(i)
-    
-    tmp <- data2.discrete.loss %>%  dplyr::select(lts.up1, c(x))
-    stopifnot(names(tmp)[2] == x)
-    names(tmp)[1] <- 'expression'
-    names(tmp)[2] <- 'segment'
-    
-    g1 <- tmp %>% dplyr::filter(segment == "loss") %>%  dplyr::pull(expression)
-    g2 <- tmp %>% dplyr::filter(segment == "no-loss") %>%  dplyr::pull(expression)
-    
-    if(length(g1) > 1 & length(g2) > 1) {
-      w <- t.test(g1, g2)
-      stats2$lts.up1.loss.ttest[stats2$cnv.segment.id == x] <- w$p.value
-    }
-    #}
-    
-    i <- i + 1
-  }
-}
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
 
 
-saveRDS(stats2, file="cache/stats2.Rds")
+# plot(stats2$lts.up1.gain.ttest , stats2$lts.up1.gain.ttest2)
+# stats2 |>
+#   dplyr::filter(lts.up1.gain.ttest != lts.up1.gain.ttest2)
+
+
+
+
+### loss ----
+
+tmp <- data2.discrete.loss |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.loss$lts.up1) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(lts.up1.loss.ttest = pvals)
+
+
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
+
+
+# plot(stats2$lts.up1.loss.ttest , stats2$lts.up1.loss.ttest2,col = round(runif(1)*4)+1)
+# stats2 |>
+#   dplyr::filter(lts.up1.loss.ttest != lts.up1.loss.ttest2)
+
+
 
 
 ## lts.up1 [norm] ----
 #' uses lts.up1 transformed to pseudo-normal
+### gain ----
+
+tmp <- data2.discrete.gain |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.gain$lts.up1.norm) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(lts.up1.norm.gain.ttest = pvals)
 
 
-i <- 0
-stats2$lts.up1.norm.gain.ttest <- NA
-for(x in colnames(data2.discrete.gain)) {
-  if(x %in% stats2$cnv.segment.id) {
-    #if(i %% 33 == 1) {
-    print(i)
-    
-    tmp <- data2.discrete.gain %>%  dplyr::select(lts.up1.norm, c(x))
-    stopifnot(names(tmp)[2] == x)
-    names(tmp)[1] <- 'expression'
-    names(tmp)[2] <- 'segment'
-    
-    g1 <- tmp %>% dplyr::filter(segment == "gain") %>%  dplyr::pull(expression)
-    g2 <- tmp %>% dplyr::filter(segment == "no-gain") %>%  dplyr::pull(expression)
-    
-    if(length(g1) > 1 & length(g2) > 1) {
-      w <- t.test(g1, g2)
-      stats2$lts.up1.norm.gain.ttest[stats2$cnv.segment.id == x] <- w$p.value
-    }
-    #}
-    
-    i <- i + 1
-  }
-}
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
 
 
-i <- 0
-stats2$lts.up1.norm.loss.ttest <- NA
-for(x in colnames(data2.discrete.loss)) {
-  if(x %in% stats2$cnv.segment.id) {
-    #if(i %% 33 == 1) {
-    #if(grepl("chr3", x)) {
-    print(i)
-    
-    tmp <- data2.discrete.loss %>%  dplyr::select(lts.up1.norm, c(x))
-    stopifnot(names(tmp)[2] == x)
-    names(tmp)[1] <- 'expression'
-    names(tmp)[2] <- 'segment'
-    
-    g1 <- tmp %>% dplyr::filter(segment == "loss") %>%  dplyr::pull(expression)
-    g2 <- tmp %>% dplyr::filter(segment == "no-loss") %>%  dplyr::pull(expression)
-    
-    if(length(g1) > 1 & length(g2) > 1) {
-      w <- t.test(g1, g2)
-      stats2$lts.up1.norm.loss.ttest[stats2$cnv.segment.id == x] <- w$p.value
-    }
-    #}
-    
-    i <- i + 1
-  }
-}
+# plot(stats2$lts.up1.norm.gain.ttest , stats2$lts.up1.norm.gain.ttest2,col = round(runif(1)*4)+1)
+# stats2 |>
+#   dplyr::filter(lts.up1.norm.gain.ttest != lts.up1.norm.gain.ttest2)
 
 
-saveRDS(stats2, file="cache/stats2.Rds")
+### loss ----
+
+tmp <- data2.discrete.loss |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.loss$lts.up1.norm) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(lts.up1.norm.loss.ttest = pvals)
+
+
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
+
+
+
+# plot(stats2$lts.up1.norm.loss.ttest , stats2$lts.up1.norm.loss.ttest2,col = round(runif(1)*4)+1)
+# stats2 |>
+#   dplyr::filter(lts.up1.norm.loss.ttest != lts.up1.norm.loss.ttest2)
+
+
+
+
+## lts.up2 ----
+### gain ----
+
+tmp <- data2.discrete.gain |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.gain$lts.up2) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(lts.up2.gain.ttest = pvals)
+
+
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
+
+
+
+
+### loss ----
+
+tmp <- data2.discrete.loss |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.loss$lts.up2) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(lts.up2.loss.ttest = pvals)
+
+
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
+
+
+
+
+## lts.up2 [norm] ----
+#' uses lts.up2 transformed to pseudo-normal
+### gain ----
+
+tmp <- data2.discrete.gain |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.gain$lts.up2.norm) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(lts.up2.norm.gain.ttest = pvals)
+
+
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
+
+
+### loss ----
+
+tmp <- data2.discrete.loss |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.loss$lts.up2.norm) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(lts.up2.norm.loss.ttest = pvals)
+
+
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
 
 
 
 ## IDH_IDH_HG p ratio ----
+### gain ----
 
-i <- 0
-stats2$IDH_HG_IDH_ratio.gain.ttest <- NA
-for(x in colnames(data2.discrete.gain)) {
-  if(x %in% stats2$cnv.segment.id) {
-    if(i %% 33 == 1) {
-      print(paste0(i, " -> ", round(i / length(stats2$cnv.segment.id) * 100,2), "%"))
-    }
-    
-    tmp <- data2.discrete.gain %>%  dplyr::select(IDH_HG_IDH_ratio, c(x))
-    stopifnot(names(tmp)[2] == x)
-    names(tmp)[1] <- 'expression'
-    names(tmp)[2] <- 'segment'
-    
-    g1 <- tmp %>% dplyr::filter(segment == "gain") %>%  dplyr::pull(expression)
-    g2 <- tmp %>% dplyr::filter(segment == "no-gain") %>%  dplyr::pull(expression)
-    
-    if(length(g1) > 1 & length(g2) > 1) {
-      w <- t.test(g1, g2)
-      stats2$IDH_HG_IDH_ratio.gain.ttest[stats2$cnv.segment.id == x] <- w$p.value
-    }
-    
-    i <- i + 1
-  }
-}
+tmp <- data2.discrete.gain |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.gain$IDH_HG_IDH_ratio) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(IDH_HG_IDH_ratio.gain.ttest = pvals)
 
 
-i <- 0
-stats2$IDH_HG_IDH_ratio.loss.ttest <- NA
-for(x in colnames(data2.discrete.loss)) {
-  if(x %in% stats2$cnv.segment.id) {
-    #if(i %% 133 == 1) {
-    if(i %% 33 == 1) {
-      print(paste0(i, " -> ", round(i / length(stats2$cnv.segment.id) * 100,2), "%"))
-    }
-    
-    tmp <- data2.discrete.loss %>%  dplyr::select(IDH_HG_IDH_ratio, c(x))
-    stopifnot(names(tmp)[2] == x)
-    names(tmp)[1] <- 'expression'
-    names(tmp)[2] <- 'segment'
-    
-    g1 <- tmp %>% dplyr::filter(segment == "loss") %>%  dplyr::pull(expression)
-    g2 <- tmp %>% dplyr::filter(segment == "no-loss") %>%  dplyr::pull(expression)
-    
-    if(length(g1) > 1 & length(g2) > 1) {
-      w <- t.test(g1, g2)
-      stats2$IDH_HG_IDH_ratio.loss.ttest[stats2$cnv.segment.id == x] <- w$p.value
-    }
-    
-    i <- i + 1
-  }
-}
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
 
 
-saveRDS(stats2, file="cache/stats2.Rds")
+# plot(stats2$IDH_HG_IDH_ratio.gain.ttest , stats2$IDH_HG_IDH_ratio.gain.ttest2,col = round(runif(1)*4)+1)
+# stats2 |>
+#   dplyr::filter(IDH_HG_IDH_ratio.gain.ttest != IDH_HG_IDH_ratio.gain.ttest2)
+
+
+### loss ----
+
+tmp <- data2.discrete.loss |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.loss$IDH_HG_IDH_ratio) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(IDH_HG_IDH_ratio.loss.ttest = pvals)
+
+
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
+
+
+# plot(stats2$IDH_HG_IDH_ratio.loss.ttest , stats2$IDH_HG_IDH_ratio.loss.ttest2,col = round(runif(1)*4)+1)
+# stats2 |>
+#   dplyr::filter(IDH_HG_IDH_ratio.loss.ttest != IDH_HG_IDH_ratio.loss.ttest2)
 
 
 
 ## IDH_IDH_HG p ratio [norm] ----
+### gain ----
 
-i <- 0
-stats2$IDH_HG_IDH_ratio.norm.gain.ttest <- NA
-for(x in colnames(data2.discrete.gain)) {
-  if(x %in% stats2$cnv.segment.id) {
-    if(i %% 33 == 1) {
-      print(paste0(i, " -> ", round(i / length(stats2$cnv.segment.id) * 100,2), "%"))
-    }
-    
-    tmp <- data2.discrete.gain %>%  dplyr::select(IDH_HG_IDH_ratio.norm, c(x))
-    stopifnot(names(tmp)[2] == x)
-    names(tmp)[1] <- 'expression'
-    names(tmp)[2] <- 'segment'
-    
-    g1 <- tmp %>% dplyr::filter(segment == "gain") %>%  dplyr::pull(expression)
-    g2 <- tmp %>% dplyr::filter(segment == "no-gain") %>%  dplyr::pull(expression)
-    
-    if(length(g1) > 1 & length(g2) > 1) {
-      w <- t.test(g1, g2)
-      stats2$IDH_HG_IDH_ratio.norm.gain.ttest[stats2$cnv.segment.id == x] <- w$p.value
-    }
-    
-    i <- i + 1
-  }
-}
+tmp <- data2.discrete.gain |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.gain$IDH_HG_IDH_ratio.norm) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(IDH_HG_IDH_ratio.norm.gain.ttest = pvals)
 
 
-i <- 0
-stats2$IDH_HG_IDH_ratio.norm.loss.ttest <- NA
-for(x in colnames(data2.discrete.loss)) {
-  if(x %in% stats2$cnv.segment.id) {
-    #if(i %% 133 == 1) {
-    if(i %% 33 == 1) {
-      print(paste0(i, " -> ", round(i / length(stats2$cnv.segment.id) * 100,2), "%"))
-    }
-    
-    tmp <- data2.discrete.loss %>%  dplyr::select(IDH_HG_IDH_ratio.norm, c(x))
-    stopifnot(names(tmp)[2] == x)
-    names(tmp)[1] <- 'expression'
-    names(tmp)[2] <- 'segment'
-    
-    g1 <- tmp %>% dplyr::filter(segment == "loss") %>%  dplyr::pull(expression)
-    g2 <- tmp %>% dplyr::filter(segment == "no-loss") %>%  dplyr::pull(expression)
-    
-    if(length(g1) > 1 & length(g2) > 1) {
-      w <- t.test(g1, g2)
-      stats2$IDH_HG_IDH_ratio.norm.loss.ttest[stats2$cnv.segment.id == x] <- w$p.value
-    }
-    
-    i <- i + 1
-  }
-}
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
 
 
-saveRDS(stats2, file="cache/stats2.Rds")
+# plot(stats2$IDH_HG_IDH_ratio.norm.gain.ttest , stats2$IDH_HG_IDH_ratio.norm.gain.ttest2,col = round(runif(1)*4)+1)
+# stats2 |>
+#   dplyr::filter(IDH_HG_IDH_ratio.norm.gain.ttest != IDH_HG_IDH_ratio.norm.gain.ttest2)
+
+### loss ----
+
+tmp <- data2.discrete.loss |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.loss$IDH_HG_IDH_ratio.norm) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(IDH_HG_IDH_ratio.norm.loss.ttest = pvals)
 
 
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
+
+
+# plot(stats2$IDH_HG_IDH_ratio.norm.loss.ttest , stats2$IDH_HG_IDH_ratio.norm.loss.ttest2,col = round(runif(1)*4)+1)
+# stats2 |>
+#   dplyr::filter(IDH_HG_IDH_ratio.norm.loss.ttest != IDH_HG_IDH_ratio.norm.loss.ttest2)
 
 
 
 ## mean meth signature ----
+### gain ----
+
+tmp <- data2.discrete.gain |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.gain$mean.DNA.methylation.signature) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(mean.DNA.methylation.signature.gain.ttest = pvals)
 
 
-i <- 0
-stats2$mean.DNA.methylation.signature.gain.ttest <- NA
-for(x in colnames(data2.discrete.gain)) {
-  if(x %in% stats2$cnv.segment.id) {
-    if(i %% 33 == 1) {
-      print(paste0(i, " -> ", round(i / length(stats2$cnv.segment.id) * 100,2), "%"))
-    }
-    
-    tmp <- data2.discrete.gain %>%  dplyr::select(mean.DNA.methylation.signature, c(x))
-    stopifnot(names(tmp)[2] == x)
-    names(tmp)[1] <- 'expression'
-    names(tmp)[2] <- 'segment'
-    
-    g1 <- tmp %>% dplyr::filter(segment == "gain" & !is.na(expression)) %>%  dplyr::pull(expression)
-    g2 <- tmp %>% dplyr::filter(segment == "no-gain" & !is.na(expression)) %>%  dplyr::pull(expression)
-    
-    if(length(g1) > 1 & length(g2) > 1) {
-      w <- t.test(g1, g2)
-      stats2$mean.DNA.methylation.signature.gain.ttest[stats2$cnv.segment.id == x] <- w$p.value
-    }
-    
-    i <- i + 1
-  }
-}
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
 
 
-i <- 0
-stats2$mean.DNA.methylation.signature.loss.ttest <- NA
-for(x in colnames(data2.discrete.loss)) {
-  if(x %in% stats2$cnv.segment.id) {
-    #if(i %% 133 == 1) {
-    if(i %% 33 == 1) {
-      print(paste0(i, " -> ", round(i / length(stats2$cnv.segment.id) * 100,2), "%"))
-    }
-    
-    tmp <- data2.discrete.loss %>%  dplyr::select(mean.DNA.methylation.signature, c(x))
-    stopifnot(names(tmp)[2] == x)
-    names(tmp)[1] <- 'expression'
-    names(tmp)[2] <- 'segment'
-    
-    g1 <- tmp %>% dplyr::filter(segment == "loss" & !is.na(expression)) %>%  dplyr::pull(expression)
-    g2 <- tmp %>% dplyr::filter(segment == "no-loss" & !is.na(expression)) %>%  dplyr::pull(expression)
-    
-    #print(g1)
-    
-    if(length(g1) > 1 & length(g2) > 1) {
-      w <- t.test(g1, g2)
-      stats2$mean.DNA.methylation.signature.loss.ttest[stats2$cnv.segment.id == x] <- w$p.value
-    }
-    
-    i <- i + 1
-  }
-}
+# plot(stats2$mean.DNA.methylation.signature.gain.ttest , stats2$mean.DNA.methylation.signature.gain.ttest2,col = round(runif(1)*4)+1)
+# stats2 |>
+#   dplyr::filter(mean.DNA.methylation.signature.gain.ttest != mean.DNA.methylation.signature.gain.ttest2)
+
+### loss ----
+
+tmp <- data2.discrete.loss |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.loss$mean.DNA.methylation.signature) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(mean.DNA.methylation.signature.loss.ttest = pvals)
 
 
-saveRDS(stats2, file="cache/stats2.Rds")
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
+
+
+# plot(stats2$mean.DNA.methylation.signature.loss.ttest , stats2$mean.DNA.methylation.signature.loss.ttest2,col = round(runif(1)*4)+1)
+# stats2 |>
+#   dplyr::filter(mean.DNA.methylation.signature.loss.ttest != mean.DNA.methylation.signature.loss.ttest2)
+# 
+
+
+
+## mean meth signature [norm] ----
+### gain ----
+
+tmp <- data2.discrete.gain |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.gain$mean.DNA.methylation.signature.norm) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(mean.DNA.methylation.signature.norm.gain.ttest = pvals)
+
+
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
+
+
+# plot(stats2$mean.DNA.methylation.signature.norm.gain.ttest , stats2$mean.DNA.methylation.signature.norm.gain.ttest2,col = round(runif(1)*4)+1)
+# stats2 |>
+#   dplyr::filter(mean.DNA.methylation.signature.norm.gain.ttest != mean.DNA.methylation.signature.norm.gain.ttest2)
+
+
+
+
+### loss ----
+
+tmp <- data2.discrete.loss |> 
+  dplyr::select(starts_with('chr')) |> 
+  pbapply::pblapply(fun.ttest,
+                    values = data2.discrete.loss$mean.DNA.methylation.signature.norm) |> 
+  data.frame(check.names = F, row.names = 'pvals') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('cnv.segment.id') |> 
+  dplyr::rename(mean.DNA.methylation.signature.norm.loss.ttest = pvals)
+
+
+stats2 <- stats2 |> 
+  dplyr::left_join(tmp , by=c('cnv.segment.id'='cnv.segment.id'), suffix=c('',''))
+
+rm(tmp)
+
+
+# plot(stats2$mean.DNA.methylation.signature.norm.loss.ttest , stats2$mean.DNA.methylation.signature.norm.loss.ttest2,col = round(runif(1)*4)+1)
+# stats2 |>
+#   dplyr::filter(mean.DNA.methylation.signature.norm.loss.ttest != mean.DNA.methylation.signature.norm.loss.ttest2)
+
+
 
 
 
@@ -705,32 +815,65 @@ saveRDS(stats2, file="cache/stats2.Rds")
 
 source('scripts/R/chrom_sizes.R')
 
-plt <- stats2 %>% 
-  dplyr::mutate(chr = gsub(":.+$","",cnv.segment.id)) %>% 
-  dplyr::mutate(start = as.numeric(gsub("^.+:([0-9]+)-.+$","\\1",cnv.segment.id))) %>% 
+plt <- stats2 |>
+  dplyr::mutate(chr = gsub(":.+$","",.data$cnv.segment.id)) |> 
+  dplyr::mutate(start = as.numeric(gsub("^.+:([0-9]+)-.+$","\\1", .data$cnv.segment.id))) |> 
   dplyr::left_join(
-    data.frame(chrs_hg19_s) %>% tibble::rownames_to_column('chr'),
+    data.frame(chrs_hg19_s) |> tibble::rownames_to_column('chr'),
     by=c('chr'='chr') 
-  ) %>% 
-  dplyr::mutate(x = chrs_hg19_s + start) %>% 
-  dplyr::mutate(y.gain.lts.up1 = -log10(lts.up1.gain.ttest)) %>% 
-  dplyr::mutate(y.loss.lts.up1 = -log10(lts.up1.loss.ttest)) %>% 
-  dplyr::mutate(y.gain.IDH_HG_IDH_ratio = -log10(IDH_HG_IDH_ratio.gain.ttest)) %>% 
-  dplyr::mutate(y.loss.IDH_HG_IDH_ratio = -log10(IDH_HG_IDH_ratio.loss.ttest)) %>% 
-  dplyr::mutate(y.gain.mean.DNA.methylation.signature = -log10(mean.DNA.methylation.signature.gain.ttest)) %>% 
-  dplyr::mutate(y.loss.mean.DNA.methylation.signature = -log10(mean.DNA.methylation.signature.loss.ttest))
+  ) |> 
+  dplyr::mutate(x = chrs_hg19_s + .data$start) |> 
+  dplyr::mutate(y.gain.lts.up1 = -log10(lts.up1.gain.ttest)) |> 
+  dplyr::mutate(y.loss.lts.up1 = -log10(lts.up1.loss.ttest)) |> 
+  dplyr::mutate(y.gain.lts.up2 = -log10(lts.up2.gain.ttest)) |> 
+  dplyr::mutate(y.loss.lts.up2 = -log10(lts.up2.loss.ttest)) |> 
+  dplyr::mutate(y.gain.IDH_HG_IDH_ratio = -log10(IDH_HG_IDH_ratio.gain.ttest)) |> 
+  dplyr::mutate(y.loss.IDH_HG_IDH_ratio = -log10(IDH_HG_IDH_ratio.loss.ttest)) |> 
+  dplyr::mutate(y.gain.mean.DNA.methylation.signature = -log10(mean.DNA.methylation.signature.gain.ttest)) |> 
+  dplyr::mutate(y.loss.mean.DNA.methylation.signature = -log10(mean.DNA.methylation.signature.loss.ttest)) |> 
+  dplyr::mutate(y.gain.lts.up1.norm = -log10(lts.up1.norm.gain.ttest)) |> 
+  dplyr::mutate(y.loss.lts.up1.norm = -log10(lts.up1.norm.loss.ttest)) |>
+  dplyr::mutate(y.gain.lts.up2.norm = -log10(lts.up2.norm.gain.ttest)) |> 
+  dplyr::mutate(y.loss.lts.up2.norm = -log10(lts.up2.norm.loss.ttest)) |> 
+  dplyr::mutate(y.gain.IDH_HG_IDH_ratio.norm = -log10(IDH_HG_IDH_ratio.norm.gain.ttest)) |> 
+  dplyr::mutate(y.loss.IDH_HG_IDH_ratio.norm = -log10(IDH_HG_IDH_ratio.norm.loss.ttest)) |> 
+  dplyr::mutate(y.gain.mean.DNA.methylation.signature.norm = -log10(mean.DNA.methylation.signature.norm.gain.ttest)) |> 
+  dplyr::mutate(y.loss.mean.DNA.methylation.signature.norm = -log10(mean.DNA.methylation.signature.norm.loss.ttest)) |> 
+  dplyr::mutate(chr = factor(.data$chr, levels=gtools::mixedsort(unique(as.character(.data$chr))) )) 
+
+
 
 # https://www.nature.com/articles/s41379-021-00778-x.pdf
 # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4829945/
 
-plt.exp <- rbind(plt %>% dplyr::mutate(y =  y.gain.lts.up1, y.loss = NULL, y.gain=NULL, group="gain", facet="lts.up1") ,
-                 plt %>% dplyr::mutate(y = -y.loss.lts.up1, y.loss=NULL, y.gain=NULL , group = "loss", facet="lts.up1") ,
+plt.exp <- rbind(
+                 #plt %>% dplyr::mutate(y =  y.gain.lts.up1, y.loss=NULL, y.gain=NULL, group="gain", facet="lts.up1") ,
+                 #plt %>% dplyr::mutate(y = -y.loss.lts.up1, y.loss=NULL, y.gain=NULL , group="loss", facet="lts.up1") ,
                  
-                 plt %>% dplyr::mutate(y =  y.gain.IDH_HG_IDH_ratio, y.loss = NULL, y.gain=NULL, group="gain",facet="A_IDH / A_IDH_HG ratio") ,
-                 plt %>% dplyr::mutate(y = -y.loss.IDH_HG_IDH_ratio, y.loss=NULL, y.gain=NULL , group = "loss",facet="A_IDH / A_IDH_HG ratio"),
+                 plt %>% dplyr::mutate(y =  y.gain.lts.up1.norm, y.loss=NULL, y.gain=NULL, group="gain", facet="lts.up1 [norm]") ,
+                 plt %>% dplyr::mutate(y = -y.loss.lts.up1.norm, y.loss=NULL, y.gain=NULL , group="loss", facet="lts.up1 [norm]") ,
+
                  
-                 plt %>% dplyr::mutate(y =  y.gain.mean.DNA.methylation.signature, y.loss = NULL, y.gain=NULL, group="gain",facet="mean DNA methylation signature") ,
-                 plt %>% dplyr::mutate(y = -y.loss.mean.DNA.methylation.signature, y.loss=NULL, y.gain=NULL , group = "loss",facet="mean DNA methylation signature")
+                 plt %>% dplyr::mutate(y =  y.gain.lts.up2, y.loss=NULL, y.gain=NULL, group="gain", facet="lts.up2") ,
+                 plt %>% dplyr::mutate(y = -y.loss.lts.up2, y.loss=NULL, y.gain=NULL , group="loss", facet="lts.up2") ,
+                 
+                 plt %>% dplyr::mutate(y =  y.gain.lts.up2.norm, y.loss=NULL, y.gain=NULL, group="gain", facet="lts.up2 [norm]") ,
+                 plt %>% dplyr::mutate(y = -y.loss.lts.up2.norm, y.loss=NULL, y.gain=NULL , group="loss", facet="lts.up2 [norm]") ,
+
+                 
+                 #plt %>% dplyr::mutate(y =  y.gain.IDH_HG_IDH_ratio, y.loss=NULL, y.gain=NULL, group="gain",facet="A_IDH / A_IDH_HG ratio") ,
+                 #plt %>% dplyr::mutate(y = -y.loss.IDH_HG_IDH_ratio, y.loss=NULL, y.gain=NULL , group = "loss",facet="A_IDH / A_IDH_HG ratio"),
+
+                 plt %>% dplyr::mutate(y =  y.gain.IDH_HG_IDH_ratio.norm, y.loss=NULL, y.gain=NULL, group="gain",facet="A_IDH / A_IDH_HG ratio [norm]") ,
+                 plt %>% dplyr::mutate(y = -y.loss.IDH_HG_IDH_ratio.norm, y.loss=NULL, y.gain=NULL , group = "loss",facet="A_IDH / A_IDH_HG ratio [norm]"),
+
+                                  
+                 #plt %>% dplyr::mutate(y =  y.gain.mean.DNA.methylation.signature, y.loss = NULL, y.gain=NULL, group="gain",facet="mean DNA methylation signature") ,
+                 #plt %>% dplyr::mutate(y = -y.loss.mean.DNA.methylation.signature, y.loss=NULL, y.gain=NULL , group = "loss",facet="mean DNA methylation signature"),
+                 
+                 plt %>% dplyr::mutate(y =  y.gain.mean.DNA.methylation.signature.norm, y.loss = NULL, y.gain=NULL, group="gain",facet="mean DNA methylation signature [norm]") ,
+                 plt %>% dplyr::mutate(y = -y.loss.mean.DNA.methylation.signature.norm, y.loss=NULL, y.gain=NULL , group = "loss",facet="mean DNA methylation signature [norm]")
+
                  ) %>% 
   dplyr::mutate(end = as.numeric(gsub("^.+\\-","",cnv.segment.id))) %>% 
   dplyr::filter(!is.na(y)) %>% 
@@ -790,27 +933,44 @@ plt.exp <- rbind(plt %>% dplyr::mutate(y =  y.gain.lts.up1, y.loss = NULL, y.gai
   
   dplyr::mutate(label = ifelse(chr == "chr19" &  start < 42282635 & end > 42282674  & group=="loss", "CIC", label)) %>% 
   dplyr::mutate(label = ifelse(chr == "chr19" &  start < 30308415 & end > 30308454  & group=="gain", "CCNE1", label)) %>%
-  #dplyr::mutate(label = ifelse(chr == "chr19" &  start < 44499806 & end > 44499845  & group=="loss" , "ZNF locus end", label))
-  dplyr::mutate(label = ifelse(chr == "chr19" &  start < 39993847 & end > 39993956  & group=="gain", "DLL3", label)) %>% 
-  dplyr::mutate(y = ifelse(y > 8, 8 , y))
+  
+  dplyr::mutate(label = ifelse(chr == "chr19" &  start < 10250399 & end > 10250590   , "DNMT1", label))
+  
+  dplyr::mutate(label = ifelse(chr == "chr19" &  start < 39993847 & end > 39993956  & group=="gain", "DLL3", label)) |> 
+  dplyr::mutate(y = ifelse(y > 9, 9 , y)) |> 
+  dplyr::mutate(y = ifelse(y < -9, -9 , y))
 
 #unique(plt.exp$label)
 
 
-plt.exp <- plt.exp %>%  dplyr::filter(chr %in% c("chr16","chr17","chr18"))
+#plt.exp <- plt.exp %>%  dplyr::filter(chr %in% c("chr14","chr15","chr16"))
+plt.exp$lts.up2.gain.ttest = NULL
+plt.exp$lts.up1.gain.ttest = NULL
 
 
-ggplot(plt.exp, aes(x=x, y=y, col=chr, group=group, label=label)) +
+ggplot(plt.exp, aes(x=start / 1000000, y=y, col=chr, group=group, label=label)) +
   labs(y = "Association CNA locus with glioma progression",x=NULL) +
-  geom_line(col="gray",alpha=0.75) + 
-  geom_point(cex=0.84) + 
-  theme_bw() + 
-  ylim(-8.5,8.5) +
-  facet_grid(rows = vars(facet), scales = "free") +
+  #geom_line(col="gray",alpha=0.75) + 
+  geom_point(cex=0.80, show.legend = FALSE) + 
+  ylim(-9.5,9.5) +
+  facet_grid(rows = vars(facet), cols = vars(chr), scales = "free",space="free_x") +
+  #theme_bw() + 
   ggrepel::geom_text_repel(data = subset(plt.exp, y < 0 & !is.na(label)),cex=2.8,col="black",  direction = "y", nudge_y = -5, segment.size=0.25) +
-  ggrepel::geom_text_repel(data = subset(plt.exp, y > 0 & !is.na(label)),cex=2.8,col="black",  direction = "y", nudge_y = 5, segment.size=0.25)
+  ggrepel::geom_text_repel(data = subset(plt.exp, y > 0 & !is.na(label)),cex=2.8,col="black",  direction = "y", nudge_y = 5, segment.size=0.25)+
+  geom_smooth(alpha=0.5, se = FALSE, col="black",lwd=0.4,na.rm=T) +
+  youri_gg_theme +
+  labs(x=NULL) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_line(colour = 'grey20', linetype = 'dotted'),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank()
+  ) +
+  scale_x_continuous(breaks = seq(0, 1000, by = 50))
+
   #geom_vline(xintercept =  chrs_hg19_s['chr7'] + 148537176, alpha=0.5)
-  # geom_vline(xintercept =  chrs_hg19_s['chr3'] + 52648235, alpha=0.5)
+  #geom_vline(xintercept =  chrs_hg19_s['chr15'] + 52648235, alpha=0.5) +
+  #geom_vline(xintercept =  chrs_hg19_s['chr15'] + 44048235, alpha=0.5)
 
 
 
@@ -852,6 +1012,142 @@ plt.exp %>%  dplyr::filter(chr == "chr18") %>% arrange(-y,start) %>% head(n=28)
 plt.exp %>%  dplyr::filter(chr == "chr19") %>% arrange(y,start) %>% head(n=28)
 plt.exp %>%  dplyr::filter(chr == "chr19") %>% arrange(-y,start) %>% head(n=28)
 plt.exp %>%  dplyr::filter(chr == "chr22") %>% arrange(y,start) %>% head(n=28)
+
+
+# plot stats2 / lts.up2 ----
+
+
+# events specifiek voor collagen cluster: chr8, chr16 centro
+# find segments:
+
+
+plt <- stats2 |>
+  dplyr::mutate(chr = gsub(":.+$","",.data$cnv.segment.id)) |> 
+  dplyr::mutate(start = as.numeric(gsub("^.+:([0-9]+)-.+$","\\1", .data$cnv.segment.id))) |> 
+  dplyr::left_join(
+    data.frame(chrs_hg19_s) |> tibble::rownames_to_column('chr'),
+    by=c('chr'='chr') 
+  ) |> 
+  dplyr::mutate(x = chrs_hg19_s + .data$start) |> 
+  dplyr::mutate(y.gain.lts.up1 = -log10(lts.up1.gain.ttest)) |> 
+  dplyr::mutate(y.loss.lts.up1 = -log10(lts.up1.loss.ttest)) |> 
+  dplyr::mutate(y.gain.lts.up2 = -log10(lts.up2.gain.ttest)) |> 
+  dplyr::mutate(y.loss.lts.up2 = -log10(lts.up2.loss.ttest)) |> 
+  dplyr::mutate(y.gain.IDH_HG_IDH_ratio = -log10(IDH_HG_IDH_ratio.gain.ttest)) |> 
+  dplyr::mutate(y.loss.IDH_HG_IDH_ratio = -log10(IDH_HG_IDH_ratio.loss.ttest)) |> 
+  dplyr::mutate(y.gain.mean.DNA.methylation.signature = -log10(mean.DNA.methylation.signature.gain.ttest)) |> 
+  dplyr::mutate(y.loss.mean.DNA.methylation.signature = -log10(mean.DNA.methylation.signature.loss.ttest)) |> 
+  dplyr::mutate(y.gain.lts.up1.norm = -log10(lts.up1.norm.gain.ttest)) |> 
+  dplyr::mutate(y.loss.lts.up1.norm = -log10(lts.up1.norm.loss.ttest)) |>
+  dplyr::mutate(y.gain.lts.up2.norm = -log10(lts.up2.norm.gain.ttest)) |> 
+  dplyr::mutate(y.loss.lts.up2.norm = -log10(lts.up2.norm.loss.ttest)) |> 
+  dplyr::mutate(y.gain.IDH_HG_IDH_ratio.norm = -log10(IDH_HG_IDH_ratio.norm.gain.ttest)) |> 
+  dplyr::mutate(y.loss.IDH_HG_IDH_ratio.norm = -log10(IDH_HG_IDH_ratio.norm.loss.ttest)) |> 
+  dplyr::mutate(y.gain.mean.DNA.methylation.signature.norm = -log10(mean.DNA.methylation.signature.norm.gain.ttest)) |> 
+  dplyr::mutate(y.loss.mean.DNA.methylation.signature.norm = -log10(mean.DNA.methylation.signature.norm.loss.ttest)) |> 
+  dplyr::mutate(chr = factor(.data$chr, levels=gtools::mixedsort(unique(as.character(.data$chr))) )) 
+
+
+
+# https://www.nature.com/articles/s41379-021-00778-x.pdf
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4829945/
+
+plt.exp <- rbind(
+  #plt |> dplyr::mutate(y =  y.gain.lts.up1, y.loss=NULL, y.gain=NULL, group="gain", facet="lts.up1") ,
+  #plt |> dplyr::mutate(y = -y.loss.lts.up1, y.loss=NULL, y.gain=NULL , group="loss", facet="lts.up1") ,
+  
+  plt |> dplyr::mutate(y =  y.gain.lts.up1.norm, y.loss=NULL, y.gain=NULL, group="gain", facet="lts.up1 [norm]") ,
+  plt |> dplyr::mutate(y = -y.loss.lts.up1.norm, y.loss=NULL, y.gain=NULL , group="loss", facet="lts.up1 [norm]") ,
+  
+  
+  plt |> dplyr::mutate(y =  y.gain.lts.up2, y.loss=NULL, y.gain=NULL, group="gain", facet="lts.up2") ,
+  plt |> dplyr::mutate(y = -y.loss.lts.up2, y.loss=NULL, y.gain=NULL , group="loss", facet="lts.up2") ,
+  
+  plt |> dplyr::mutate(y =  y.gain.lts.up2.norm, y.loss=NULL, y.gain=NULL, group="gain", facet="lts.up2 [norm]") ,
+  plt |> dplyr::mutate(y = -y.loss.lts.up2.norm, y.loss=NULL, y.gain=NULL , group="loss", facet="lts.up2 [norm]") ,
+  
+  
+  #plt |> dplyr::mutate(y =  y.gain.IDH_HG_IDH_ratio, y.loss=NULL, y.gain=NULL, group="gain",facet="A_IDH / A_IDH_HG ratio") ,
+  #plt |> dplyr::mutate(y = -y.loss.IDH_HG_IDH_ratio, y.loss=NULL, y.gain=NULL , group = "loss",facet="A_IDH / A_IDH_HG ratio"),
+  
+  plt |> dplyr::mutate(y =  y.gain.IDH_HG_IDH_ratio.norm, y.loss=NULL, y.gain=NULL, group="gain",facet="A_IDH / A_IDH_HG ratio [norm]") ,
+  plt |> dplyr::mutate(y = -y.loss.IDH_HG_IDH_ratio.norm, y.loss=NULL, y.gain=NULL , group = "loss",facet="A_IDH / A_IDH_HG ratio [norm]"),
+  
+  
+  #plt |> dplyr::mutate(y =  y.gain.mean.DNA.methylation.signature, y.loss = NULL, y.gain=NULL, group="gain",facet="mean DNA methylation signature") ,
+  #plt |> dplyr::mutate(y = -y.loss.mean.DNA.methylation.signature, y.loss=NULL, y.gain=NULL , group = "loss",facet="mean DNA methylation signature"),
+  
+  plt |> dplyr::mutate(y =  y.gain.mean.DNA.methylation.signature.norm, y.loss = NULL, y.gain=NULL, group="gain",facet="mean DNA methylation signature [norm]") ,
+  plt |> dplyr::mutate(y = -y.loss.mean.DNA.methylation.signature.norm, y.loss=NULL, y.gain=NULL , group = "loss",facet="mean DNA methylation signature [norm]")
+  
+) |> 
+  dplyr::mutate(end = as.numeric(gsub("^.+\\-","",cnv.segment.id))) |> 
+  dplyr::filter(!is.na(y)) |> 
+  dplyr::mutate(label = NA) |> 
+  dplyr::mutate(signi = abs(y) > 5)  |> 
+
+  dplyr::mutate(y = ifelse(y > 9, 9 , y)) |> 
+  dplyr::mutate(y = ifelse(y < -9, -9 , y)) |> 
+  dplyr::filter(chr %in% c('chr14')) |> 
+  dplyr::filter(grepl("up2",facet)) 
+
+summary(`plt.exp$y`)
+'y' %in% colnames(plt.exp)
+
+
+ggplot(plt.exp, aes(x=start / 1000000, y=`y`, col=chr, group=group, label=label, shape=signi)) +
+  labs(y = "Association CNA locus with glioma progression",x=NULL) +
+  geom_point(cex=0.80, show.legend = FALSE) + 
+  ylim(-9.5,9.5) +
+  facet_grid(rows = vars(facet), cols = vars(chr), scales = "free",space="free_x") +
+  ggrepel::geom_text_repel(data = subset(plt.exp, y < 0 & !is.na(label)),cex=2.8,col="black",  direction = "y", nudge_y = -5, segment.size=0.25) +
+  ggrepel::geom_text_repel(data = subset(plt.exp, y > 0 & !is.na(label)),cex=2.8,col="black",  direction = "y", nudge_y = 5, segment.size=0.25)+
+  geom_smooth(alpha=0.5, se = FALSE, col="black",lwd=0.4,na.rm=T) +
+  youri_gg_theme +
+  labs(x=NULL) +
+  scale_x_continuous(breaks = seq(0, 1000, by = 50))
+
+
+
+
+tmp.ids <- plt.exp |> 
+  dplyr::filter(abs(y) > 5) |> 
+  dplyr::arrange(chr, .data$cnv.segment.id) |> 
+  dplyr::pull(cnv.segment.id) |> 
+  unique()
+
+
+tmp.sub <- data2.discrete.loss |> 
+  dplyr::select(c(colnames(data2.discrete.loss)[1:13], tmp.ids))
+tmp.sub <- data2.discrete.gailoss |> 
+  dplyr::select(c(colnames(data2.discrete.loss)[1:13], 'chr8:108200001-108300000', 'chr16:49000001-49100000')) |> 
+  dplyr::arrange(`chr8:108200001-108300000`)
+
+## chr16 ----  
+  
+tmp.sub <- data2.discrete.gain |> 
+  dplyr::select(c(colnames(data2.discrete.loss)[1:13], 'chr14:93500001-93600000')) |> 
+  dplyr::arrange(`chr14:93500001-93600000`)
+
+summary(as.factor(tmp.sub$`chr16:49000001-49100000`))
+
+
+#chr16: shcbp1 & heatr3 double check
+
+ggplot(tmp.sub, aes(x=`chr14:93500001-93600000`, y=lts.up2.norm)) +
+  ggbeeswarm::geom_quasirandom() +
+  geom_signif(
+    comparisons = list(c("gain", "no-gain")),
+    test="t.test",
+    test.args=c(var.equal=T)
+    #map_signif_level = TRUE
+  )
+
+g1 = tmp.sub |> dplyr::filter(`chr14:93500001-93600000` == 'gain') |> dplyr::pull(lts.up2.norm)
+g2 = tmp.sub |> dplyr::filter(`chr14:93500001-93600000` != 'gain') |> dplyr::pull(lts.up2.norm)
+
+t.test(g1,g2, var.equal=T)
+
 
 
 
