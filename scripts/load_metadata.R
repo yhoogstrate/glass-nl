@@ -93,7 +93,7 @@ rm(parse_fastp_json_files)
 
 # per resection ----
 
-
+## load RNA ----
 
 metadata.glass.per.resection <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Samplesheet_GLASS_RNAseq__ALL.csv') %>% 
   dplyr::mutate(institute = gsub("^.+_(.+)_.+$","\\1",GLASS_ID)) %>% 
@@ -106,7 +106,55 @@ metadata.glass.per.resection <- read.csv('data/glass/Clinical data/Cleaned/metad
   dplyr::mutate(Sample_Type = factor(Sample_Type, levels=c('initial','recurrent','X')))
 
 
+## add proteomics ID's ----
 
+
+tmp.1 <- readxl::read_xlsx('data/glass/Proteomics/2022-03-31_data_update/Annotation_Reduced_withControls.xlsx') |> 
+  dplyr::select(`File_Name_Proteomics`, `Sample_Name`) |> 
+  dplyr::filter(grepl("Control",Sample_Name)==F)
+
+tmp.2 <- read.csv('data/glass/Proteomics/ProteinMatrix_30percentNA_cutoff_75percent_proteincutoff_MADnorm_MixedImputed_correct annotations_fixed-quotes_fixedspaces.csv',header=T) |> 
+  dplyr::filter(X == "IGKV2-28") |> 
+  tibble::column_to_rownames('X') |> 
+  t() |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column('proteomics_imputed_id') |> 
+  dplyr::mutate(proteomics_imputed_id = gsub("^[A-Z]+_[A-Z]+_","",proteomics_imputed_id)) |> # needs to be cleaned from metadata for safety reasons
+  dplyr::mutate(`IGKV2-28` = NULL) |> 
+  dplyr::mutate(pid = gsub("_.+$","",proteomics_imputed_id)) |> 
+  dplyr::mutate(resection_label = gsub("^[0-9]+_","",proteomics_imputed_id)) |> 
+  dplyr::mutate(Sample_Name_suffix = case_when(resection_label == "P" ~ "R1",
+                                               resection_label == "R1" ~ "R2",
+                                               resection_label == "R2" ~ "R3",
+                                               resection_label == "R3" ~ "R4",
+                                               T ~ "error"
+                                               )) |> 
+  dplyr::mutate(Sample_Name = paste0(pid,"_",Sample_Name_suffix)) |> 
+  dplyr::select(proteomics_imputed_id, Sample_Name)
+
+stopifnot(tmp.2$Sample_Name %in% tmp.1$Sample_Name)
+stopifnot(sum(tmp.2$Sample_Name %in% tmp.1$Sample_Name) == 55)
+
+
+tmp.1 <- tmp.1 |> 
+  dplyr::left_join(tmp.2, by=c('Sample_Name'='Sample_Name'), suffix=c('',''))
+rm(tmp.2)
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection |> 
+  dplyr::full_join(tmp.1, by=c('Sample_Name'='Sample_Name'), suffix=c('',''))
+
+
+rm(tmp.1)
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection |> 
+  dplyr::mutate(resection = ifelse(
+    is.na(`genomescan.sid`),
+    gsub("^.+([0-9])$","S\\1", Sample_Name),
+    resection)) |> 
+  dplyr::mutate(Sample_Type = ifelse(is.na(`genomescan.sid`) & grepl("_R1$", Sample_Name), "initial", Sample_Type)) |> 
+  dplyr::mutate(Sample_Type = ifelse(is.na(`genomescan.sid`) & grepl("_R2$", Sample_Name), "recurrent", Sample_Type))
 
 
 ## aggregated per fastq qc stats ----
@@ -645,7 +693,7 @@ dev.off()
 
 # seems gamma fit
 fit <- fit.g
-rm(fit.g,fit.ln,fit.wb,plt.legend)
+rm(fit.g,fit.ln,fit.wb,plot.legend)
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection |> 
