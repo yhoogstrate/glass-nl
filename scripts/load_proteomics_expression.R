@@ -66,6 +66,7 @@ stopifnot(rownames(expression.proteomics.normalised.imputed) %in% rownames(expre
 
 
 # create the same matrix but with the raw values, to obtain 'Filtered' values
+# this matrix consists of 1's and NA's
 tmp <- expression.proteomics.raw |> 
   dplyr::mutate_all(function(arg) { return (ifelse(arg == "Filtered", as.numeric(NA), arg)) }) |> 
   dplyr::select(colnames(expression.proteomics.normalised.imputed)) |> 
@@ -82,8 +83,8 @@ stopifnot(rownames(tmp) == rownames(expression.proteomics.normalised.imputed))
 
 
 
+# multipying the imputed matrix with the 1's and NA's will set the imputed values to NA and leave the rest as is
 expression.proteomics.normalised.partial <- expression.proteomics.normalised.imputed * tmp
-
 rm(tmp)
 
 
