@@ -46,13 +46,13 @@ expression.proteomics.raw <- expression.proteomics.raw |>
   dplyr::rename(!!! ( # rename to names as used in the raw data
     metadata.glass.per.resection |> 
       dplyr::filter(!is.na(File_Name_Proteomics)) |> 
-      dplyr::pull(File_Name_Proteomics, name=ProtID)
+      dplyr::pull(File_Name_Proteomics, name=Sample_Name)
   )) |> 
-  dplyr::select(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |>  dplyr::pull(ProtID))
+  dplyr::select(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |>  dplyr::pull(Sample_Name))
 
-stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$ProtID) == 55) # from 77 to 55
-stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$ProtID == F) == 0)
-(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |> dplyr::pull(ProtID)) %in% colnames(expression.proteomics.raw)
+stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$Sample_Name) == 55) # from 77 to 55
+stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$Sample_Name == F) == 0)
+stopifnot((metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |> dplyr::pull(Sampe_Name)) %in% colnames(expression.proteomics.raw))
 
 
 
@@ -60,20 +60,21 @@ stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resect
 # normalised data contains 55 samples, not 99 or 77
 expression.proteomics.normalised.imputed <- read.csv('data/glass/Proteomics/ProteinMatrix_30percentNA_cutoff_75percent_proteincutoff_MADnorm_MixedImputed_correct annotations_fixed-quotes_fixedspaces.csv',header=T) |> 
   dplyr::filter(X %in% c("HLA-B.1") == F) |>  # duplicated
-  dplyr::rename_with( ~ gsub('^[A-Z]+_[A-Z]+_','',.x)) |> # do not use sample identifiers for metadata
   tibble::column_to_rownames('X') |> 
   dplyr::rename(!!! ( # rename to names as used in the raw data
     metadata.glass.per.resection |> 
-      dplyr::filter(!is.na(proteomics_imputed_id)) |> 
-      dplyr::select(File_Name_Proteomics, proteomics_imputed_id) |> 
-      dplyr::pull(proteomics_imputed_id, name=File_Name_Proteomics)
-  )) 
+      dplyr::filter(!is.na(ProtID)) |> 
+      dplyr::pull(ProtID, name=Sample_Name)
+  ))
 
 
 # ensure identifiers between raw and imputed table exist
 stopifnot(nrow(expression.proteomics.normalised.imputed) == 3247)
 stopifnot(ncol(expression.proteomics.normalised.imputed) == 55)
 stopifnot(rownames(expression.proteomics.normalised.imputed) %in% rownames(expression.proteomics.metadata))
+stopifnot(colnames(expression.proteomics.normalised.imputed) %in% (metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |> dplyr::pull(Sample_Name)))
+stopifnot((metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |> dplyr::pull(Sample_Name)) %in% colnames(expression.proteomics.normalised.imputed))
+
 
 
 
