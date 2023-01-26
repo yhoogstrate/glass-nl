@@ -48,7 +48,7 @@ expression.proteomics.raw <- expression.proteomics.raw |>
       dplyr::filter(!is.na(File_Name_Proteomics)) |> 
       dplyr::pull(File_Name_Proteomics, name=Sample_Name)
   )) |> 
-  dplyr::select(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |>  dplyr::pull(Sample_Name))
+  dplyr::select(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |>  dplyr::pull(Sample_Name) |> sort())
 
 stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$Sample_Name) == 55) # from 77 to 55
 stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$Sample_Name == F) == 0)
@@ -65,7 +65,8 @@ expression.proteomics.normalised.imputed <- read.csv('data/glass/Proteomics/Prot
     metadata.glass.per.resection |> 
       dplyr::filter(!is.na(ProtID)) |> 
       dplyr::pull(ProtID, name=Sample_Name)
-  ))
+  )) |> 
+  dplyr::select(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |>  dplyr::pull(Sample_Name) |> sort())
 
 
 # ensure identifiers between raw and imputed table exist

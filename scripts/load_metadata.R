@@ -146,6 +146,14 @@ stopifnot(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |>  dply
 
 
 
+# ensure no patients with 3 or more resection appear in this data
+stopifnot(metadata.glass.per.resection |> 
+            dplyr::filter(!is.na(ProtID)) |> 
+            dplyr::pull(GLASS_ID) |>
+            table() |> 
+            max() == 2)
+
+
 
 
 ## aggregated per fastq qc stats ----
