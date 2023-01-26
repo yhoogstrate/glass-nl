@@ -1,6 +1,12 @@
 #!/usr/bin/env R
 
 
+if(!exists("metadata.glass.per.resection")) {
+  source('scripts/load_metadata.R')
+}
+
+
+
 # raw data, useful for gene identifiers and 'Filtered' values (i.e. imputed in normalised data)
 
 expression.proteomics.raw <- read.table("data/glass/Proteomics/2022-03-31_data_update/20210729_084405_GLASSNL_LGG_dia_ProteinReport.tsv", sep = "\t", quote = "", header = T) |> 
@@ -37,10 +43,16 @@ stopifnot(nrow(expression.proteomics.metadata) == 4881)
 # 20210720_076_GLASSNL_LGG69_S307495.d.PG.Quantity
 # 20210720_080_2_GLASSNL_LGG73_S307499.d.PG.Quantity
 expression.proteomics.raw <- expression.proteomics.raw |>
-  dplyr::select(metadata.glass.per.resection |> dplyr::filter(!is.na(File_Name_Proteomics)) |>  dplyr::pull(File_Name_Proteomics))
+  dplyr::rename(!!! ( # rename to names as used in the raw data
+    metadata.glass.per.resection |> 
+      dplyr::filter(!is.na(File_Name_Proteomics)) |> 
+      dplyr::pull(File_Name_Proteomics, name=ProtID)
+  )) |> 
+  dplyr::select(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |>  dplyr::pull(ProtID))
 
-stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$File_Name_Proteomics) == 77)
-stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$File_Name_Proteomics == F) == 0)
+stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$ProtID) == 55) # from 77 to 55
+stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$ProtID == F) == 0)
+(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |> dplyr::pull(ProtID)) %in% colnames(expression.proteomics.raw)
 
 
 
