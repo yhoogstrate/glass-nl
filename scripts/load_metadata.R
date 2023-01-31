@@ -132,19 +132,16 @@ metadata.glass.per.resection <- metadata.glass.per.resection |>
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection |>
-  dplyr::mutate(Sample_Type = as.character(Sample_Type)) |> 
+  dplyr::mutate(Sample_Type = as.character(Sample_Type)) |>
   dplyr::mutate(Sample_Type = ifelse(is.na(Sample_Type) & grepl("_P$", ProtID), "initial", Sample_Type)) |>
   dplyr::mutate(Sample_Type = ifelse(is.na(`Sample_Type`) & grepl("_R[1-4]$", ProtID), "recurrent", Sample_Type))  |>
   dplyr::mutate(GLASS_ID = ifelse(is.na(GLASS_ID) & !is.na(ProtID), paste0("GLNL_EMCR_",gsub("_.+$","",Sample_Name)), GLASS_ID)) |>
-  dplyr::mutate(institute = ifelse(is.na(institute) & !is.na(ProtID), "EMCR", institute)) |> 
-  dplyr::mutate(WHO_Classification2021 = ifelse(Sample_Name == "153_R2", "Astrocytoma, IDH-mutant, WHO grade 4", WHO_Classification2021))
+  dplyr::mutate(institute = ifelse(is.na(institute) & !is.na(ProtID), "EMCR", institute))
 
 
 stopifnot(!is.na(metadata.glass.per.resection$GLASS_ID)) # all must have patient identifier
 stopifnot(!is.na(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |>  dplyr::pull(Sample_Type))) # all protein samples must have initial/recurrent status
 stopifnot(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |>  dplyr::pull(institute) == "EMCR") # all protein samples are from EMC
-
-
 
 
 # ensure no patients with 3 or more resection appear in this data
@@ -730,7 +727,12 @@ tmp <- read.csv('data/glass/Methylation/Metadata/WHOclassification_03052022.csv'
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
-  dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'),suffix = c("", ""))
+  dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'),suffix = c("", ""))|>
+  dplyr::mutate(WHO_Classification2021 = ifelse(Sample_Name == "153_R2", "Astrocytoma, IDH-mutant, WHO grade 4", WHO_Classification2021))
+
+
+# ensure R153_R2 is WHO grade IV (not in metadata file, but confirmed by Wies)
+stopifnot((metadata.glass.per.resection |> dplyr::filter(Sample_Name == "153_R2") |> dplyr::pull(WHO_Classification2021)) == "Astrocytoma, IDH-mutant, WHO grade 4")
 
 
 rm(tmp)
