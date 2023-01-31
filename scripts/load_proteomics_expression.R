@@ -52,7 +52,7 @@ expression.proteomics.raw <- expression.proteomics.raw |>
 
 stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$Sample_Name) == 55) # from 77 to 55
 stopifnot(sum(colnames(expression.proteomics.raw) %in% metadata.glass.per.resection$Sample_Name == F) == 0)
-stopifnot((metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |> dplyr::pull(Sampe_Name)) %in% colnames(expression.proteomics.raw))
+stopifnot((metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |> dplyr::pull(Sample_Name)) %in% colnames(expression.proteomics.raw))
 
 
 
