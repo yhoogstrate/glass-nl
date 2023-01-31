@@ -136,7 +136,9 @@ metadata.glass.per.resection <- metadata.glass.per.resection |>
   dplyr::mutate(Sample_Type = ifelse(is.na(Sample_Type) & grepl("_P$", ProtID), "initial", Sample_Type)) |>
   dplyr::mutate(Sample_Type = ifelse(is.na(`Sample_Type`) & grepl("_R[1-4]$", ProtID), "recurrent", Sample_Type))  |>
   dplyr::mutate(GLASS_ID = ifelse(is.na(GLASS_ID) & !is.na(ProtID), paste0("GLNL_EMCR_",gsub("_.+$","",Sample_Name)), GLASS_ID)) |>
-  dplyr::mutate(institute = ifelse(is.na(institute) & !is.na(ProtID), "EMCR", institute))
+  dplyr::mutate(institute = ifelse(is.na(institute) & !is.na(ProtID), "EMCR", institute)) |> 
+  dplyr::mutate(resection = ifelse(Sample_Name == "130_R2", "S2", resection)) |> 
+  dplyr::mutate(resection = ifelse(Sample_Name == "153_R2", "S2", resection))
 
 
 stopifnot(!is.na(metadata.glass.per.resection$GLASS_ID)) # all must have patient identifier
@@ -890,12 +892,12 @@ metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadat
 stopifnot(metadata.glass.per.resection$GLASS_ID %in% metadata.glass.per.patient$GLASS_ID)
 
 
+# define the appropriate primaries and recurrences per patient for RNA
 for(pid in metadata.glass.per.patient$GLASS_ID) {
-  slice <- metadata.glass.per.patient |> 
-    dplyr::filter(GLASS_ID == pid)
+  #slice <- metadata.glass.per.patient |> 
+  #  dplyr::filter(GLASS_ID == pid)
   
   
-  # define the appropriate primaries and recurrences per patient for RNA
   r.I <- metadata.glass.per.resection %>% 
     dplyr::filter(GLASS_ID == pid & Sample_Type == "initial" & excluded == F) %>% 
     dplyr::arrange(resection) %>% 
@@ -911,24 +913,117 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
     dplyr::filter(GLASS_ID == pid & Sample_Type == "recurrent" & excluded == F) %>% 
     dplyr::arrange(resection) %>% 
     dplyr::slice_tail(n=1)
-
+  
   if(nrow(r.R) > 0) {
     metadata.glass.per.patient <- metadata.glass.per.patient %>% 
       dplyr::mutate(Sample_Name.R = ifelse(GLASS_ID == pid, r.R$Sample_Name, Sample_Name.R) ) %>% 
       dplyr::mutate(genomescan.sid.R = ifelse(GLASS_ID == pid, r.R$genomescan.sid, genomescan.sid.R))
   }
-  
-  
-  # define the appropriate primaries and recurrences per patient for protein, for WHO2021
-  slice <- slice |> 
-    dplyr::filter(!is.na(ProtID)) |> 
-    dplyr::mutate(who2021 = case_when(
-      WHO_Classification2021 %in% c("Astrocytoma, IDH-mutant, WHO grade 2", "Astrocytoma, IDH-mutant, WHO grade 3") ~ "grade2_3",
-      WHO_Classification2021 %in% c("Astrocytoma, IDH-mutant, WHO grade 4") ~ "grade4",
-      T ~ "?"
-      ))
 }
-rm(r.I, r.R, pid, slice)
+rm(r.I, r.R, pid)
+
+
+# define the appropriate primaries and recurrences per patient for protein, for WHO2021
+metadata.glass.per.patient <- metadata.glass.per.patient |> 
+  dplyr::mutate(proteomics.sid.I = NA) |> 
+  dplyr::mutate(proteomics.sid.R = NA) |> 
+  dplyr::mutate(proteomics.sid.A_IDH = NA) |> 
+  dplyr::mutate(proteomics.sid.A_IDH_HG = NA)|> 
+  dplyr::mutate(proteomics.sid.WHO2021_g23 = NA) |> 
+  dplyr::mutate(proteomics.sid.WHO2021_g4 = NA)
+for(pid in metadata.glass.per.patient$GLASS_ID) {
+  r.I <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & Sample_Type == "initial" & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_head(n=1)
+  
+  if(nrow(r.I) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.I = ifelse(GLASS_ID == pid, r.I$Sample_Name, proteomics.sid.I))
+    print(r.I$Sample_Name)
+  }
+  rm(r.I)
+  
+  r.R <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & Sample_Type == "recurrent" & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_head(n=1)
+  
+  if(nrow(r.R) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.R = ifelse(GLASS_ID == pid, r.R$Sample_Name, proteomics.sid.R))
+    print(r.R$Sample_Name)
+  }
+  rm(r.R)
+  
+  r.A_IDH <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & methylation.sub.diagnosis == "A_IDH" & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_head(n=1)
+  
+  if(nrow(r.A_IDH) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.A_IDH = ifelse(GLASS_ID == pid, r.A_IDH$Sample_Name, proteomics.sid.A_IDH))
+    print(r.A_IDH$Sample_Name)
+  }
+  rm(r.A_IDH)
+  
+  
+  r.A_IDH_HG <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & methylation.sub.diagnosis == "A_IDH_HG" & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_tail(n=1)
+  
+  if(nrow(r.A_IDH_HG) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.A_IDH_HG = ifelse(GLASS_ID == pid, r.A_IDH_HG$Sample_Name, proteomics.sid.A_IDH_HG))
+    print(r.A_IDH_HG$Sample_Name)
+  }
+  rm(r.A_IDH_HG)
+  
+  
+  r.WHO2021_g23 <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & WHO_Classification2021 %in% c('Astrocytoma, IDH-mutant, WHO grade 2','Astrocytoma, IDH-mutant, WHO grade 3') & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_head(n=1)
+  
+  if(nrow(r.WHO2021_g23) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.WHO2021_g23 = ifelse(GLASS_ID == pid, r.WHO2021_g23$Sample_Name, proteomics.sid.WHO2021_g23))
+    print(r.WHO2021_g23$Sample_Name)
+  }
+  rm(r.WHO2021_g23)
+  
+  
+  r.WHO2021_g4 <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & WHO_Classification2021 %in% c('Astrocytoma, IDH-mutant, WHO grade 4') & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_tail(n=1)
+  
+  if(nrow(r.WHO2021_g4) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.WHO2021_g4 = ifelse(GLASS_ID == pid, r.WHO2021_g4$Sample_Name, proteomics.sid.WHO2021_g4))
+    print(r.WHO2021_g4$Sample_Name)
+  }
+  rm(r.WHO2021_g4)
+}
+rm(pid)
+
+
+stopifnot(intersect(
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.I)) |> dplyr::pull(proteomics.sid.WHO2021_g23),
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.R)) |> dplyr::pull(proteomics.sid.WHO2021_g4)
+) == c())
+
+stopifnot(intersect(
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.A_IDH)) |> dplyr::pull(proteomics.sid.WHO2021_g23),
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.A_IDH_HG)) |> dplyr::pull(proteomics.sid.WHO2021_g4)
+) == c())
+
+stopifnot(intersect(
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.WHO2021_g23)) |> dplyr::pull(proteomics.sid.WHO2021_g23),
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.WHO2021_g4)) |> dplyr::pull(proteomics.sid.WHO2021_g4)
+) == c())
 
 
 
