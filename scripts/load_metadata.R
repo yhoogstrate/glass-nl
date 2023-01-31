@@ -136,7 +136,8 @@ metadata.glass.per.resection <- metadata.glass.per.resection |>
   dplyr::mutate(Sample_Type = ifelse(is.na(Sample_Type) & grepl("_P$", ProtID), "initial", Sample_Type)) |>
   dplyr::mutate(Sample_Type = ifelse(is.na(`Sample_Type`) & grepl("_R[1-4]$", ProtID), "recurrent", Sample_Type))  |>
   dplyr::mutate(GLASS_ID = ifelse(is.na(GLASS_ID) & !is.na(ProtID), paste0("GLNL_EMCR_",gsub("_.+$","",Sample_Name)), GLASS_ID)) |>
-  dplyr::mutate(institute = ifelse(is.na(institute) & !is.na(ProtID), "EMCR", institute))
+  dplyr::mutate(institute = ifelse(is.na(institute) & !is.na(ProtID), "EMCR", institute)) |> 
+  dplyr::mutate(WHO_Classification2021 = ifelse(Sample_Name == "153_R2", "Astrocytoma, IDH-mutant, WHO grade 4", WHO_Classification2021))
 
 
 stopifnot(!is.na(metadata.glass.per.resection$GLASS_ID)) # all must have patient identifier
@@ -888,9 +889,11 @@ stopifnot(metadata.glass.per.resection$GLASS_ID %in% metadata.glass.per.patient$
 
 
 for(pid in metadata.glass.per.patient$GLASS_ID) {
-  slice <- metadata.glass.per.patient %>% 
+  slice <- metadata.glass.per.patient |> 
     dplyr::filter(GLASS_ID == pid)
   
+  
+  # define the appropriate primaries and recurrences per patient for RNA
   r.I <- metadata.glass.per.resection %>% 
     dplyr::filter(GLASS_ID == pid & Sample_Type == "initial" & excluded == F) %>% 
     dplyr::arrange(resection) %>% 
@@ -912,6 +915,16 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
       dplyr::mutate(Sample_Name.R = ifelse(GLASS_ID == pid, r.R$Sample_Name, Sample_Name.R) ) %>% 
       dplyr::mutate(genomescan.sid.R = ifelse(GLASS_ID == pid, r.R$genomescan.sid, genomescan.sid.R))
   }
+  
+  
+  # define the appropriate primaries and recurrences per patient for protein, for WHO2021
+  slice <- slice |> 
+    dplyr::filter(!is.na(ProtID)) |> 
+    dplyr::mutate(who2021 = case_when(
+      WHO_Classification2021 %in% c("Astrocytoma, IDH-mutant, WHO grade 2", "Astrocytoma, IDH-mutant, WHO grade 3") ~ "grade2_3",
+      WHO_Classification2021 %in% c("Astrocytoma, IDH-mutant, WHO grade 4") ~ "grade4",
+      T ~ "?"
+      ))
 }
 rm(r.I, r.R, pid, slice)
 
