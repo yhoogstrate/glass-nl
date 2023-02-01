@@ -43,13 +43,16 @@ ggplot(plt, aes(x=logFC, y=-log10(adj.P.Val), col=cell.cycling, label=hugo_symbo
   ggrepel::geom_text_repel(data = plt |>  dplyr::filter(cell.cycling==T), col="black",alpha=0.35,nudge_y=-0.25) +
   theme_bw() +
   annotate(geom="text", x=-1.0, y=-log10(0.05 + 0.004), label="Padj = 0.05", color="black") +
-  labs(x = "logFC protein (primary - recurrence)",
+  labs(x = "logFC proteomics (primary - recurrence)",
        y = "-log10(adjusted P-value limma)",
        caption = paste0("Differential protein analysis: n=",length(tmp.metadata$Sample_Type),
                         "  (initial: ",sum(tmp.metadata$Sample_Type == "initial"),
                         ", recurrent: ",sum(tmp.metadata$Sample_Type == "recurrent")
                         ,")"))
 
+
+
+ggsave("output/figures/vis_DPE_primary_recurrence.pdf", width=8.5, height=11/2)
 
 
 head(plt)
@@ -290,7 +293,7 @@ ggplot(plt, aes(x=logFC, y=-log10(adj.P.Val), col=cell.cycling, label=hugo_symbo
   ggrepel::geom_text_repel(data = plt |>  dplyr::filter(cell.cycling==T), col="black",alpha=0.35,nudge_y=-0.25) +
   theme_bw() +
   annotate(geom="text", x=-1.0, y=-log10(0.05 + 0.004), label="Padj = 0.05", color="black") +
-  labs(x = "logFC protein (primary - recurrence)",
+  labs(x = "logFC proteomics (A_IDH - A_IDH_HG)",
        y = "-log10(adjusted P-value limma)",
        caption = paste0("Differential protein analysis: n=",length(tmp.metadata$Sample_Type),
                         "  (A_IDH: ",sum(tmp.metadata$methylation.sub.diagnosis == "A_IDH"),
@@ -298,6 +301,7 @@ ggplot(plt, aes(x=logFC, y=-log10(adj.P.Val), col=cell.cycling, label=hugo_symbo
                         ,")"))
 
 
+ggsave("output/figures/vis_DPE_Meth_A_IDH__A_IDH_HG.pdf", width=8.5, height=11/2)
 
 head(plt)
 
@@ -345,16 +349,31 @@ plt <- limma::topTable(fit2, adjust.method="fdr",n=Inf) |>
 ggplot(plt, aes(x=logFC, y=-log10(adj.P.Val), col=cell.cycling, label=hugo_symbol)) +
   geom_point(data = plt |>  dplyr::filter(cell.cycling==F),cex=0.5) +
   geom_point(data = plt |>  dplyr::filter(cell.cycling==T)) +
-  geom_hline(yintercept = -log10(0.05),col="black", lty=2) +
-  ggrepel::geom_text_repel(data = plt |>  dplyr::filter(cell.cycling==T), col="black",alpha=0.35,nudge_y=-0.25) +
-  theme_bw() +
-  annotate(geom="text", x=-1.5, y=-log10(0.05 + 0.004), label="Padj = 0.05", color="black") +
-  labs(x = "logFC protein (primary - recurrence)",
+  geom_hline(yintercept = -log10(0.05),col="black", lty=2, size=0.5/2.14) +
+  ggrepel::geom_text_repel(data = plt |>  dplyr::filter(cell.cycling==T), col="black",alpha=0.55,
+                           nudge_y=-0.25,nudge_x = 0.5,
+                           size=7 * (3.88/11)) +
+  annotate(geom="text", x=-1.6, y=-log10(0.065), label="Padj = 0.05", color="black",
+           size=7 * (3.88/11)) +
+  labs(x = "logFC proteomics",
        y = "-log10(adjusted P-value limma)",
-       caption = paste0("Differential protein analysis: n=",length(tmp.metadata$Sample_Type),
-                        "  (WHO2021 2 & 3: ",sum(tmp.metadata$methylation.sub.diagnosis == "WHO2021_g23"),
-                        ", WHO2021 4: ",sum(tmp.metadata$methylation.sub.diagnosis == "WHO2021_g4")
-                        ,")"))
+       caption = paste0("n=",length(tmp.metadata$Sample_Type),
+                        "  (WHO2021 2 & 3: ",sum(tmp.metadata$WHO_Classification2021 == "WHO2021_g23"),
+                        ", WHO2021 4: ",sum(tmp.metadata$WHO_Classification2021 == "WHO2021_g4")
+                        ,")"),
+       title = "Differential proteomics: WHO2021 grade 2 & 3  -  WHO2021 grade 4"
+       ) +
+  theme_bw() +
+  theme(legend.position = 'bottom') +
+  theme_cellpress # in compliance with most journals
+
+
+
+ggsave("output/figures/vis_DPE_WHO2021.pdf", width=8.5/2, height=11/3)
+
+
+
+## plot, to vis ----
 
 
 
