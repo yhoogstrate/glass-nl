@@ -34,7 +34,9 @@ if(!file.exists("cache/res.proteomics.primary__recurrence.Rds")) {
   fit.proteomics.primary__recurrence <- limma::lmFit(tmp.data, design)
   res.proteomics.primary__recurrence <- limma::eBayes(fit.proteomics.primary__recurrence, trend = TRUE)
   res.proteomics.primary__recurrence <- limma::topTable(res.proteomics.primary__recurrence, adjust.method="fdr",n=Inf)
+  
   saveRDS(res.proteomics.primary__recurrence, "cache/res.proteomics.primary__recurrence.Rds")
+  saveRDS(tmp.metadata, 'cache/meta.proteomics.proteomics.primary__recurrence.Rds')
 }
 
 
@@ -250,6 +252,7 @@ if(!file.exists("cache/res.proteomics.meth_a_idh__a_idh_hg.Rds")) {
   res.proteomics.meth_a_idh__a_idh_hg <- limma::topTable(res.proteomics.meth_a_idh__a_idh_hg, adjust.method="fdr",n=Inf)
   
   saveRDS(res.proteomics.meth_a_idh__a_idh_hg, "cache/res.proteomics.meth_a_idh__a_idh_hg.Rds")
+  saveRDS(tmp.metadata, 'cache/meta.proteomics.meth_a_idh__a_idh_hg.Rds.Rds')
 }
 
 
@@ -292,6 +295,7 @@ if(!file.exists("cache/res.proteomics.who21_2_3__4.Rds")) {
   res.proteomics.who21_2_3__4 <- limma::topTable(res.proteomics.who21_2_3__4, adjust.method="fdr",n=Inf)
   
   saveRDS(res.proteomics.who21_2_3__4, "cache/res.proteomics.who21_2_3__4.Rds")
+  saveRDS(tmp.metadata, 'cache/meta.proteomics.who21_2_3__4.Rds')
 }
 
 

@@ -10,6 +10,7 @@
 ## limma - imputed ----
 
 
+tmp.metadata <- readRDS('cache/meta.proteomics.proteomics.primary__recurrence.Rds')
 plt <- readRDS('cache/res.proteomics.primary__recurrence.Rds') |> 
   tibble::rownames_to_column('hugo_symbol') |> 
   dplyr::mutate(cell.cycling = hugo_symbol %in% c("ANLN","ANP32E","ARHGAP11A","ARL6IP1","ASF1B","ASPM","ATAD2","AURKA","AURKB","BIRC5","BLM","BRIP1","BUB1","BUB1B","CASP8AP2","CBX5","CCNA2","CCNB1","CCNB2","CCNE2","CDC20","CDC25B","CDC25C","CDC45","CDC6","CDCA2","CDCA3","CDCA5","CDCA7","CDCA8","CDK1","CDKN3","CENPA","CENPE","CENPF","CENPK","CENPM","CENPW","CHAF1B","CKAP2","CKAP2L","CKAP5","CKS1B","CKS2","CLSPN","CTCF","DEK","DHFR","DLGAP5","DNMT1","DSCC1","DSN1","DTL","DTYMK","DUT","E2F8","ECT2","EXO1","EZH2","FABP5","FAM64A","FANCI","FEN1","FOXM1","G2E3","GAS2L3","GINS2","GMNN","GPSM2","GTSE1","H2AFZ","HAT1","HELLS","HIST1H4C","HJURP","HMGB1","HMGB2","HMGB3","HMMR","HN1","KIAA0101","KIF11","KIF20A","KIF20B","KIF22","KIF23","KIF2C","KIF4A","KIFC1","KNSTRN","KPNA2","LBR","LMNB1","MAD2L1","MCM2","MCM3","MCM4","MCM5","MCM6","MCM7","MELK","MKI67","MLF1IP","MND1","MSH2","MXD3","MZT1","NASP","NCAPD2","NDC80","NEK2","NUDT1","NUF2","NUSAP1","OIP5","ORC6","PBK","PCNA","PHF19","PKMYT1","PLK1","POLA1","POLA2","POLD3","PRIM1","PSRC1","PTTG1","RACGAP1","RAD51","RAD51AP1","RANBP1","RANGAP1","REEP4","RFC2","RFC3","RFC4","RFC5","RNASEH2A","RPA2","RPL39L","RRM1","RRM2","SAE1","SDF2L1","SHCBP1","SLBP","SMC4","SNRNP25","SPAG5","TACC3","TCF19","TIMELESS","TIPIN","TK1","TMEM106C","TMEM194A","TMPO","TOP2A","TPX2","TROAP","TTK","TUBA1B","TUBA1C","TUBB4B","TUBB6","TUBG1","TYMS","UBE2C","UBE2T","UBR7","UHRF1","UNG","USP1","VRK1","WDR34","WDR76","ZWILCH","ZWINT"))
@@ -40,10 +41,10 @@ ggplot(plt, aes(x=logFC, y=-log10(adj.P.Val), col=cell.cycling, label=hugo_symbo
 
 
 
-ggsave("output/figures/vis_DPE_primary_recurrence.pdf", width=8.5, height=11/2)
+ggsave("output/figures/vis_DPE_primary_recurrence.pdf", width=8.5/2, height=11/3)
 
 
-rm(plt)
+rm(plt, tmp.metadata)
 
 
 
@@ -53,6 +54,7 @@ rm(plt)
 ## limma - imputed ----
 
 
+tmp.metadata <- readRDS('cache/meta.proteomics.meth_a_idh__a_idh_hg.Rds.Rds')
 plt <- readRDS('cache/res.proteomics.meth_a_idh__a_idh_hg.Rds') |> 
   tibble::rownames_to_column('hugo_symbol') |> 
   dplyr::mutate(cell.cycling = hugo_symbol %in% c("ANLN","ANP32E","ARHGAP11A","ARL6IP1","ASF1B","ASPM","ATAD2","AURKA","AURKB","BIRC5","BLM","BRIP1","BUB1","BUB1B","CASP8AP2","CBX5","CCNA2","CCNB1","CCNB2","CCNE2","CDC20","CDC25B","CDC25C","CDC45","CDC6","CDCA2","CDCA3","CDCA5","CDCA7","CDCA8","CDK1","CDKN3","CENPA","CENPE","CENPF","CENPK","CENPM","CENPW","CHAF1B","CKAP2","CKAP2L","CKAP5","CKS1B","CKS2","CLSPN","CTCF","DEK","DHFR","DLGAP5","DNMT1","DSCC1","DSN1","DTL","DTYMK","DUT","E2F8","ECT2","EXO1","EZH2","FABP5","FAM64A","FANCI","FEN1","FOXM1","G2E3","GAS2L3","GINS2","GMNN","GPSM2","GTSE1","H2AFZ","HAT1","HELLS","HIST1H4C","HJURP","HMGB1","HMGB2","HMGB3","HMMR","HN1","KIAA0101","KIF11","KIF20A","KIF20B","KIF22","KIF23","KIF2C","KIF4A","KIFC1","KNSTRN","KPNA2","LBR","LMNB1","MAD2L1","MCM2","MCM3","MCM4","MCM5","MCM6","MCM7","MELK","MKI67","MLF1IP","MND1","MSH2","MXD3","MZT1","NASP","NCAPD2","NDC80","NEK2","NUDT1","NUF2","NUSAP1","OIP5","ORC6","PBK","PCNA","PHF19","PKMYT1","PLK1","POLA1","POLA2","POLD3","PRIM1","PSRC1","PTTG1","RACGAP1","RAD51","RAD51AP1","RANBP1","RANGAP1","REEP4","RFC2","RFC3","RFC4","RFC5","RNASEH2A","RPA2","RPL39L","RRM1","RRM2","SAE1","SDF2L1","SHCBP1","SLBP","SMC4","SNRNP25","SPAG5","TACC3","TCF19","TIMELESS","TIPIN","TK1","TMEM106C","TMEM194A","TMPO","TOP2A","TPX2","TROAP","TTK","TUBA1B","TUBA1C","TUBB4B","TUBB6","TUBG1","TYMS","UBE2C","UBE2T","UBR7","UHRF1","UNG","USP1","VRK1","WDR34","WDR76","ZWILCH","ZWINT"))
@@ -83,10 +85,8 @@ ggplot(plt, aes(x=logFC, y=-log10(adj.P.Val), col=cell.cycling, label=hugo_symbo
 
 
 
-ggsave("output/figures/vis_DPE_Meth_A_IDH__A_IDH_HG.pdf", width=8.5, height=11/2)
-
-
-rm(plt)
+ggsave("output/figures/vis_DPE_Meth_A_IDH__A_IDH_HG.pdf", width=8.5/2, height=11/3)
+rm(plt, tmp.metadata)
 
 
 # DPE: WHO2021: 2 & 3 - WHO2021: 4 ----
@@ -94,6 +94,7 @@ rm(plt)
 
 
 
+tmp.metadata <- readRDS('cache/meta.proteomics.who21_2_3__4.Rds')
 plt <- readRDS("cache/res.proteomics.who21_2_3__4.Rds") |> 
   tibble::rownames_to_column('hugo_symbol') |> 
   dplyr::mutate(cell.cycling = hugo_symbol %in% c("ANLN","ANP32E","ARHGAP11A","ARL6IP1","ASF1B","ASPM","ATAD2","AURKA","AURKB","BIRC5","BLM","BRIP1","BUB1","BUB1B","CASP8AP2","CBX5","CCNA2","CCNB1","CCNB2","CCNE2","CDC20","CDC25B","CDC25C","CDC45","CDC6","CDCA2","CDCA3","CDCA5","CDCA7","CDCA8","CDK1","CDKN3","CENPA","CENPE","CENPF","CENPK","CENPM","CENPW","CHAF1B","CKAP2","CKAP2L","CKAP5","CKS1B","CKS2","CLSPN","CTCF","DEK","DHFR","DLGAP5","DNMT1","DSCC1","DSN1","DTL","DTYMK","DUT","E2F8","ECT2","EXO1","EZH2","FABP5","FAM64A","FANCI","FEN1","FOXM1","G2E3","GAS2L3","GINS2","GMNN","GPSM2","GTSE1","H2AFZ","HAT1","HELLS","HIST1H4C","HJURP","HMGB1","HMGB2","HMGB3","HMMR","HN1","KIAA0101","KIF11","KIF20A","KIF20B","KIF22","KIF23","KIF2C","KIF4A","KIFC1","KNSTRN","KPNA2","LBR","LMNB1","MAD2L1","MCM2","MCM3","MCM4","MCM5","MCM6","MCM7","MELK","MKI67","MLF1IP","MND1","MSH2","MXD3","MZT1","NASP","NCAPD2","NDC80","NEK2","NUDT1","NUF2","NUSAP1","OIP5","ORC6","PBK","PCNA","PHF19","PKMYT1","PLK1","POLA1","POLA2","POLD3","PRIM1","PSRC1","PTTG1","RACGAP1","RAD51","RAD51AP1","RANBP1","RANGAP1","REEP4","RFC2","RFC3","RFC4","RFC5","RNASEH2A","RPA2","RPL39L","RRM1","RRM2","SAE1","SDF2L1","SHCBP1","SLBP","SMC4","SNRNP25","SPAG5","TACC3","TCF19","TIMELESS","TIPIN","TK1","TMEM106C","TMEM194A","TMPO","TOP2A","TPX2","TROAP","TTK","TUBA1B","TUBA1C","TUBB4B","TUBB6","TUBG1","TYMS","UBE2C","UBE2T","UBR7","UHRF1","UNG","USP1","VRK1","WDR34","WDR76","ZWILCH","ZWINT"))
