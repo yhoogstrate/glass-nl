@@ -884,7 +884,9 @@ metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadat
   dplyr::mutate(Cause_of_Death = ifelse(Cause_of_Death == "", "Unkown" , Cause_of_Death)) %>% # unknown, but deceased
 
   dplyr::mutate(overall.survival.event = ifelse(is.na(overall.survival) | Cause_of_Death == "Other",0,1),
-              overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival))
+              overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival)) |> 
+  
+  dplyr::add_row(GLASS_ID = "GLNL_EMCR_153") # not in the file, exclusive for proteomics
   
 
 
@@ -940,7 +942,6 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
   if(nrow(r.I) > 0) {
     metadata.glass.per.patient <- metadata.glass.per.patient %>% 
       dplyr::mutate(proteomics.sid.I = ifelse(GLASS_ID == pid, r.I$Sample_Name, proteomics.sid.I))
-    print(r.I$Sample_Name)
   }
   rm(r.I)
   
@@ -952,7 +953,6 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
   if(nrow(r.R) > 0) {
     metadata.glass.per.patient <- metadata.glass.per.patient %>% 
       dplyr::mutate(proteomics.sid.R = ifelse(GLASS_ID == pid, r.R$Sample_Name, proteomics.sid.R))
-    print(r.R$Sample_Name)
   }
   rm(r.R)
   
@@ -964,7 +964,6 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
   if(nrow(r.A_IDH) > 0) {
     metadata.glass.per.patient <- metadata.glass.per.patient %>% 
       dplyr::mutate(proteomics.sid.A_IDH = ifelse(GLASS_ID == pid, r.A_IDH$Sample_Name, proteomics.sid.A_IDH))
-    print(r.A_IDH$Sample_Name)
   }
   rm(r.A_IDH)
   
@@ -977,7 +976,6 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
   if(nrow(r.A_IDH_HG) > 0) {
     metadata.glass.per.patient <- metadata.glass.per.patient %>% 
       dplyr::mutate(proteomics.sid.A_IDH_HG = ifelse(GLASS_ID == pid, r.A_IDH_HG$Sample_Name, proteomics.sid.A_IDH_HG))
-    print(r.A_IDH_HG$Sample_Name)
   }
   rm(r.A_IDH_HG)
   
@@ -990,7 +988,6 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
   if(nrow(r.WHO2021_g23) > 0) {
     metadata.glass.per.patient <- metadata.glass.per.patient %>% 
       dplyr::mutate(proteomics.sid.WHO2021_g23 = ifelse(GLASS_ID == pid, r.WHO2021_g23$Sample_Name, proteomics.sid.WHO2021_g23))
-    print(r.WHO2021_g23$Sample_Name)
   }
   rm(r.WHO2021_g23)
   
@@ -1003,7 +1000,6 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
   if(nrow(r.WHO2021_g4) > 0) {
     metadata.glass.per.patient <- metadata.glass.per.patient %>% 
       dplyr::mutate(proteomics.sid.WHO2021_g4 = ifelse(GLASS_ID == pid, r.WHO2021_g4$Sample_Name, proteomics.sid.WHO2021_g4))
-    print(r.WHO2021_g4$Sample_Name)
   }
   rm(r.WHO2021_g4)
 }
