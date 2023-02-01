@@ -1,8 +1,22 @@
 #!/usr/bin/env R
 
+theme_cellpress <- theme(
+  text =          element_text(size = 7, family = "Arial", face = "plain"),
+  axis.text =     element_text(size = 7, family = "Arial", face = "plain"),
+  axis.title.x =  element_text(size = 7, family = "Arial", face = "plain"),
+  axis.title.y =  element_text(size = 7, family = "Arial", face = "plain"),
+  strip.text =    element_text(size = 7, family = "Arial", face = "plain"),
+  plot.title =    element_text(size = 7, family = "Arial", face = "plain"), # `title` covers both title and subtitle
+  plot.subtitle = element_text(size = 7, family = "Arial", face = "italic"),
+  plot.caption =  element_text(size = 7, family = "Arial", face = "italic")
+)
+
+
+
+
 youri_gg_theme <- theme(
   text = element_text(family = 'Helvetica'),
-  axis.text.x = element_text(angle = 45, hjust = 1),
+  #axis.text.x = element_text(angle = 45, hjust = 1),
   legend.position = 'bottom',
   plot.title = element_text(face = "bold", size = rel(1.2), hjust = 0.5),
   panel.background = element_rect(fill = 'white', colour = 'white'),
@@ -18,4 +32,4 @@ youri_gg_theme <- theme(
 ) + theme(
   panel.grid.major.x = element_line(colour = 'grey20', linetype = 'dotted',size=0.25),
   panel.grid.minor.x = element_line(colour = 'grey50', linetype = 'dotted')
-)
+) 
