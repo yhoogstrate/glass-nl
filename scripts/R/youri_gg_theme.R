@@ -21,7 +21,8 @@
 # loadfonts()
 # sort(fonts())
 
-theme_cellpress <- theme(
+theme_cellpress <- theme_bw() +
+  theme(
   text =          element_text(size = 7, family = "Arial", face = "plain"),
   axis.text =     element_text(size = 7, family = "Arial", face = "plain"),
   axis.title.x =  element_text(size = 7, family = "Arial", face = "plain"),
