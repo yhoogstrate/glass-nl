@@ -5,13 +5,17 @@ if(!exists("metadata.glass.per.resection")) {
   source('scripts/load_metadata.R')
 }
 
+# needed to match id's to RNA Data
+if(!exists('expression.glass.exon.metadata')) {
+  source('scripts/load_rna-counts.R')
+}
 
 
 # raw data, useful for gene identifiers and 'Filtered' values (i.e. imputed in normalised data)
 
 expression.proteomics.raw <- read.table("data/glass/Proteomics/2022-03-31_data_update/20210729_084405_GLASSNL_LGG_dia_ProteinReport.tsv", sep = "\t", quote = "", header = T) |> 
   dplyr::rename_with( ~ gsub('^X','',.x)) |> 
-  dplyr::filter(grepl("^Y-FGCZCont",PG.ProteinAccessions) == F) |> 
+  dplyr::filter(grepl("Y-FGCZCont",PG.ProteinAccessions) == F) |> 
   dplyr::filter(PG.ProteinAccessions != 'P01892') |>  # one of the four duplicate genes
   dplyr::filter(PG.ProteinAccessions != 'Q04826') |> # one of the four duplicate genes
   dplyr::filter(PG.ProteinAccessions != 'Q29974') |> # one of the four duplicate genes
@@ -22,9 +26,86 @@ expression.proteomics.raw <- read.table("data/glass/Proteomics/2022-03-31_data_u
 expression.proteomics.metadata <- expression.proteomics.raw |>
   dplyr::select('PG.ProteinAccessions', "PG.Genes", "PG.CellularComponent", "PG.BiologicalProcess", "PG.MolecularFunction")
 
+stopifnot(nrow(expression.proteomics.raw) == 4828)
+stopifnot(nrow(expression.proteomics.metadata) == 4828)
 
-stopifnot(nrow(expression.proteomics.raw) == 4881)
-stopifnot(nrow(expression.proteomics.metadata) == 4881)
+
+
+# match identifiers with RNA -- all except 3 are missing in the gtf
+expression.proteomics.metadata <- expression.proteomics.metadata |> 
+  dplyr::mutate(hugo_symbol_rna_prot_shared = gsub(";.*?$","",PG.Genes)) |> 
+  dplyr::mutate(hugo_symbol_rna_prot_shared = 
+                  dplyr::recode(hugo_symbol_rna_prot_shared,
+                                'AARS' = 'AARS1',
+                                'ADPRHL2' = 'ADPRS',
+                                'ADSS' = 'ADSS2',
+                                'ASNA1' = 'GET3',
+                                'CARS' = 'CARS1',
+                                'CRAD' = 'CRACD',
+                                'DARS' = 'DARS1',
+                                'EPRS' = 'EPRS1',
+                                'FAM129B' = 'NIBAN2',
+                                'FAM49A' = 'CYRIA',
+                                'FAM49B' = 'CYRIB',
+                                'GARS' = 'GARS1',
+                                'H1F0' = 'H1-0',
+                                'H1FX' = 'H1-10',
+                                'H2AFY2' = 'MACROH2A2',
+                                'H2AFY' = 'MACROH2A1',
+                                'H2AFZ' = 'H2AZ1',
+                                'H3F3A' = 'H3-3A',
+                                'HARS' = 'HARS1',
+                                'HIST1H1B' = 'H1-5',
+                                'HIST1H1C' = 'H1-2',
+                                'HIST1H1D' = 'H1-3',
+                                'HIST1H1E' = 'H1-4',
+                                'HIST1H2AB' = 'H2AC4',
+                                'HIST1H2AG' = 'H2AC11',
+                                'HIST1H2BA' = 'H2BC1',
+                                'HIST1H2BK' = 'H2BC12',
+                                'HIST1H2BO' = 'H2BC17',
+                                'HIST1H4A' = 'H4C1',
+                                'HIST2H2AB' = 'H2AC21',
+                                'HIST2H2AC' = 'H2AC20',
+                                'IARS' = 'IARS1',
+                                'KARS' = 'KARS1',
+                                'KIF1BP' = 'KIFBP',
+                                'LARS' = 'LARS1',
+                                'MARS' = 'MARS1',
+                                'NARS' = 'NARS1',
+                                'QARS' = 'QARS1',
+                                'RARS' = 'RARS1',
+                                'RYDEN' = 'SHFL',
+                                'SARS' = 'SARS1',
+                                'TARSL2' = 'TARS3',
+                                'TARS' = 'TARS1',
+                                'VARS' = 'VARS1',
+                                'WARS' = 'WARS1',
+                                'YARS' = 'YARS1',
+                                'ICK' = 'CILK1',
+                                'KIAA1107' = 'BTBD8',
+                                'AKAP2' = 'PALM2AKAP2',
+                                'MARC2' = 'MTARC2',
+                                'BAP18' = 'C17orf49',
+                                'C6orf203' = 'MTRES1',
+                                'MARC1' = 'MTARC1',
+                                'CNK3/IPCEF1' = 'IPCEF1',
+                                'FAM129A' = 'NIBAN1',
+                                'FAM192A'='PSME3IP1',
+                                'FAM45BP' = 'DENND10P1',
+                                'GSTT1' = '',
+                                'LCHN' = 'DENND11',
+                                'NUPL2' = 'NUP42',
+                                'PALM2' = ''
+                         )
+                  )
+
+
+stopifnot((expression.proteomics.metadata |> 
+  dplyr::filter(duplicated(hugo_symbol_rna_prot_shared)) |> 
+  dplyr::pull(hugo_symbol_rna_prot_shared) |> 
+  unique()) == "")
+
 
 
 # only 77 / 99 of the samples have metadata - 3 controls make sense, the other 19 unclear, most likely replicates
