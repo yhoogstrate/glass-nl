@@ -187,7 +187,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'), suffix = c("", ""))
 
 
-stopifnot(is.na(metadata.glass.per.resection$fastp.total_reads) == F) # ENSURE ALL SAMPLE HAVE THIS METADATA
+stopifnot(is.na(metadata.glass.per.resection |> dplyr::filter(!is.na(genomescan.sid)) |> dplyr::pull(fastp.total_reads)) == F) # ENSURE ALL SAMPLE HAVE THIS METADATA
 
 rm(tmp)
 
@@ -223,7 +223,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'), suffix=c("", ""))
 
 
-stopifnot(is.na(metadata.glass.per.resection$star.input.reads) == F)
+stopifnot(is.na(metadata.glass.per.resection |>  dplyr::filter(!is.na(genomescan.sid)) |> dplyr::pull(star.input.reads) ) == F)
 
 
 rm(tmp, parse_star_log_final_out)
@@ -270,7 +270,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(    tmp, by=c('genomescan.sid'='genomescan.sid') , suffix=c("", "")  )
 
 
-stopifnot(is.na(metadata.glass.per.resection$idxstats.alternate.loci) == F)
+stopifnot(is.na(metadata.glass.per.resection |> dplyr::filter(!is.na(genomescan.sid)) |>  dplyr::pull(idxstats.alternate.loci)) == F)
 
 
 rm(tmp, parse_idxstats)
@@ -306,7 +306,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 
 
 
-stopifnot(is.na(metadata.glass.per.resection$featureCounts.Assigned) == F)
+stopifnot(is.na(metadata.glass.per.resection |> dplyr::filter(!is.na(genomescan.sid)) |>  dplyr::pull(featureCounts.Assigned)) == F)
 
 
 rm(tmp)
@@ -852,42 +852,48 @@ rm(tmp)
 # per patient ----
 
 
-metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_GLASS RNAseq__ALL.csv') %>% 
-  dplyr::mutate(data_of_birth = NULL) %>%
-  # dplyr::mutate(Age_at_Diagnosis = NULL) %>%
-  dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) %>%
-  dplyr::mutate(Date_of_Death = as.Date(Date_of_Death , format = "%Y-%m-%d")) %>%
-  dplyr::mutate(Date_Last_Followup = as.Date(Date_Last_Followup , format = "%Y-%m-%d")) %>%
-  dplyr::mutate(overall.survival = difftime(Date_of_Death , Date_of_Diagnosis, units = 'days')) %>%
-  dplyr::mutate(time.until.last.followup = difftime(Date_Last_Followup, Date_of_Diagnosis, units = 'days')) %>% 
-  dplyr::mutate(deceased = !is.na(Date_of_Death)) %>% 
-  dplyr::mutate(Sample_Name.I = NA, Sample_Name.R = NA, genomescan.sid.I = NA, genomescan.sid.R = NA) %>% 
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_148", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_160", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_162", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_137", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_GLASS RNAseq__ALL.csv') |> 
+  dplyr::mutate(data_of_birth = NULL) |>
+  # dplyr::mutate(Age_at_Diagnosis = NULL) |>
+  dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) |>
+  dplyr::mutate(Date_of_Death = as.Date(Date_of_Death , format = "%Y-%m-%d")) |>
+  dplyr::mutate(Date_Last_Followup = as.Date(Date_Last_Followup , format = "%Y-%m-%d")) |>
+  dplyr::mutate(overall.survival = difftime(Date_of_Death , Date_of_Diagnosis, units = 'days')) |>
+  dplyr::mutate(time.until.last.followup = difftime(Date_Last_Followup, Date_of_Diagnosis, units = 'days')) |> 
+  dplyr::mutate(deceased = !is.na(Date_of_Death)) |> 
+  dplyr::mutate(Sample_Name.I = NA, Sample_Name.R = NA, genomescan.sid.I = NA, genomescan.sid.R = NA) |> 
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_148", "Tumor" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_160", "Tumor" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_162", "Tumor" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_137", "Tumor" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
   
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_110", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_113", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_118", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_156", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_174", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_002", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_018", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_020", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_022", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_029", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_110", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_113", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_118", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_156", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_174", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_002", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_018", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_020", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_022", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_029", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
   
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_017", "Other" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_UMCU_207", "Other" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_017", "Other" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_UMCU_207", "Other" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
   
-  dplyr::mutate(Cause_of_Death = ifelse(Cause_of_Death == "", "Unkown" , Cause_of_Death)) %>% # unknown, but deceased
-
+  dplyr::mutate(Cause_of_Death = ifelse(Cause_of_Death == "", "Unkown" , Cause_of_Death)) |> # unknown, but deceased
+  
   dplyr::mutate(overall.survival.event = ifelse(is.na(overall.survival) | Cause_of_Death == "Other",0,1),
-              overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival)) |> 
+                overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival)) |> 
+  
+  (function(.) {
+    assertthat::assert_that(nrow(.) == 98)
+    return(.)
+  })() |> # in-pipe stopifnot(nrow(.) == 98)
   
   dplyr::add_row(GLASS_ID = "GLNL_EMCR_153") # not in the file, exclusive for proteomics
-  
+
+
 
 
 # missing metadata for those 3 patients lacking a matching pair
