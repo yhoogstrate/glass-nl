@@ -18,8 +18,8 @@
 # font_import(pattern='Arial')
 # 
 # 3. check if Arial exists:
-# loadfonts()
-# sort(fonts())
+# extrafonts::loadfonts()
+# sort(extrafont::fonts())
 
 theme_cellpress <- theme_bw() +
   theme(
@@ -64,3 +64,10 @@ youri_gg_theme <- theme(
   panel.grid.major.x = element_line(colour = 'grey20', linetype = 'dotted',size=0.25),
   panel.grid.minor.x = element_line(colour = 'grey50', linetype = 'dotted')
 ) 
+
+
+
+
+extrafont::loadfonts()
+
+

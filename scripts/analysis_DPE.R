@@ -5,6 +5,15 @@
 # obtain metadata ---
 
 
+if(!exists('metadata.glass.per.resection')) {
+  source('scripts/load_metadata.R')
+}
+
+
+if(!exists('expression.proteomics.normalised.imputed')) {
+  source('scripts/load_proteomics_expression.R')
+}
+
 
 # DPE: primary - recurrence ----
 ## limma - imputed ----
@@ -252,7 +261,7 @@ if(!file.exists("cache/res.proteomics.meth_a_idh__a_idh_hg.Rds")) {
   res.proteomics.meth_a_idh__a_idh_hg <- limma::topTable(res.proteomics.meth_a_idh__a_idh_hg, adjust.method="fdr",n=Inf)
   
   saveRDS(res.proteomics.meth_a_idh__a_idh_hg, "cache/res.proteomics.meth_a_idh__a_idh_hg.Rds")
-  saveRDS(tmp.metadata, 'cache/meta.proteomics.meth_a_idh__a_idh_hg.Rds.Rds')
+  saveRDS(tmp.metadata, 'cache/meta.proteomics.meth_a_idh__a_idh_hg.Rds')
 }
 
 
@@ -294,8 +303,8 @@ if(!file.exists("cache/res.proteomics.who21_2_3__4.Rds")) {
   res.proteomics.who21_2_3__4 <- limma::eBayes(fit.proteomics.who21_2_3__4, trend = TRUE)
   res.proteomics.who21_2_3__4 <- limma::topTable(res.proteomics.who21_2_3__4, adjust.method="fdr",n=Inf)
   
-  saveRDS(res.proteomics.who21_2_3__4, "cache/res.proteomics.who21_2_3__4.Rds")
-  saveRDS(tmp.metadata, 'cache/meta.proteomics.who21_2_3__4.Rds')
+  saveRDS(res.proteomics.who21_2_3__4, file="cache/res.proteomics.who21_2_3__4.Rds")
+  saveRDS(tmp.metadata, file='cache/meta.proteomics.who21_2_3__4.Rds')
 }
 
 

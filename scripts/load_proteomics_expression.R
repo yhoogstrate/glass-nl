@@ -153,6 +153,14 @@ expression.proteomics.normalised.imputed <- read.csv('data/glass/Proteomics/Prot
 # ensure identifiers between raw and imputed table exist
 stopifnot(nrow(expression.proteomics.normalised.imputed) == 3247)
 stopifnot(ncol(expression.proteomics.normalised.imputed) == 55)
+
+# there are 31 identifiers that were excluded by the 'Y-FGCZCont'-filter
+expression.proteomics.normalised.imputed <- expression.proteomics.normalised.imputed |> 
+  tibble::rownames_to_column('hugo_symbol') |> 
+  dplyr::filter(hugo_symbol %in% rownames(expression.proteomics.metadata)) |> 
+  tibble::column_to_rownames('hugo_symbol')
+
+stopifnot(nrow(expression.proteomics.normalised.imputed) == (3247 - 31))
 stopifnot(rownames(expression.proteomics.normalised.imputed) %in% rownames(expression.proteomics.metadata))
 stopifnot(colnames(expression.proteomics.normalised.imputed) %in% (metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |> dplyr::pull(Sample_Name)))
 stopifnot((metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |> dplyr::pull(Sample_Name)) %in% colnames(expression.proteomics.normalised.imputed))
