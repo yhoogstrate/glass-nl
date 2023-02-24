@@ -131,7 +131,7 @@ if(file.exists("cache/res.paired.a.exon.Rds")) {
   
   
   stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
-  #saveRDS(tmp.data, "cache/res.paired.a.exon.design.Rds")
+  #saveRDS(tmp.metadata, "cache/res.paired.a.exon.design.Rds")
   
   
   
