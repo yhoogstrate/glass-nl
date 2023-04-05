@@ -74,3 +74,26 @@ rm(dge.partially.paired.h.up, dge.partially.paired.h.down)
 rm(tmp)
 
 
+tmp <- data.frame(
+  gene_name = dge.partially.paired.h$labels,
+  hclust_order = dge.partially.paired.h$order,
+  hclust_rank = order(dge.partially.paired.h$order)
+)
+
+
+
+dge.partially.paired.clusters <- dge.partially.paired.clusters |> 
+  dplyr::left_join(tmp, by=c('gene_name'='gene_name'),suffix=c('','')) |> 
+  dplyr::arrange(hclust_rank)
+
+rm(tmp)
+
+stopifnot(nrow(dge.partially.paired.clusters) == 604)
+stopifnot(is.na(dge.partially.paired.clusters$hclust_rank) == F)
+
+
+stopifnot(dge.partially.paired.clusters |> head(n=1) |> dplyr::pull(gene_name) == "CHL1-AS2")
+stopifnot(dge.partially.paired.clusters |> tail(n=1) |> dplyr::pull(gene_name) == "COL6A2")
+
+
+

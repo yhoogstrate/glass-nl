@@ -159,6 +159,7 @@ stopifnot(duplicated(tmp$V4) == F)
 expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
   dplyr::left_join(tmp,by=c('gene_id'='V4'),suffix = c("", ""))
 
+rm(tmp)
 
 
 ## VST transform ----

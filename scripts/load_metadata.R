@@ -791,8 +791,8 @@ tmp <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Chemotherapy dat
   dplyr::mutate(chemotherapy = gsub("^.+: ","", value)) %>% 
   dplyr::mutate(conditional.surgery = gsub("^.+Surgery ([^:]+):.+$","\\1",value)) %>% 
   dplyr::mutate(condition = gsub("^([^ ]+) .+$","\\1",value)) %>% 
-  dplyr::mutate(value=NULL) %>% 
-  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID')) %>% 
+  dplyr::mutate(value=NULL) %>%
+  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID'), multiple='all') %>% 
   dplyr::filter(
                 (condition == "After" & Sample_Name > conditional.surgery) |
                 (condition == "Before" & Sample_Name >= conditional.surgery) 
@@ -828,7 +828,7 @@ tmp <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Radiotherapy dat
   dplyr::mutate(conditional.surgery = gsub("^.+Surgery ([^:]+)$","\\1",value)) %>% 
   dplyr::mutate(condition = gsub("^([^ ]+) .+$","\\1",value)) %>% 
   dplyr::mutate(value=NULL) %>% 
-  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID')) %>% 
+  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID'), multiple='all') %>% 
   dplyr::filter(
     (condition == "After" & Sample_Name > conditional.surgery) | (condition == "Before" & Sample_Name >= conditional.surgery) 
   ) %>% 
