@@ -14,8 +14,6 @@ if(!exists("metadata.glass.per.resection") | "dna.wes.VAF_IDH" %in% names(metada
 }
 
 
-
-
 # calc correlations ----
 
 
@@ -231,7 +229,14 @@ rm(tmp.metadata, tmp.data, tmp.out)
 # export -----
 
 
+out <- out |> 
+  tibble::column_to_rownames('gene_uid') |> 
+  dplyr::mutate_all(as.numeric) |> 
+  tibble::rownames_to_column('gene_uid')
+
+
 saveRDS(out, file="cache/correlation_expression_purity.Rds")
+
 
 
 
