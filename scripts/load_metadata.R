@@ -468,14 +468,13 @@ fit.wb = fitdistrplus::fitdist(fit.data, "weibull")
 
 #print(fit.g)
 
-par(mfrow = c(2, 2))
-plot.legend <- c("gamma", "lognormal", "weibull")
-denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-
-dev.off()
+#par(mfrow = c(2, 2))
+#plot.legend <- c("gamma", "lognormal", "weibull")
+#denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#dev.off()
 
 # seems gamma fit
 fit <- fit.g
@@ -793,7 +792,7 @@ tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022/Chemotherapy
   dplyr::mutate(conditional.surgery = gsub("^.+Surgery ([^:]+):.+$","\\1",value)) %>% 
   dplyr::mutate(condition = gsub("^([^ ]+) .+$","\\1",value)) %>% 
   dplyr::mutate(value=NULL) %>%
-  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID'), multiple='all') %>% 
+  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID'), relationship = "many-to-many") %>%
   dplyr::filter(
                 (condition == "After" & Sample_Name > conditional.surgery) |
                 (condition == "Before" & Sample_Name >= conditional.surgery) 

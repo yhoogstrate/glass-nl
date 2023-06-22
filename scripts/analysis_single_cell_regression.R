@@ -12,6 +12,9 @@ if('expression.glass.exon.metadata' %in% colnames(dge.partially.paired.clusters)
 
 
 
+
+
+
 # load Johnson ----
 
 seurat_obj_johnson <- SeuratDisk::LoadH5Seurat("data/syn25956426_Johnson/processed_data/analysis_scRNAseq_tumor_counts.h5")
@@ -53,380 +56,6 @@ seurat_obj_johnson <- Seurat::RunUMAP( object = seurat_obj_johnson, dims = 1:35,
 
 
 rm(rename, metadata, slot)
-
-
-# load Bolleboom - Gao ----
-
-
-# # take processed data from G-SAM cache
-# seurat_obj_bolleboom_h243gbm <- readRDS(file="cache/seurat_bolleboom.2.Rds")
-# seurat_obj_bolleboom_h243gbm$yaxis <- paste0(seurat_obj_bolleboom_h243gbm$cellt, " ", seurat_obj_bolleboom_h243gbm$seurat_clusters)
-# 
-# 
-# plt.bolleboom <- Seurat::DotPlot(seurat_obj_bolleboom_h243gbm,
-#                                   features=dge.partially.paired.clusters |> 
-#                                     dplyr::arrange(desc(hclust_rank)) |> 
-#                                     dplyr::pull(gene_name),
-#                                   col.min = -4.6,
-#                                   col.max = 4.6,
-#                                   group.by = 'annotated_clusters')
-# 
-# 
-# rm(seurat_obj_bolleboom_h243gbm)
-# gc()
-# 
-# 
-# 
-# data.bolleboom.ac <- plt.bolleboom$data |> 
-#   dplyr::mutate(pct.exp=NULL) |> # not plotted
-#   dplyr::mutate(avg.exp=NULL) |> # not very useful for plotting
-#   dplyr::filter(id %in% c("15. AC")) |> 
-#   tibble::remove_rownames() |> 
-#   tibble::column_to_rownames('features.plot') |> 
-#   dplyr::mutate(id = NULL ) |> 
-#   dplyr::rename_with( ~ paste0("Astrocytes [in GBM, Bolleboom] ", .x)) |> 
-#   tibble::rownames_to_column('gene_name')
-# 
-# 
-# 
-# data.bolleboom.ne <- plt.bolleboom$data |> 
-#   dplyr::mutate(pct.exp=NULL) |> # not plotted
-#   dplyr::mutate(avg.exp=NULL) |> # not very useful for plotting
-#   dplyr::filter(id == "4. NE") |> 
-#   tibble::remove_rownames() |> 
-#   tibble::column_to_rownames('features.plot') |> 
-#   dplyr::mutate(id = NULL ) |> 
-#   dplyr::rename_with( ~ paste0("Neurons [in GBM, Bolleboom]", .x)) |> 
-#   tibble::rownames_to_column('gene_name')
-# 
-# 
-
-
-
-
-# integrate / merge ----
-
-#metadata_bolleboom_h243gbm <- seurat_obj_bolleboom_h243gbm@meta.data <- data.frame()
-
-
-#seurat_obj_johnson@meta.data <- data.frame()
-#seurat_obj_bolleboom_h243gbm@meta.data <- data.frame()
-
-
-nrow(seurat_obj_johnson)
-nrow(seurat_obj_bolleboom_h243gbm)
-length(union(rownames(seurat_obj_johnson),rownames(seurat_obj_bolleboom_h243gbm)))
-isct <- intersect(rownames(seurat_obj_johnson),rownames(seurat_obj_bolleboom_h243gbm))
-length(isct)
-
-
-glioma.combined <- merge(x = seurat_obj_johnson[,1:ncol(seurat_obj_johnson)-1], # wow strange error otherwise... https://github.com/satijalab/seurat/issues/6098
-                         y = seurat_obj_bolleboom_h243gbm,
-                         add.cell.ids = c("j", "b"), project = "glioma")
-
-nrow(glioma.combined)
-
-
-
-glioma.combined <- glioma.combined[rownames(glioma.combined) %in% isct,]
-
-stopifnot(nrow(glioma.combined) == length(isct))
-
-
-
-
-table(glioma.combined@meta.data$idh_codel_subtype)
-
-
-glioma.combined@meta.data <- glioma.combined@meta.data |> 
-  dplyr::mutate(idh_codel_subtype = ifelse(is.na(idh_codel_subtype), "IDHwt", idh_codel_subtype))
-
-
-table(glioma.combined@meta.data$idh_codel_subtype)
-
-
-
-glioma.combined <- Seurat::NormalizeData(object = glioma.combined, normalization.method = "LogNormalize", scale.factor = 1e4, verbose = F)
-glioma.combined <- Seurat::FindVariableFeatures(object = glioma.combined, selection.method = "vst", verbose = F)
-glioma.combined <- Seurat::ScaleData(object = glioma.combined, verbose = T,
-                                     features = c(Seurat::VariableFeatures(object = glioma.combined),dge.partially.paired.clusters$gene_name)
-                                     )
-
-glioma.combined <- Seurat::RunPCA(reduction.key = "PC_", object = glioma.combined, features = Seurat::VariableFeatures(object = glioma.combined),verbose = F)
-glioma.combined <- Seurat::FindNeighbors(object = glioma.combined, dims = 1:35, verbose = F)
-glioma.combined <- Seurat::FindClusters(object = glioma.combined, resolution = 1.2, algorithm = 1, verbose = F)
-glioma.combined <- Seurat::RunUMAP( object = glioma.combined, dims = 1:35, verbose = T )
-
-
-glioma.combined@meta.data <- glioma.combined@meta.data |> 
-  dplyr::mutate(cell_type_combined = ifelse(is.na(cell_state), cell_type, cell_state)) |> 
-  dplyr::mutate(cell_type_combined = dplyr::recode(cell_type_combined, 
-                                                   `OD`='oligodendrocyte',
-                                                   `Oligodendrocyte`='oligodendrocyte',
-                                                   `EN`='endothelial',
-                                                   `NE`='neuron',
-                                                   `AC`='astrocyte',
-                                                   `Pericyte`='pericyte',
-                                                   `Fibroblast`='fibroblast',
-                                                   `PE`='pericyte',
-                                                   `T`='tumor',
-                                                   `B cell`='B-cell',
-                                                   `Endothelial`='endothelial',
-                                                   `T cell`='T-cell',
-                                                   `OPC`='OPC',
-                                                   `Myeloid` = 'TAM',
-                                                   `Dendritic cell` = 'TAM',
-                                                   `Granulocyte` = 'TAM',
-                                                   `Diff.-like` = 'tumor',
-                                                   `Prolif. stem-like` = 'tumor',
-                                                   `Stem-like` = 'tumor'
-                                                   )) |> 
-  dplyr::mutate(tumor_type_str = dplyr::case_when(
-    idh_codel_subtype == "IDHwt" ~ "tumor [GBM]",
-    idh_codel_subtype == "IDHmut_codel" ~ "tumor [1p/19q]",
-    idh_codel_subtype == "IDHmut_noncodel" ~ "tumor [IDH+]"
-  )) |> 
-  dplyr::mutate(cell_type_combined = ifelse(cell_type_combined == "tumor", tumor_type_str, cell_type_combined))
-
-Seurat::DimPlot(glioma.combined, reduction = "umap", label = TRUE, pt.size = .6, group.by = "cell_type_combined")
-Seurat::FeaturePlot(glioma.combined, reduction = "umap", features="TOP2A", label = TRUE)
-
-c39 <- subset(glioma.combined, seurat_clusters == 39)
-
-
-
-# Seurat::DimPlot(data.sub, reduction = "umap", label = TRUE, pt.size = .6, group.by = "cell_type_combined")
-# Seurat::DimPlot(data.sub, reduction = "umap", label = TRUE, pt.size = .6, group.by = "cell_type_combined")
-# 
-# 
-#  
-
-
-# regression ----
-
-# quicker subsetting later on
-data.sub <- subset(glioma.combined, )[rownames(glioma.combined) %in% dge.partially.paired.clusters$gene_name,]
-#data.sub$cell_type_combined <- ifelse(  data.sub$seurat_clusters %in% c(39,26,21,22,38,23),  paste0(data.sub$cell_type_combined ," [cycling]"),  data.sub$cell_type_combined )
-data.sub$cell_type_combined[data.sub$cell_type_combined %in% c('fibroblast','pericyte')] <- 'fibroblast & pericyte'
-data.sub <- subset(data.sub, cell_type_combined %in% c('tumor [1p/19q]', 'tumor [GBM]',
-                                                       
-                                               'tumor [1p/19q] [cycling]', 'tumor [GBM] [cycling]',
-                                               'endothelial [cycling]',# small cluster. probably wrong
-                                               'oligodendrocyte [cycling]',# small cluster. probably wrong
-                                               'T-cell [cycling]' # small cluster. probably wrong
-) == F)
-
-
-
-out.n.estimate <- data.frame()
-out.n.stderr <- data.frame()
-out.n.tstat <- data.frame()
-
-out.s.estimate <- data.frame()
-out.s.stderr <- data.frame()
-out.s.tstat <- data.frame()
-
-
-
-i = 1
-n = length(dge.partially.paired.clusters$gene_name)
-#for(gene in c(dge.partially.paired.clusters$gene_name)[1:604 %% 40 == 1]) {
-#for(gene in c("TOP2A","COL1A2","SELL","IGSF3","F5")) {
-for(gene in dge.partially.paired.clusters$gene_name) {
-  print(paste0(gene, " -- " ,i,"/",n , " = ", round(i / n * 100,1), "%"))
-  if(gene %in% rownames(data.sub)) {
-    
-    data <- subset(data.sub, )[rownames(data.sub) == gene,]
-    
-    if(nrow(data) == 1) {
-      df.n <- data.frame(expr.norm = data@assays$RNA@data[1,])
-      df.s <- data.frame(expr.norm = data@assays$RNA@scale.data[1,])
-      
-      
-      # for(celltype in unique(data@meta.data$cell_type_combined)) {
-      #   df.n[[celltype]] <- as.numeric(data@meta.data$cell_type_combined == celltype)
-      #   df.s[[celltype]] <- as.numeric(data@meta.data$cell_type_combined == celltype)
-      # }
-      for(cluster in levels(data.sub$seurat_clusters)) {
-        df.n[[paste0("c",cluster)]] <- as.numeric(data.sub$seurat_clusters == cluster)
-        df.s[[paste0("c",cluster)]] <- as.numeric(data.sub$seurat_clusters == cluster)
-      }
-      
-      
-      res.n <- lm(expr.norm ~ 0 + ., data=df.n)
-      est <- as.data.frame(summary(res.n)$coef) |> 
-        dplyr::select('Estimate') |> 
-        t() |> 
-        as.data.frame() 
-      rownames(est) <- gene
-      
-      
-      err <- as.data.frame(summary(res.n)$coef) |> 
-        dplyr::select('Std. Error') |> 
-        t() |> 
-        as.data.frame() 
-      rownames(err) <- gene
-      
-      
-      tstat <- as.data.frame(summary(res.n)$coef) |> 
-        dplyr::select('t value') |> 
-        t() |> 
-        as.data.frame() 
-      rownames(tstat) <- gene
-      
-      out.n.estimate <- rbind(out.n.estimate, est)
-      out.n.stderr <- rbind(out.n.stderr, err)
-      out.n.tstat <- rbind(out.n.tstat, tstat)
-      
-      rm(est,err,tstat, res.n)
-      
-      
-      
-      res.s <- lm(expr.norm ~ 0 + ., data=df.s)
-      est <- as.data.frame(summary(res.s)$coef) |> 
-        dplyr::select('Estimate') |> 
-        t() |> 
-        as.data.frame() 
-      rownames(est) <- gene
-      
-      
-      err <- as.data.frame(summary(res.s)$coef) |> 
-        dplyr::select('Std. Error') |> 
-        t() |> 
-        as.data.frame() 
-      rownames(err) <- gene
-      
-      
-      tstat <- as.data.frame(summary(res.s)$coef) |> 
-        dplyr::select('t value') |> 
-        t() |> 
-        as.data.frame() 
-      rownames(tstat) <- gene
-      
-      out.s.estimate <- rbind(out.s.estimate, est)
-      out.s.stderr <- rbind(out.s.stderr, err)
-      out.s.tstat <- rbind(out.s.tstat, tstat)
-      
-      rm(est,err,tstat, res.s)
-      
-      
-  
-    } else {
-      print(paste0("Skipping: ",gene))
-    }
-  } else {
-    print(paste0("Skipping **: ",gene))
-  }
-  
-  i <- i + 1
-  
-}
-
-
-
-#saveRDS(out.s.estimate, file="cache/out.s.estimate.Rds")
-#saveRDS(out.s.stderr, file="cache/out.s.stderr.Rds")
-#saveRDS(out.s.tstat , file="cache/out.s.tstat.Rds")
-
-
-
-# ## plot ----
-
-
-out.s.estimate <- readRDS("cache/out.s.estimate.Rds")
-out.s.estimate <- readRDS("cache/out.s.stderr.Rds")
-out.s.estimate <- readRDS("cache/out.s.tstat.Rds")
-
-
-
-
-df <- data.frame(
-  gene_name = dge.partially.paired.clusters |> 
-    dplyr::arrange(hclust_rank) |> 
-    dplyr::pull(gene_name)
- ) |>
-  #dplyr::left_join(out.stderr |> tibble::rownames_to_column('gene_name'),by=c('gene_name'='gene_name'),suffix=c('','')) |> 
-  #dplyr::left_join(out.n.estimate |> tibble::rownames_to_column('gene_name'),by=c('gene_name'='gene_name'),suffix=c('','')) |> 
-  dplyr::left_join(out.s.estimate |> tibble::rownames_to_column('gene_name'),by=c('gene_name'='gene_name'),suffix=c('','')) |> 
-  dplyr::mutate(order.y = 1:dplyr::n()) |> 
-  tidyr::pivot_longer(cols=-c(gene_name, order.y))
-
-plt <- rbind(df,
-             df |>  dplyr::mutate(value = ifelse(!is.na(value),0,value)))
-
-
-
-ggplot(plt, aes(x=value, y=reorder(gene_name, order.y), group = gene_name)) + 
-  facet_grid(cols = vars(name)) +
-  #geom_hline(yintercept = "COL1A2",col="red",alpha=0.2) +  # COL1A2
-  geom_line() +
-  labs(y=NULL) + 
-  theme(axis.text.y=element_blank(),
-        axis.ticks.y=element_blank() ) 
-
-
-
-
-data.sub$glial.cluster <- data.sub$seurat_clusters %in% c(18,20,24,25,27,29,32,37, 40, 43, 9) # 37 specifiek
-Seurat::DimPlot(data.sub, group.by='glial.cluster')
-
-
-
-
-celltype.per.cluster <- data.frame(
-  cluster = paste0('c',data.sub$seurat_clusters),
-  celltype = data.sub$cell_type_combined
-) |> 
-  dplyr::group_by(cluster) |> 
-  dplyr::summarize (celltype =names(which.max(table(celltype))))
-
-
-dataset.per.cluster <- data.frame(
-  cluster = paste0('c',data.sub$seurat_clusters),
-  dataset = ifelse(is.na(data.sub$cell_state),"Bolleboom","Johnson")
-) |> 
-  dplyr::group_by(cluster) |> 
-  dplyr::summarize (dataset =names(which.max(table(dataset))))
-
-
-sample.per.cluster <- data.frame(
-  cluster = paste0('c',data.sub$seurat_clusters),
-  sample = ifelse(is.na(data.sub$case_barcode),"Bolleboom - Gao" ,data.sub$case_barcode)
-) |> 
-  dplyr::group_by(cluster) |> 
-  dplyr::summarize (sample =names(which.max(table(sample))))
-
-
-
-
-df <- data.frame(
-  gene_name = dge.partially.paired.clusters |> 
-    dplyr::arrange(hclust_rank) |> 
-    dplyr::pull(gene_name)
-) |>
-  dplyr::left_join(out.s.estimate |> tibble::rownames_to_column('gene_name'),by=c('gene_name'='gene_name'),suffix=c('','')) |> 
-  dplyr::mutate(order.y = 1:dplyr::n()) |> 
-  tidyr::pivot_longer(cols=-c(gene_name, order.y)) |> 
-  dplyr::rename(cluster = name) |> 
-  dplyr::left_join(celltype.per.cluster, by=c('cluster'='cluster'), suffix=c('','')) |> 
-  dplyr::left_join(dataset.per.cluster, by=c('cluster'='cluster'), suffix=c('','')) |> 
-  dplyr::left_join(sample.per.cluster, by=c('cluster'='cluster'), suffix=c('','')) |> 
-  dplyr::mutate(cluster_rename = paste0(celltype, " [",cluster,"]"))
-
-
-plt <- rbind(df,
-             df |>  dplyr::mutate(value = ifelse(!is.na(value),0,value))) |> 
-  dplyr::filter(cluster %in% c('c18','c41','c21','c22','c39','c37')) |>  # ,'c26','c38','c23',
-  dplyr::mutate(type = "line")
-
-
-ggplot(plt, aes(x=value, y=reorder(gene_name, order.y), group = gene_name, col=celltype)) + 
-  facet_grid(cols = vars(cluster_rename)) +
-  geom_line(data=plt |> dplyr::filter(type == "line")) +
-  labs(y=NULL) + 
-  theme(axis.text.y=element_blank(),
-        axis.ticks.y=element_blank() ) 
-
 
 
 
@@ -530,15 +159,16 @@ data.van_hijfte_astros.astro.c27 <- plt.van_hijfte_astros |>
 
 
 
+# Seurat::DimPlot(van_hijfte_astro)
+# Seurat::DimPlot(van_hijfte_astro,group.by="yaxis", label=T)
+# Seurat::FeaturePlot(van_hijfte_astro, features=c('COL1A2'))
 
 
-Seurat::DimPlot(van_hijfte_astro)
-Seurat::DimPlot(van_hijfte_astro,group.by="yaxis", label=T)
-Seurat::FeaturePlot(van_hijfte_astro, features=c('COL1A2'))
 
 
 # data: Yuan - PJ016 ----
 # PJ16 = IDH
+
 
 yuan_PJ016 <- readRDS("../scRNA-glioma-workflows/cache/Yuan [GSE103224]__PJ016__[A-IDH]__master.Rds")
 yuan_PJ016$yaxis <- paste0(yuan_PJ016$celltype.annotated.venteicher, " ", yuan_PJ016$seurat_clusters)
@@ -626,8 +256,6 @@ data.diaz.ac2 <- plt.diaz_SF11136$data |>
 
 
 
-
-## clusters:
 
 
 
@@ -998,6 +626,8 @@ plt <- df |>
 unique(plt$panel)
 
 
+plt <- readRDS("cache/vis_DGE_scRNA_clusters.Rds")
+
 
 plt.0 <- rbind(plt, plt |>  dplyr::mutate(value=0)) |> 
   dplyr::mutate(col = ifelse(panel == "cluster", col, ".")) |> 
@@ -1037,19 +667,18 @@ plt.4 <- plt |>
   dplyr::mutate(y= paste0(name, ": ", value)) 
 
 
+col2 <- grDevices::colorRampPalette(c("#67001F", "#B2182B", "#D6604D", "#F4A582",
+                                      "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
+                                      "#4393C3", "#2166AC", "#053061"))
+
 
 
 
 p0 <- ggplot(plt.0, aes(x = value, y = reorder(gene_name, hclust_rank), col=value_c)) +
   facet_grid(cols = vars(panel)) + # , scales = "free_x"
   geom_line() +
-  scale_colour_gradient2(
-    low = "red",
-    mid = "gray",
-    high = "blue",
-    midpoint = 0
-  ) +
-  #scale_color_manual(values=c('.'='gray30','up-1 (collagen)' = 'red','up-2 (cell cycling)'='darkgreen','up-3 (fuzzy)'='brown','down'='blue')) +
+  ggplot2::scale_color_gradientn(colours = col2(200), na.value = "grey50",
+                                 limits = c(-0.5, 0.5), oob = scales::squish ) +
   labs(y=NULL, x=NULL) + 
   theme(axis.text.y=element_blank(),
         axis.ticks.y=element_blank() )  +
@@ -1059,13 +688,7 @@ p0 <- ggplot(plt.0, aes(x = value, y = reorder(gene_name, hclust_rank), col=valu
 p1 <- ggplot(plt.1, aes(x = value, y = reorder(gene_name, hclust_rank), col=value_c)) +
   facet_grid(cols = vars(reorder(panel,xorder))) + # , scales = "free_x"
   geom_line() +
-  scale_colour_gradient2(
-    low = "red",
-    mid = "gray",
-    high = "blue",
-    midpoint = 0
-  ) +
-  #scale_color_manual(values=c('.'='gray30','up-1 (collagen)' = 'red','up-2 (cell cycling)'='darkgreen','up-3 (fuzzy)'='brown','down'='blue')) +
+  ggplot2::scale_color_gradientn(colours = col2(200), na.value = "grey50", limits = c(-4, 4), oob = scales::squish ) +
   labs(y=NULL, x=NULL) + 
   theme(axis.text.y=element_blank(),
         axis.ticks.y=element_blank() )  +
@@ -1084,9 +707,6 @@ p3 <- ggplot(plt.3, aes(x=reorder(panel,xorder), y=reorder(y, order), col=value)
   geom_point(size=4) + 
   guides(color = FALSE, size = FALSE) +
   labs(x=NULL, y=NULL) + 
-  theme(
-    #panel.background = element_rect(fill = 'white', colour = 'white')
-        ) +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) + 
   theme_bw()
 
@@ -1109,6 +729,7 @@ ABC
 ")
 
 
-ggsave("output/figures/single_cell_clusters.pdf", width = 11, height = 8)
+#saveRDS(plt, "cache/vis_DGE_scRNA_clusters.Rds")
+ggsave("output/figures/vis_DGE_scRNA_clusters.pdf", width = 11, height = 8)
 
 
