@@ -59,7 +59,12 @@ expression.glass.exon <- read.delim('data/glass/RNAseq/alignments/alignments-new
 #   dplyr::filter(grepl("XIST",gene_uid))
 
 
-stopifnot(metadata.glass.per.resection$genomescan.sid %in% colnames(expression.glass.exon)) # all metadata included samples must exist expression data
+stopifnot(
+  (metadata.glass.per.resection |> 
+            dplyr::filter(!is.na(genomescan.sid)) |> 
+            dplyr::pull(genomescan.sid) )
+          
+          %in% colnames(expression.glass.exon)) # all metadata included samples must exist expression data
 
 
 
@@ -75,7 +80,7 @@ expression.glass.exon.metadata <- expression.glass.exon %>%
   dplyr::mutate(gene_loc = paste0(gene_chr, ":", round(gene_chr_center_loc / 1000000),"M")) 
 
 
-nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon)
+stopifnot(nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon))
 
 
 # expression.glass.exon.metadata %>% 
@@ -88,12 +93,13 @@ nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon)
 ## remove non count columns ----
 
 
-expression.glass.exon <- expression.glass.exon %>%
-  dplyr::select(-c('gene_id', 'Chr', 'Start', 'End', 'Strand', 'Length')) %>% 
-  tibble::column_to_rownames('gene_uid') %>% 
+expression.glass.exon <- expression.glass.exon |> 
+  dplyr::select(-c('gene_id', 'Chr', 'Start', 'End', 'Strand', 'Length')) |> 
+  tibble::column_to_rownames('gene_uid') |> 
   dplyr::select( # Reorder w/ metadata
-    metadata.glass.per.resection %>%
-      dplyr::filter(excluded == F) %>% 
+    metadata.glass.per.resection |> 
+      dplyr::filter(!is.na(genomescan.sid)) |>  # 1 proteomics-only sample
+      dplyr::filter(excluded == F) |> 
       dplyr::pull('genomescan.sid'))
 
 
@@ -109,7 +115,7 @@ sel <- expression.glass.exon %>%
   dplyr::pull('keep')
 
 
-nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon)
+stopifnot(nrow(expression.glass.exon.metadata) == nrow(expression.glass.exon))
 stopifnot(rownames(expression.glass.exon) == expression.glass.exon.metadata$gene_uid)
   
   
@@ -153,6 +159,7 @@ stopifnot(duplicated(tmp$V4) == F)
 expression.glass.exon.metadata <- expression.glass.exon.metadata %>% 
   dplyr::left_join(tmp,by=c('gene_id'='V4'),suffix = c("", ""))
 
+rm(tmp)
 
 
 ## VST transform ----
@@ -178,7 +185,11 @@ expression.glass.gene <- read.delim('output/tables/rna-seq/GLASS.LGG.EMC.RNA.rea
 
 
 
-stopifnot(metadata.glass.per.resection$genomescan.sid %in% colnames(expression.glass.gene)) # all metadata included samples must exist expression data
+stopifnot(
+  (metadata.glass.per.resection |> 
+     dplyr::filter(!is.na(genomescan.sid)) |> 
+     dplyr::pull(genomescan.sid)
+   ) %in% colnames(expression.glass.gene)) # all metadata included samples must exist expression data
 
 
 
@@ -197,12 +208,13 @@ expression.glass.gene.metadata <- expression.glass.gene %>%
 ## remove non count columns ----
 
 
-expression.glass.gene <- expression.glass.gene %>%
-  dplyr::select(-c('gene_id', 'Chr', 'Start', 'End', 'Strand', 'Length')) %>% 
-  tibble::column_to_rownames('gene_uid') %>% 
+expression.glass.gene <- expression.glass.gene |> 
+  dplyr::select(-c('gene_id', 'Chr', 'Start', 'End', 'Strand', 'Length')) |> 
+  tibble::column_to_rownames('gene_uid') |> 
   dplyr::select( # Reorder w/ metadata
-    metadata.glass.per.resection %>%
-      dplyr::filter(excluded == F) %>% 
+    metadata.glass.per.resection |> 
+      dplyr::filter(!is.na(genomescan.sid)) |>  # 1 proteomics-only sample
+      dplyr::filter(excluded == F) |> 
       dplyr::pull('genomescan.sid'))
 
 

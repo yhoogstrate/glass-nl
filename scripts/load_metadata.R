@@ -61,6 +61,8 @@ parse_fastp_json_files <- function(json_file) {
 
 
 
+
+
 metadata.glass.per.fastq <- data.frame(fastp.json = Sys.glob("data/glass/RNAseq/fastq-clean/*.json")) %>% 
   dplyr::mutate(genomescan.sid = gsub("^.+/[^_]+_([^_]+)_.+$","\\1", fastp.json)) %>% 
   dplyr::mutate(json.stats = pbapply::pblapply(fastp.json, parse_fastp_json_files)) %>% 
@@ -93,18 +95,64 @@ rm(parse_fastp_json_files)
 
 # per resection ----
 
-
-
-metadata.glass.per.resection <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Samplesheet_GLASS_RNAseq__ALL.csv') %>% 
-  dplyr::mutate(institute = gsub("^.+_(.+)_.+$","\\1",GLASS_ID)) %>% 
-  dplyr::rename(genomescan.sid = GS_ID) %>% 
-  dplyr::mutate(rid = paste0(gsub("^(.+_)[^_]+$","\\1",GLASS_ID),Sample_Name)) %>% 
-  dplyr::rename(Exclude.by.Wies.on.complete.pair = Exclude) %>% 
+## load RNA ----
+metadata.glass.per.resection <- read.csv("data/glass/Metadata/Cleaned_clinical/metadata_2022/Samplesheet_GLASS_RNAseq__ALL.csv") |> 
+  dplyr::mutate(institute = gsub("^.+_(.+)_.+$","\\1",GLASS_ID)) |> 
+  dplyr::rename(genomescan.sid = GS_ID) |> 
+  dplyr::mutate(rid = paste0(gsub("^(.+_)[^_]+$","\\1",GLASS_ID),Sample_Name)) |> 
+  dplyr::rename(Exclude.by.Wies.on.complete.pair = Exclude) |> 
   dplyr::mutate(Sample_Type = case_when(Sample_Type == "I" ~ "initial",
                                         Sample_Type == "R" ~ "recurrent",
-                                        T ~ "X")) %>% 
-  dplyr::mutate(Sample_Type = factor(Sample_Type, levels=c('initial','recurrent','X')))
+                                        T ~ as.character(NA))) |> 
+  dplyr::mutate(Sample_Type = factor(Sample_Type, levels=c('initial','recurrent','X'))) |> 
+  dplyr::mutate(Customer_ID = NULL) # horribly confusing set of identifiers, some of which match Sample_Name but on different samples
 
+
+## add proteomics ID's ----
+
+
+# column does not contain the IDs from the normalised data
+tmp <- readxl::read_xlsx('data/glass/Proteomics/Annotation_Reduced_withControls__sample_swap_146_fixed.xlsx') |> 
+  dplyr::select(`File_Name_Proteomics`, `Sample_Name`) |> 
+  dplyr::filter(grepl("Control",Sample_Name)==F) |> 
+  dplyr::left_join(
+    read.csv("data/glass/Proteomics/Proteomics_SampleSheet_03112022.csv") |> 
+      dplyr::select(Sample_Name, ProtID)
+    , by=c('Sample_Name'='Sample_Name'), suffix=c('','')) |> 
+  dplyr::filter(!is.na(ProtID)) # not in final results table anyway
+# 146_R3 os missing
+stopifnot(nrow(tmp) == 55)
+stopifnot("146_R1" %in% tmp$Sample_Name == F) # if this file is found in the metadata, the metadata is old, invalid and results in a sample swap
+stopifnot("146_R2" %in% tmp$Sample_Name)
+stopifnot("146_R3" %in% tmp$Sample_Name)
+stopifnot(nrow(tmp) == 55)
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection |> 
+  dplyr::full_join(tmp, by=c('Sample_Name'='Sample_Name'), suffix=c('',''))
+
+
+metadata.glass.per.resection <- metadata.glass.per.resection |>
+  dplyr::mutate(Sample_Type = as.character(Sample_Type)) |>
+  dplyr::mutate(Sample_Type = ifelse(is.na(Sample_Type) & grepl("_P$", ProtID), "initial", Sample_Type)) |>
+  dplyr::mutate(Sample_Type = ifelse(is.na(`Sample_Type`) & grepl("_R[1-4]$", ProtID), "recurrent", Sample_Type))  |>
+  dplyr::mutate(GLASS_ID = ifelse(is.na(GLASS_ID) & !is.na(ProtID), paste0("GLNL_EMCR_",gsub("_.+$","",Sample_Name)), GLASS_ID)) |>
+  dplyr::mutate(institute = ifelse(is.na(institute) & !is.na(ProtID), "EMCR", institute)) |> 
+  dplyr::mutate(resection = ifelse(Sample_Name == "130_R2", "S2", resection)) |> 
+  dplyr::mutate(resection = ifelse(Sample_Name == "153_R2", "S2", resection))
+
+
+stopifnot(!is.na(metadata.glass.per.resection$GLASS_ID)) # all must have patient identifier
+stopifnot(!is.na(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |>  dplyr::pull(Sample_Type))) # all protein samples must have initial/recurrent status
+stopifnot(metadata.glass.per.resection |> dplyr::filter(!is.na(ProtID)) |>  dplyr::pull(institute) == "EMCR") # all protein samples are from EMC
+
+
+# ensure no patients with 3 or more resection appear in this data
+stopifnot(metadata.glass.per.resection |> 
+            dplyr::filter(!is.na(ProtID)) |> 
+            dplyr::pull(GLASS_ID) |>
+            table() |> 
+            max() == 2)
 
 
 
@@ -140,7 +188,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'), suffix = c("", ""))
 
 
-stopifnot(is.na(metadata.glass.per.resection$fastp.total_reads) == F) # ENSURE ALL SAMPLE HAVE THIS METADATA
+stopifnot(is.na(metadata.glass.per.resection |> dplyr::filter(!is.na(genomescan.sid)) |> dplyr::pull(fastp.total_reads)) == F) # ENSURE ALL SAMPLE HAVE THIS METADATA
 
 rm(tmp)
 
@@ -176,7 +224,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(tmp, by=c('genomescan.sid'='genomescan.sid'), suffix=c("", ""))
 
 
-stopifnot(is.na(metadata.glass.per.resection$star.input.reads) == F)
+stopifnot(is.na(metadata.glass.per.resection |>  dplyr::filter(!is.na(genomescan.sid)) |> dplyr::pull(star.input.reads) ) == F)
 
 
 rm(tmp, parse_star_log_final_out)
@@ -223,7 +271,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
   dplyr::left_join(    tmp, by=c('genomescan.sid'='genomescan.sid') , suffix=c("", "")  )
 
 
-stopifnot(is.na(metadata.glass.per.resection$idxstats.alternate.loci) == F)
+stopifnot(is.na(metadata.glass.per.resection |> dplyr::filter(!is.na(genomescan.sid)) |>  dplyr::pull(idxstats.alternate.loci)) == F)
 
 
 rm(tmp, parse_idxstats)
@@ -259,7 +307,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 
 
 
-stopifnot(is.na(metadata.glass.per.resection$featureCounts.Assigned) == F)
+stopifnot(is.na(metadata.glass.per.resection |> dplyr::filter(!is.na(genomescan.sid)) |>  dplyr::pull(featureCounts.Assigned)) == F)
 
 
 rm(tmp)
@@ -293,7 +341,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 
 # find dates of last event
 
-tmp.1 <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Surgery data_GLASS RNAseq.csv')
+tmp.1 <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022/Surgery data_GLASS RNAseq.csv')
 tmp.1 <- rbind(
   tmp.1 %>%
     dplyr::select(`GLASS_ID` | ends_with("_S1")) %>%
@@ -313,21 +361,21 @@ tmp.1 <- rbind(
   #dplyr::select(Sample_Name, Date_Surgery, GLASS_ID)
 
 
-tmp.2 <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Survival data_GLASS RNAseq__ALL.csv') %>% 
-  dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) %>% 
-  dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Death , format = "%Y-%m-%d")) %>% 
-  dplyr::select(GLASS_ID, Date_of_Death, Date_Last_Followup) %>% 
-  dplyr::mutate(Date_Last_Event = ifelse(is.na(Date_of_Death), Date_Last_Followup , Date_of_Death)) %>% 
-  dplyr::mutate(Date_Last_Event.status = ifelse(is.na(Date_of_Death), 0 , 1) ) %>% 
+tmp.2 <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022/Survival data_GLASS RNAseq__ALL.csv') |>  
+  dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) |> 
+  dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Death , format = "%Y-%m-%d")) |> 
+  dplyr::select(GLASS_ID, Date_of_Death, Date_Last_Followup) |> 
+  dplyr::mutate(Date_Last_Event = ifelse(is.na(Date_of_Death), Date_Last_Followup , Date_of_Death)) |> 
+  dplyr::mutate(Date_Last_Event.status = ifelse(is.na(Date_of_Death), 0 , 1) ) |> 
   dplyr::mutate(Date_of_Death = NULL,  Date_Last_Followup = NULL)
 
 
 stopifnot(tmp.1$GLASS_ID %in% tmp.2$GLASS_ID)
 
 
-tmp <- tmp.1 %>% dplyr::left_join(tmp.2, by=c('GLASS_ID'='GLASS_ID')) %>% 
-  dplyr::mutate(time.resection.until.last.event = difftime(Date_Last_Event,Date_Surgery, units = 'days')) %>% 
-  dplyr::rename(status.resection.until.last.event = Date_Last_Event.status) %>% 
+tmp <- tmp.1 %>% dplyr::left_join(tmp.2, by=c('GLASS_ID'='GLASS_ID')) |> 
+  dplyr::mutate(time.resection.until.last.event = difftime(Date_Last_Event,Date_Surgery, units = 'days')) |> 
+  dplyr::rename(status.resection.until.last.event = Date_Last_Event.status) |> 
   dplyr::select(Sample_Name, time.resection.until.last.event, status.resection.until.last.event)
 
 
@@ -420,14 +468,13 @@ fit.wb = fitdistrplus::fitdist(fit.data, "weibull")
 
 #print(fit.g)
 
-par(mfrow = c(2, 2))
-plot.legend <- c("gamma", "lognormal", "weibull")
-denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-
-dev.off()
+#par(mfrow = c(2, 2))
+#plot.legend <- c("gamma", "lognormal", "weibull")
+#denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#dev.off()
 
 # seems gamma fit
 fit <- fit.g
@@ -533,7 +580,7 @@ tmp.2 <- data.frame(Heidelberg.segment.file = Sys.glob("data/glass/Methylation/H
   dplyr::mutate(Sample_ID = gsub("^.+_unzip/([^/]+)_Run.+$","\\1",Heidelberg.segment.file))
 
 
-tmp.3 <- read.csv('data/glass/Clinical data/(Epi)genetic data methylation/(Epi)genetic data_GLASS-NL_01092021.csv') %>% 
+tmp.3 <- read.csv("data/glass/Metadata/(Epi)genetic_data/(Epi)genetic data_GLASS-NL_01092021.csv") %>% 
   dplyr::mutate(X=NULL)
 
 
@@ -645,7 +692,7 @@ dev.off()
 
 # seems gamma fit
 fit <- fit.g
-rm(fit.g,fit.ln,fit.wb,plt.legend)
+rm(fit.g,fit.ln,fit.wb,plot.legend)
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection |> 
@@ -682,7 +729,12 @@ tmp <- read.csv('data/glass/Methylation/Metadata/WHOclassification_03052022.csv'
 
 
 metadata.glass.per.resection <- metadata.glass.per.resection %>% 
-  dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'),suffix = c("", ""))
+  dplyr::left_join(tmp, by=c('Sample_Name'='Sample_Name'),suffix = c("", ""))|>
+  dplyr::mutate(WHO_Classification2021 = ifelse(Sample_Name == "153_R2", "Astrocytoma, IDH-mutant, WHO grade 4", WHO_Classification2021))
+
+
+# ensure R153_R2 is WHO grade IV (not in metadata file, but confirmed by Wies)
+stopifnot((metadata.glass.per.resection |> dplyr::filter(Sample_Name == "153_R2") |> dplyr::pull(WHO_Classification2021)) == "Astrocytoma, IDH-mutant, WHO grade 4")
 
 
 rm(tmp)
@@ -694,7 +746,7 @@ rm(tmp)
 
 # alkalating.agent = PCV, CCNU | TMZ
 
-tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Chemotherapy data_GLASS RNAseq.csv') %>% 
+tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022/Chemotherapy data_GLASS RNAseq.csv') %>% 
   dplyr::select(-contains("Date_")) %>% 
   dplyr::select(-contains("KPS_")) %>% 
   dplyr::select(-contains("_Stopped_")) %>% 
@@ -739,8 +791,8 @@ tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Chemotherap
   dplyr::mutate(chemotherapy = gsub("^.+: ","", value)) %>% 
   dplyr::mutate(conditional.surgery = gsub("^.+Surgery ([^:]+):.+$","\\1",value)) %>% 
   dplyr::mutate(condition = gsub("^([^ ]+) .+$","\\1",value)) %>% 
-  dplyr::mutate(value=NULL) %>% 
-  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID')) %>% 
+  dplyr::mutate(value=NULL) %>%
+  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID'), relationship = "many-to-many") %>%
   dplyr::filter(
                 (condition == "After" & Sample_Name > conditional.surgery) |
                 (condition == "Before" & Sample_Name >= conditional.surgery) 
@@ -764,7 +816,7 @@ rm(tmp)
 ## attach Radio-therapy ----
 
 
-tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Radiotherapy data_GLASS RNAseq.csv') %>% 
+tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022/Radiotherapy data_GLASS RNAseq.csv') %>% 
   tibble %>% 
   dplyr::select(-contains("Date_")) %>% 
   dplyr::select(-contains("KPS_")) %>% 
@@ -776,7 +828,7 @@ tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Radiotherap
   dplyr::mutate(conditional.surgery = gsub("^.+Surgery ([^:]+)$","\\1",value)) %>% 
   dplyr::mutate(condition = gsub("^([^ ]+) .+$","\\1",value)) %>% 
   dplyr::mutate(value=NULL) %>% 
-  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID')) %>% 
+  dplyr::left_join(metadata.glass.per.resection %>% dplyr::select(GLASS_ID, Sample_Name), by=c('GLASS_ID'='GLASS_ID'), multiple='all') %>% 
   dplyr::filter(
     (condition == "After" & Sample_Name > conditional.surgery) | (condition == "Before" & Sample_Name >= conditional.surgery) 
   ) %>% 
@@ -800,49 +852,59 @@ rm(tmp)
 # per patient ----
 
 
-metadata.glass.per.patient <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Survival data_GLASS RNAseq__ALL.csv') %>% 
-  dplyr::mutate(data_of_birth = NULL) %>%
-  # dplyr::mutate(Age_at_Diagnosis = NULL) %>%
-  dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) %>%
-  dplyr::mutate(Date_of_Death = as.Date(Date_of_Death , format = "%Y-%m-%d")) %>%
-  dplyr::mutate(Date_Last_Followup = as.Date(Date_Last_Followup , format = "%Y-%m-%d")) %>%
-  dplyr::mutate(overall.survival = difftime(Date_of_Death , Date_of_Diagnosis, units = 'days')) %>%
-  dplyr::mutate(time.until.last.followup = difftime(Date_Last_Followup, Date_of_Diagnosis, units = 'days')) %>% 
-  dplyr::mutate(deceased = !is.na(Date_of_Death)) %>% 
-  dplyr::mutate(Sample_Name.I = NA, Sample_Name.R = NA, genomescan.sid.I = NA, genomescan.sid.R = NA) %>% 
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_148", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_160", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_162", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_137", "Tumor" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+metadata.glass.per.patient <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022/Survival data_GLASS RNAseq__ALL.csv') |> 
+  dplyr::mutate(data_of_birth = NULL) |>
+  # dplyr::mutate(Age_at_Diagnosis = NULL) |>
+  dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) |>
+  dplyr::mutate(Date_of_Death = as.Date(Date_of_Death , format = "%Y-%m-%d")) |>
+  dplyr::mutate(Date_Last_Followup = as.Date(Date_Last_Followup , format = "%Y-%m-%d")) |>
+  dplyr::mutate(overall.survival = difftime(Date_of_Death , Date_of_Diagnosis, units = 'days')) |>
+  dplyr::mutate(time.until.last.followup = difftime(Date_Last_Followup, Date_of_Diagnosis, units = 'days')) |> 
+  dplyr::mutate(deceased = !is.na(Date_of_Death)) |> 
+  dplyr::mutate(Sample_Name.I = NA, Sample_Name.R = NA, genomescan.sid.I = NA, genomescan.sid.R = NA) |> 
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_148", "Tumor" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_160", "Tumor" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_162", "Tumor" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_137", "Tumor" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
   
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_110", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_113", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_118", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_156", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_174", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_002", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_018", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_020", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_022", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_029", "Unknown" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_110", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_113", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_118", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_156", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_EMCR_174", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_002", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_018", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_020", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_022", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_029", "Unknown" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
   
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_017", "Other" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
-  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_UMCU_207", "Other" , Cause_of_Death)) %>% # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_AUMC_017", "Other" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
+  dplyr::mutate(Cause_of_Death = ifelse(GLASS_ID == "GLNL_UMCU_207", "Other" , Cause_of_Death)) |> # Following e-mail conversation 29-4-2022
   
-  dplyr::mutate(Cause_of_Death = ifelse(Cause_of_Death == "", "Unkown" , Cause_of_Death)) %>% # unknown, but deceased
-
+  dplyr::mutate(Cause_of_Death = ifelse(Cause_of_Death == "", "Unkown" , Cause_of_Death)) |> # unknown, but deceased
+  
   dplyr::mutate(overall.survival.event = ifelse(is.na(overall.survival) | Cause_of_Death == "Other",0,1),
-              overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival))
+                overall.survival = ifelse(is.na(overall.survival),time.until.last.followup,overall.survival)) |> 
   
+  (function(.) {
+    assertthat::assert_that(nrow(.) == 98)
+    return(.)
+  })() |> # in-pipe stopifnot(nrow(.) == 98)
+  
+  dplyr::add_row(GLASS_ID = "GLNL_EMCR_153") # not in the file, exclusive for proteomics
+
+
 
 
 # missing metadata for those 3 patients lacking a matching pair
 stopifnot(metadata.glass.per.resection$GLASS_ID %in% metadata.glass.per.patient$GLASS_ID)
 
 
+# define the appropriate primaries and recurrences per patient for RNA
 for(pid in metadata.glass.per.patient$GLASS_ID) {
-  slice <- metadata.glass.per.patient %>% 
-    dplyr::filter(GLASS_ID == pid)
+  #slice <- metadata.glass.per.patient |> 
+  #  dplyr::filter(GLASS_ID == pid)
+  
   
   r.I <- metadata.glass.per.resection %>% 
     dplyr::filter(GLASS_ID == pid & Sample_Type == "initial" & excluded == F) %>% 
@@ -859,14 +921,111 @@ for(pid in metadata.glass.per.patient$GLASS_ID) {
     dplyr::filter(GLASS_ID == pid & Sample_Type == "recurrent" & excluded == F) %>% 
     dplyr::arrange(resection) %>% 
     dplyr::slice_tail(n=1)
-
+  
   if(nrow(r.R) > 0) {
     metadata.glass.per.patient <- metadata.glass.per.patient %>% 
       dplyr::mutate(Sample_Name.R = ifelse(GLASS_ID == pid, r.R$Sample_Name, Sample_Name.R) ) %>% 
       dplyr::mutate(genomescan.sid.R = ifelse(GLASS_ID == pid, r.R$genomescan.sid, genomescan.sid.R))
   }
 }
-rm(r.I, r.R, pid, slice)
+rm(r.I, r.R, pid)
+
+
+# define the appropriate primaries and recurrences per patient for protein, for WHO2021
+metadata.glass.per.patient <- metadata.glass.per.patient |> 
+  dplyr::mutate(proteomics.sid.I = NA) |> 
+  dplyr::mutate(proteomics.sid.R = NA) |> 
+  dplyr::mutate(proteomics.sid.A_IDH = NA) |> 
+  dplyr::mutate(proteomics.sid.A_IDH_HG = NA)|> 
+  dplyr::mutate(proteomics.sid.WHO2021_g23 = NA) |> 
+  dplyr::mutate(proteomics.sid.WHO2021_g4 = NA)
+for(pid in metadata.glass.per.patient$GLASS_ID) {
+  r.I <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & Sample_Type == "initial" & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_head(n=1)
+  
+  if(nrow(r.I) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.I = ifelse(GLASS_ID == pid, r.I$Sample_Name, proteomics.sid.I))
+  }
+  rm(r.I)
+  
+  r.R <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & Sample_Type == "recurrent" & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_head(n=1)
+  
+  if(nrow(r.R) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.R = ifelse(GLASS_ID == pid, r.R$Sample_Name, proteomics.sid.R))
+  }
+  rm(r.R)
+  
+  r.A_IDH <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & methylation.sub.diagnosis == "A_IDH" & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_head(n=1)
+  
+  if(nrow(r.A_IDH) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.A_IDH = ifelse(GLASS_ID == pid, r.A_IDH$Sample_Name, proteomics.sid.A_IDH))
+  }
+  rm(r.A_IDH)
+  
+  
+  r.A_IDH_HG <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & methylation.sub.diagnosis == "A_IDH_HG" & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_tail(n=1)
+  
+  if(nrow(r.A_IDH_HG) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.A_IDH_HG = ifelse(GLASS_ID == pid, r.A_IDH_HG$Sample_Name, proteomics.sid.A_IDH_HG))
+  }
+  rm(r.A_IDH_HG)
+  
+  
+  r.WHO2021_g23 <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & WHO_Classification2021 %in% c('Astrocytoma, IDH-mutant, WHO grade 2','Astrocytoma, IDH-mutant, WHO grade 3') & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_head(n=1)
+  
+  if(nrow(r.WHO2021_g23) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.WHO2021_g23 = ifelse(GLASS_ID == pid, r.WHO2021_g23$Sample_Name, proteomics.sid.WHO2021_g23))
+  }
+  rm(r.WHO2021_g23)
+  
+  
+  r.WHO2021_g4 <- metadata.glass.per.resection |> 
+    dplyr::filter(GLASS_ID == pid & WHO_Classification2021 %in% c('Astrocytoma, IDH-mutant, WHO grade 4') & !is.na(ProtID)) |> 
+    dplyr::arrange(resection) |> 
+    dplyr::slice_tail(n=1)
+  
+  if(nrow(r.WHO2021_g4) > 0) {
+    metadata.glass.per.patient <- metadata.glass.per.patient %>% 
+      dplyr::mutate(proteomics.sid.WHO2021_g4 = ifelse(GLASS_ID == pid, r.WHO2021_g4$Sample_Name, proteomics.sid.WHO2021_g4))
+  }
+  rm(r.WHO2021_g4)
+}
+rm(pid)
+
+
+stopifnot(intersect(
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.I)) |> dplyr::pull(proteomics.sid.WHO2021_g23),
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.R)) |> dplyr::pull(proteomics.sid.WHO2021_g4)
+) == c())
+
+stopifnot(intersect(
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.A_IDH)) |> dplyr::pull(proteomics.sid.WHO2021_g23),
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.A_IDH_HG)) |> dplyr::pull(proteomics.sid.WHO2021_g4)
+) == c())
+
+stopifnot(intersect(
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.WHO2021_g23)) |> dplyr::pull(proteomics.sid.WHO2021_g23),
+  metadata.glass.per.patient |> dplyr::filter(!is.na(proteomics.sid.WHO2021_g4)) |> dplyr::pull(proteomics.sid.WHO2021_g4)
+) == c())
 
 
 
@@ -883,7 +1042,7 @@ metadata.glass.per.patient <- metadata.glass.per.patient %>%
 
 
 
-tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Surgery data_GLASS RNAseq.csv')
+tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022/Surgery data_GLASS RNAseq.csv')
 tmp <- rbind(
   tmp %>% dplyr::select(Date_Surgery_S1, Sample_Name_S1, GS_ID_S1) %>%
     dplyr::rename(Date_Surgery = Date_Surgery_S1, Sample_Name = Sample_Name_S1, genomescan.sid = GS_ID_S1),

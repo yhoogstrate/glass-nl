@@ -33,7 +33,7 @@ ___
 
 
 
-# GLASS-NL RNA, WES & CNA analysis code #
+# Parts of the GLASS-NL RNA, WES, proteomics & CNA analysis code #
 
 Dr. Youri Hoogstrate, 2021 - 2022
 

@@ -26,7 +26,7 @@ if(!exists("metadata.glass.per.resection")) {
 # https://github.com/tgac-vumc/ACE/blob/master/vignettes/ACE_vignette.Rmd
 # analysis was performed by the group from Amsterdam
 
-dnaseq.purities <- readxl::read_excel('data/glass/WES/CombinedDataGLASS/AllDataGLASS.xlsx') %>% 
+dnaseq.purities <- readxl::read_excel('data/glass/WES/Combined Data WES-METH/AllDataGLASS.xlsx') %>% 
   dplyr::mutate(samplenames = NULL) %>% 
   dplyr::mutate(names = gsub("-","_",names,fixed=T)) %>% 
   dplyr::mutate(VAF_IDH = ifelse(Coverage_IDH == -1 | VAF_IDH == "NA", NA, VAF_IDH)) %>% 
@@ -74,7 +74,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 
 
 
-# methylation purities using RF ----
+# methylation purities using RFpurity ----
 
 
 methylation.purities <- read.table("data/glass/Methylation/Analysis/RFpurity/purities_RFpurity.txt") %>% 
@@ -160,7 +160,7 @@ rm(tmp)
 
 
 plt <- dnaseq.purities %>%
-  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+  #dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
   dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
   dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
 
@@ -241,8 +241,7 @@ rm(plt)
 ## Manual Fit x Meth/RF[abs] ----
 
 
-plt <- dnaseq.purities %>%
-  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+plt <- metadata.glass.per.resection %>%
   dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
   dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
 
@@ -260,8 +259,7 @@ rm(plt)
 
 
 
-plt <- dnaseq.purities %>%
-  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+plt <- metadata.glass.per.resection %>%
   dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
   dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
 
@@ -300,8 +298,7 @@ rm(plt)
 
 
 
-plt <- dnaseq.purities %>%
-  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
+plt <- metadata.glass.per.resection %>%
   dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
   dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
 
@@ -314,27 +311,27 @@ ggplot(plt %>%  dplyr::mutate(resection = gsub("^.+_(.+)$","\\1",Sample_Name)), 
 
 
 
-
-ggplot(glass.cellularities, aes(x=CNV.purity.shallowseq,y=VAF_IDH * 2, label=names, col=CNV_ploidy_IDH)) +
-  geom_point() +
-  scale_x_continuous(limits = c(0, 1)) +
-  scale_y_continuous(limits = c(0, 1.2))  +
-  youri_gg_theme + 
-  #geom_smooth(method="lm") +
-  ggrepel:: geom_text_repel(size=3, col="gray80")
-
-
-
-
-
-ggplot(glass.cellularities, aes(x=CNV.purity.shallowseq,y=VAF_IDH * 2, label=names, col=CNV_ploidy_IDH)) +
-  geom_point() +
-  scale_x_continuous(limits = c(0, 1)) +
-  scale_y_continuous(limits = c(0, 1.2))  +
-  youri_gg_theme + 
-  geom_smooth(method="lm") +
-  ggrepel:: geom_text_repel(size=3, col="gray80")
-
+# 
+# ggplot(plt, aes(x=CNV.purity.shallowseq,y=VAF_IDH * 2, label=names, col=dna.wes.ploidy_IDH)) +
+#   geom_point() +
+#   scale_x_continuous(limits = c(0, 1)) +
+#   scale_y_continuous(limits = c(0, 1.2))  +
+#   youri_gg_theme + 
+#   #geom_smooth(method="lm") +
+#   ggrepel:: geom_text_repel(size=3, col="gray80")
+# 
+# 
+# 
+# 
+# 
+# ggplot(glass.cellularities, aes(x=CNV.purity.shallowseq,y=VAF_IDH * 2, label=names, col=CNV_ploidy_IDH)) +
+#   geom_point() +
+#   scale_x_continuous(limits = c(0, 1)) +
+#   scale_y_continuous(limits = c(0, 1.2))  +
+#   youri_gg_theme + 
+#   geom_smooth(method="lm") +
+#   ggrepel:: geom_text_repel(size=3, col="gray80")
+# 
 
 rm(plt)
 
@@ -343,51 +340,50 @@ rm(plt)
 
 
 
-
-plt <- dnaseq.purities %>%
-  dplyr::full_join(methylation.purities, by=c('Sample_Name'='Sample_Name')) %>% 
-  dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
-  dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
-
-
-glass.cellularities <- glass.cellularities %>% 
-  dplyr::mutate(exp.cn.idh.mut = 1 / glass.cellularities$CNV.purity.shallowseq * glass.cellularities$VAF_IDH * glass.cellularities$Ploidy /2 ) %>% 
-  dplyr::mutate(err = abs((2 * VAF_IDH) - CNV.purity.shallowseq))
-
-
-
-ggplot(glass.cellularities, aes(x=CNV.purity.shallowseq,y=exp.cn.idh.mut, label=names, col=CNV_ploidy_IDH)) +
-  geom_point() +
-  scale_x_continuous(limits = c(0, 1)) +
-  #scale_y_continuous(limits = c(0, 1.2))  +
-  youri_gg_theme + 
-  #geom_smooth(method="lm") +
-  ggrepel:: geom_text_repel(size=3, col="gray60")
-
-
-
+# 
+# plt <- dnaseq.purities %>%
+#   dplyr::mutate(status = ifelse(dna.shallow.ACE.purity >= 0.99,"unconfident","regular")) %>% 
+#   dplyr::mutate(status.manual.fit = ifelse(dna.purity.manual.Erik == dna.shallow.ACE.purity, "ACE", "VAF"))
+# 
+# 
+# plt <- metadata.glass.per.resection %>% 
+#   dplyr::mutate(exp.cn.idh.mut = 1 / glass.cellularities$CNV.purity.shallowseq * glass.cellularities$VAF_IDH * glass.cellularities$Ploidy /2 ) %>% 
+#   dplyr::mutate(err = abs((2 * VAF_IDH) - CNV.purity.shallowseq))
+# 
+# 
+# 
+# ggplot(glass.cellularities, aes(x=CNV.purity.shallowseq,y=exp.cn.idh.mut, label=names, col=CNV_ploidy_IDH)) +
+#   geom_point() +
+#   scale_x_continuous(limits = c(0, 1)) +
+#   #scale_y_continuous(limits = c(0, 1.2))  +
+#   youri_gg_theme + 
+#   #geom_smooth(method="lm") +
+#   ggrepel:: geom_text_repel(size=3, col="gray60")
+# 
+# 
 
 
-ggplot(glass.cellularities, aes(x=CNV.purity.shallowseq,y=VAF_IDH, label=names, col=CNV_ploidy_IDH)) +
-  geom_abline(intercept = 0, slope = 0.5, lty=2, col="gray80") +
-  geom_point() +
-  scale_x_continuous(limits = c(0, 1)) +
-  scale_y_continuous(limits = c(0, 1.2/2))  +
-  youri_gg_theme + 
-  #geom_smooth(method="lm") +
-  ggrepel:: geom_text_repel(data=filter(glass.cellularities, err > 0.325), size=3, col="gray60")
-
-
-
-
-glass.cellularities <- glass.cellularities %>% 
-  dplyr::mutate(sid = gsub("^([^_]+_[^_]+).+$","\\1",names)) %>% 
-  dplyr::left_join(tmp,
-                   by=c('sid'='Sample_Name'))
-
-
-
-rm(plt)
+# 
+# ggplot(glass.cellularities, aes(x=CNV.purity.shallowseq,y=VAF_IDH, label=names, col=CNV_ploidy_IDH)) +
+#   geom_abline(intercept = 0, slope = 0.5, lty=2, col="gray80") +
+#   geom_point() +
+#   scale_x_continuous(limits = c(0, 1)) +
+#   scale_y_continuous(limits = c(0, 1.2/2))  +
+#   youri_gg_theme + 
+#   #geom_smooth(method="lm") +
+#   ggrepel:: geom_text_repel(data=filter(glass.cellularities, err > 0.325), size=3, col="gray60")
+# 
+# 
+# 
+# 
+# glass.cellularities <- glass.cellularities %>% 
+#   dplyr::mutate(sid = gsub("^([^_]+_[^_]+).+$","\\1",names)) %>% 
+#   dplyr::left_join(tmp,
+#                    by=c('sid'='Sample_Name'))
+# 
+# 
+# 
+# rm(plt)
 
 
 # 
@@ -449,10 +445,6 @@ rm(plt)
 # 
 
 # cleanup ----
-
-
-rm(dnaseq.purities)
-rm(methylation.purities)
 
 
 

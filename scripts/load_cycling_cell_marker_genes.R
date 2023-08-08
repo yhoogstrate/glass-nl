@@ -15,7 +15,7 @@ library(readODS)
 
 # if read counts and per-gene metadata are not loaded, load it
 if(!exists('expression.glass.exon.metadata')) {
-  warning('read count data was not loaded')
+  warning('read count data was not loaded, but is now')
   
   source('scripts/load_rna-counts.R')
 }

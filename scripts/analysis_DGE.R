@@ -131,7 +131,7 @@ if(file.exists("cache/res.paired.a.exon.Rds")) {
   
   
   stopifnot(colnames(tmp.data) == tmp.metadata$genomescan.sid)
-  #saveRDS(tmp.data, "cache/res.paired.a.exon.design.Rds")
+  #saveRDS(tmp.metadata, "cache/res.paired.a.exon.design.Rds")
   
   
   
@@ -570,7 +570,7 @@ if(file.exists("cache/res.treatment.chemo.Rds")) {
   # load from cache
   
   print("Loading 'cache/res.treatment.chemo.Rds' from cache")
-  res.treamtent.exon <- readRDS("cache/res.treatment.chemo.Rds")
+  res.treatment.chemo <- readRDS("cache/res.treatment.chemo.Rds")
   res.treatment.chemo.design <- readRDS("cache/res.treatment.chemo.design.Rds")
   
 } else {
@@ -668,7 +668,7 @@ if(file.exists("cache/res.treatment.radio.Rds")) {
   # load from cache
   
   print("Loading 'cache/res.treatment.radio.Rds' from cache")
-  res.treamtent.exon <- readRDS("cache/res.treatment.radio.Rds")
+  res.treatment.radio <- readRDS("cache/res.treatment.radio.Rds")
   res.treatment.radio.design <- readRDS("cache/res.treatment.radio.design.Rds")
   
 } else {
@@ -762,7 +762,7 @@ if(file.exists("cache/res.grading.exon.Rds")) {
   # load from cache
   
   print("Loading 'cache/res.grading.exon.Rds' from cache")
-  res.treamtent.exon <- readRDS("cache/res.grading.exon.Rds")
+  res.grading.exon <- readRDS("cache/res.grading.exon.Rds")
   res.grading.exon.design <- readRDS("cache/res.grading.exon.design.Rds")
   
 } else {
