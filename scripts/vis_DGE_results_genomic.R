@@ -97,6 +97,9 @@ write.table(
 # chromosome plot [all DGE + hist & cycling] ----
 
 
+plt.test = readRDS("/tmp/plot_manhattan_RNA_GLASS-NL.Rds")
+
+
 plt <- expression.glass.exon.metadata %>% 
   dplyr::left_join(chrs_hg38_s, by=c('gene_chr'='chr')) %>% 
   dplyr::mutate(x = gene_chr_center_loc + pos) %>% 
@@ -104,7 +107,7 @@ plt <- expression.glass.exon.metadata %>%
   dplyr::mutate(significant = padj.partially.paired.exon < 0.01 & abs(log2FoldChange.partially.paired.exon) > 0.75)
 
 
-saveRDS(plt, file="/tmp/plot_manhattan_RNA_GLASS-NL.Rds")
+saveRDS(plt, file="/tmp/plot_manhattan_RNA_GLASS-NL.new.Rds")
 
 
 ggplot(plt, aes(x=gene_chr_center_loc / 1000000,y=stat.partially.paired.exon,col=gene_chr)) + 

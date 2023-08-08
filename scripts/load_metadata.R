@@ -95,7 +95,7 @@ rm(parse_fastp_json_files)
 
 
 
-metadata.glass.per.resection <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Samplesheet_GLASS_RNAseq__ALL.csv') %>% 
+metadata.glass.per.resection <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Samplesheet_GLASS_RNAseq__ALL.csv') %>% 
   dplyr::mutate(institute = gsub("^.+_(.+)_.+$","\\1",GLASS_ID)) %>% 
   dplyr::rename(genomescan.sid = GS_ID) %>% 
   dplyr::mutate(rid = paste0(gsub("^(.+_)[^_]+$","\\1",GLASS_ID),Sample_Name)) %>% 
@@ -293,7 +293,7 @@ metadata.glass.per.resection <- metadata.glass.per.resection %>%
 
 # find dates of last event
 
-tmp.1 <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Surgery data_GLASS RNAseq.csv')
+tmp.1 <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Surgery data_GLASS RNAseq.csv')
 tmp.1 <- rbind(
   tmp.1 %>%
     dplyr::select(`GLASS_ID` | ends_with("_S1")) %>%
@@ -313,7 +313,7 @@ tmp.1 <- rbind(
   #dplyr::select(Sample_Name, Date_Surgery, GLASS_ID)
 
 
-tmp.2 <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_GLASS RNAseq__ALL.csv') %>% 
+tmp.2 <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Survival data_GLASS RNAseq__ALL.csv') %>% 
   dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) %>% 
   dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Death , format = "%Y-%m-%d")) %>% 
   dplyr::select(GLASS_ID, Date_of_Death, Date_Last_Followup) %>% 
@@ -694,7 +694,7 @@ rm(tmp)
 
 # alkalating.agent = PCV, CCNU | TMZ
 
-tmp <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Chemotherapy data_GLASS RNAseq.csv') %>% 
+tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Chemotherapy data_GLASS RNAseq.csv') %>% 
   dplyr::select(-contains("Date_")) %>% 
   dplyr::select(-contains("KPS_")) %>% 
   dplyr::select(-contains("_Stopped_")) %>% 
@@ -764,7 +764,7 @@ rm(tmp)
 ## attach Radio-therapy ----
 
 
-tmp <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Radiotherapy data_GLASS RNAseq.csv') %>% 
+tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Radiotherapy data_GLASS RNAseq.csv') %>% 
   tibble %>% 
   dplyr::select(-contains("Date_")) %>% 
   dplyr::select(-contains("KPS_")) %>% 
@@ -800,7 +800,7 @@ rm(tmp)
 # per patient ----
 
 
-metadata.glass.per.patient <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Survival data_GLASS RNAseq__ALL.csv') %>% 
+metadata.glass.per.patient <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Survival data_GLASS RNAseq__ALL.csv') %>% 
   dplyr::mutate(data_of_birth = NULL) %>%
   # dplyr::mutate(Age_at_Diagnosis = NULL) %>%
   dplyr::mutate(Date_of_Diagnosis = as.Date(Date_of_Diagnosis , format = "%Y-%m-%d")) %>%
@@ -883,7 +883,7 @@ metadata.glass.per.patient <- metadata.glass.per.patient %>%
 
 
 
-tmp <- read.csv('data/glass/Clinical data/Cleaned/metadata_2022/Surgery data_GLASS RNAseq.csv')
+tmp <- read.csv('data/glass/Metadata/Cleaned_clinical/metadata_2022//Surgery data_GLASS RNAseq.csv')
 tmp <- rbind(
   tmp %>% dplyr::select(Date_Surgery_S1, Sample_Name_S1, GS_ID_S1) %>%
     dplyr::rename(Date_Surgery = Date_Surgery_S1, Sample_Name = Sample_Name_S1, genomescan.sid = GS_ID_S1),
