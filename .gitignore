@@ -8,3 +8,5 @@ data/*.gtf
 /tmp/*.bed
 *.Rds
 *.pdf
+*.backup-copy
+*.svg
