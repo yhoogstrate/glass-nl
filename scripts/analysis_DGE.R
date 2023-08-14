@@ -293,6 +293,7 @@ if(file.exists("cache/res.paired.a.covar.regression.Rds")) {
   
   
   saveRDS(res.paired.a.covar.regression, "cache/res.paired.a.covar.regression.Rds")
+  saveRDS(dds.paired.a.covar.regression, "cache/dds.paired.a.covar.regression.Rds")
 }
 
 
