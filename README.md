@@ -35,5 +35,5 @@ ___
 
 # GLASS-NL RNA & proteomics code #
 
-Dr. Youri Hoogstrate, 2021 - 2022
+Dr. Youri Hoogstrate, 2021 - 2024
 
