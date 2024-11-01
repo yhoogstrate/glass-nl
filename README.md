@@ -33,7 +33,7 @@ ___
 
 
 
-# GLASS-NL RNA & proteomics code #
+# GLASS-NL RNA-seq, snRNA-seq & proteomics analysist code #
 
 Dr. Youri Hoogstrate, 2021 - 2024
 
