@@ -3,13 +3,13 @@
 # load libs ----
 
 
-library(base)
-library(utils)
-library(tidyverse)
-library(rjson)
+#library(base)
+#library(utils)
+library(tidyverse) # for the dplyr pipe
+#library(rjson)
 
-library(MASS)
-library(fitdistrplus)
+#library(MASS)
+#library(fitdistrplus)
 
 
 
@@ -18,7 +18,7 @@ library(fitdistrplus)
 ## fastp json ----
 
 parse_fastp_json_files <- function(json_file) {
-  out <- fromJSON(file = json_file)
+  out <- rjson::fromJSON(file = json_file)
   
   out <- list(
     "a" = sum(out$read1_after_filtering$content_curves$`A`, out$read2_after_filtering$content_curves$`A`),
@@ -470,10 +470,10 @@ fit.wb = fitdistrplus::fitdist(fit.data, "weibull")
 
 #par(mfrow = c(2, 2))
 #plot.legend <- c("gamma", "lognormal", "weibull")
-#denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-#qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-#cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-#ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#fitdistrplus::denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#fitdistrplus::qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#fitdistrplus::cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+#fitdistrplus::ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
 #dev.off()
 
 # seems gamma fit
@@ -524,14 +524,17 @@ fit.wb = fitdistrplus::fitdist(fit.data, "weibull")
 
 #print(fit.g)
 
-par(mfrow = c(2, 2))
-plot.legend <- c("gamma", "lognormal", "weibull")
-denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
 
-dev.off()
+
+# par(mfrow = c(2, 2))
+# plot.legend <- c("gamma", "lognormal", "weibull")
+# distrfit::fitdistrplus::denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+# fitdistrplus::qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+# fitdistrplus::cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+# fitdistrplus::ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+# dev.off()
+
+
 
 # seems gamma fit
 fit <- fit.g
@@ -548,7 +551,10 @@ metadata.glass.per.resection <- metadata.glass.per.resection |>
 # Transformation, no re-ordering
 stopifnot(order(metadata.glass.per.resection$lts.up2) == order(metadata.glass.per.resection$lts.up2.norm))
 
-plot(metadata.glass.per.resection$lts.up1 , metadata.glass.per.resection$lts.up1.norm)
+
+
+
+#plot(metadata.glass.per.resection$lts.up1 , metadata.glass.per.resection$lts.up1.norm)
 
 
 rm(fit, fit.data)
@@ -558,7 +564,7 @@ rm(fit, fit.data)
 metadata.glass.per.resection <- metadata.glass.per.resection |> 
   dplyr::mutate(lts.up2.norm = ifelse(lts.up2.norm < -3, NA, lts.up2.norm))  
 
-plot(sort(metadata.glass.per.resection$lts.up2.norm))
+#plot(sort(metadata.glass.per.resection$lts.up2.norm))
 
 
 
@@ -683,10 +689,10 @@ fit.wb = fitdistrplus::fitdist(fit.data, "weibull")
 
 par(mfrow = c(2, 2))
 plot.legend <- c("gamma", "lognormal", "weibull")
-denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
-ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+fitdistrplus::denscomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+fitdistrplus::qqcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+fitdistrplus::cdfcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
+fitdistrplus::ppcomp(list(fit.g, fit.ln, fit.wb), legendtext = plot.legend)
 
 dev.off()
 

@@ -8,9 +8,9 @@
 # load libs ----
 
 library(tidyverse)
-library(pheatmap)
-library(RColorBrewer)
-library(viridis)
+#library(pheatmap)
+#library(RColorBrewer)
+#library(viridis)
 
 
 # load data  ----

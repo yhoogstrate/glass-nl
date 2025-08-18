@@ -56,7 +56,7 @@ tmp.patients <- metadata.glass.per.patient %>%
 
 
 plt <- expression.glass.exon.vst %>% 
-  dplyr::select(tmp.patients) %>% 
+  dplyr::select(all_of(tmp.patients)) %>% 
   tibble::rownames_to_column('gene_uid') %>% 
   dplyr::filter(gene_uid %in% tmp.signi) %>% 
   tibble::column_to_rownames('gene_uid')
@@ -66,7 +66,15 @@ plt <- expression.glass.exon.vst %>%
 
 labels <- t(plt) %>% as.data.frame %>%  dplyr::select(`ENSG00000233542_AL391845.2`) %>%  dplyr::mutate(`ENSG00000233542_AL391845.2` = "A")
 
-recursiveCorPlot::recursiveCorPlot(plt, labels , 7 , 7)
+a = recursiveCorPlot::recursiveCorPlot(plt, labels , 7 , 7)
+
+
+#a[[1]]$data
+write.table(a[[2]]$data, file="output/tables/recursiveCorr.txt", sep="\t", quote = F, row.names = F)
+
+
+
+#saveRDS(plt, file="/tmp/glass_nl__hclust.Rds")
 
 
 #h <- recursiveCorPlot::recursiveCorPlot(cp, cpm, 2 ,2)

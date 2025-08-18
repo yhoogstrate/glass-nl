@@ -10,5 +10,4 @@ data/*.gtf
 *.pdf
 *.backup-copy
 *.svg
-ega/
 /wasabi

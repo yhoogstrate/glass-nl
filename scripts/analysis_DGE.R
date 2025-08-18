@@ -886,6 +886,29 @@ expression.glass.exon.metadata <- expression.glass.exon.metadata %>%
 rm(res.grading.exon) # cleanup, is joined to gene metadata anyway
 
 
+# OR volcano ----
+
+
+plt <- readRDS("cache/res.paired.a.exon.Rds") |> 
+  dplyr::mutate(col = grepl("^OR[0-9]",gene_name))
+
+
+ggplot(plt, aes(x=log2FoldChange , y=-log10(padj), col=col)) + 
+  geom_point(data=subset(plt, col==F), pch=16,cex=0.0001,alpha=0.20, col="black") +
+  geom_point(data=subset(plt, col==T), pch=16,cex=0.65,col="red") +
+  xlim(-1.25,1.25) +
+  ylim(0,5.6)
+
+
+plt |> dplyr::filter(col) |> dplyr::pull(stat) |> median()
+plt |> dplyr::filter(col) |> dplyr::pull(log2FoldChange) |> median()
+
+
+plt |> dplyr::filter(col) |> dplyr::pull(gene_name)
+
+
+
+
 # cor DE [time , grading , therapy] ----
 
 
